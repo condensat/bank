@@ -3,7 +3,15 @@ package bank
 import (
 	"context"
 	"time"
+
+	"git.condensat.tech/bank/logger/model"
 )
+
+type Logger interface {
+	Close()
+	CreateLogEntry(timestamp time.Time, app, level, msg, data string) *model.LogEntry
+	AddLogEntries(entries []*model.LogEntry) error
+}
 
 type MessageHandler func(ctx context.Context, subject string, message *Message) (*Message, error)
 
