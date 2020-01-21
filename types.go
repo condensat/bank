@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"git.condensat.tech/bank/logger/model"
+	"git.condensat.tech/bank/database/model"
+	logModel "git.condensat.tech/bank/logger/model"
 )
 
 type Key []byte
@@ -15,8 +16,8 @@ type SharedKey Key
 
 type Logger interface {
 	Close()
-	CreateLogEntry(timestamp time.Time, app, level, msg, data string) *model.LogEntry
-	AddLogEntries(entries []*model.LogEntry) error
+	CreateLogEntry(timestamp time.Time, app, level, msg, data string) *logModel.LogEntry
+	AddLogEntries(entries []*logModel.LogEntry) error
 }
 
 type MessageHandler func(ctx context.Context, subject string, message *Message) (*Message, error)
@@ -27,4 +28,11 @@ type Messaging interface {
 
 	Request(ctx context.Context, subject string, message *Message) (*Message, error)
 	RequestWithTimeout(ctx context.Context, subject string, message *Message, timeout time.Duration) (*Message, error)
+}
+
+type DB interface{}
+
+type Database interface {
+	DB() DB
+	Migrate(models []model.Model) error
 }
