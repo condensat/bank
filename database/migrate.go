@@ -1,6 +1,8 @@
 package database
 
-import "git.condensat.tech/bank/database/model"
+import (
+	"git.condensat.tech/bank/database/model"
+)
 
 func (p *Database) Migrate(models []model.Model) error {
 	var interfaces []interface{}
