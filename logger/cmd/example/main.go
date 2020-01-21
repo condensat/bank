@@ -4,15 +4,18 @@ package main
 import (
 	"context"
 	"flag"
-	"time"
 
+	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 )
 
 type Args struct {
 	AppName  string
 	LogLevel string
 	Redis    logger.RedisOptions
+	Nats     messaging.NatsOptions
 }
 
 func parseArgs() Args {
@@ -23,26 +26,51 @@ func parseArgs() Args {
 	flag.StringVar(&args.Redis.HostName, "redisHost", "localhost", "Redis hostName (default 'localhost')")
 	flag.IntVar(&args.Redis.Port, "redisPort", 6379, "Redis port (default 6379)")
 
+	flag.StringVar(&args.Nats.HostName, "natsHost", "localhost", "Nats hostName (default 'localhost')")
+	flag.IntVar(&args.Nats.Port, "natsPort", 4222, "Nats port (default 4222)")
+
 	flag.Parse()
 
 	return args
 }
 
+func echoHandler(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+	logger.Logger(ctx).
+		WithField("Subject", subject).
+		WithField("Method", "echoHandler").
+		Infof("-> %s", string(message.Data))
+
+	return message, nil
+}
+
+func natsClient(ctx context.Context) {
+	messaging := appcontext.Messaging(ctx)
+	messaging.SubscribeWorkers(ctx, "Example.Request", 8, echoHandler)
+
+	log := logger.Logger(ctx)
+	message := bank.NewMessage()
+	message.Data = []byte("Hello, World!")
+
+	for index := 0; index < 10; index++ {
+		resp, err := messaging.Request(ctx, "Example.Request", message)
+		if err != nil {
+			log.
+				WithError(err).
+				Panicf("Request failed")
+		}
+		log.
+			WithField("Method", "natsClient").
+			Infof("<- %s", string(resp.Data))
+	}
+}
+
 func main() {
 	args := parseArgs()
 
-	ctx := logger.WithAppName(context.Background(), args.AppName)
-	ctx = logger.WithWriter(ctx, logger.NewRedisLogger(args.Redis))
-	ctx = logger.WithLogLevel(ctx, args.LogLevel)
+	ctx := appcontext.WithAppName(context.Background(), args.AppName)
+	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(args.Redis))
+	ctx = appcontext.WithLogLevel(ctx, args.LogLevel)
+	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 
-	log := logger.Logger(ctx)
-	for index := 0; index < 1024*10; index++ {
-		log.
-			WithField("ID", index).
-			Infof("Add log")
-
-		if index%32 == 0 {
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
+	natsClient(ctx)
 }
