@@ -1,17 +1,18 @@
-package logger
+package cache
 
 import (
 	"flag"
+
+	"git.condensat.tech/bank"
 )
 
 type RedisOptions struct {
-	HostName string
-	Port     int
+	bank.ServerOptions
 }
 
 func OptionArgs(args *RedisOptions) {
 	if args == nil {
-		panic("Invalid args options")
+		panic("Invalid redis options")
 	}
 
 	flag.StringVar(&args.HostName, "redisHost", "localhost", "Redis hostName (default 'localhost')")

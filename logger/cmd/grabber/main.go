@@ -6,6 +6,7 @@ import (
 	"flag"
 
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
 )
@@ -14,7 +15,7 @@ type Args struct {
 	App          appcontext.Options
 	WithDatabase bool
 
-	Redis    logger.RedisOptions
+	Redis    cache.RedisOptions
 	Database database.Options
 }
 
@@ -24,7 +25,7 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "LogGrabber")
 	flag.BoolVar(&args.WithDatabase, "withDatabase", false, "Store log to database (default false)")
 
-	logger.OptionArgs(&args.Redis)
+	cache.OptionArgs(&args.Redis)
 	database.OptionArgs(&args.Database)
 
 	flag.Parse()
@@ -37,6 +38,7 @@ func main() {
 
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
+	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 
 	if args.WithDatabase {
 		ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
@@ -45,7 +47,7 @@ func main() {
 		defer databaseLogger.Close()
 	}
 
-	logger := logger.NewRedisLogger(args.Redis)
+	logger := logger.NewRedisLogger(ctx)
 	// Start the log grabber
 	logger.Grab(ctx)
 }
