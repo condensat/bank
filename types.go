@@ -54,3 +54,7 @@ type RDB interface{}
 type Cache interface {
 	RDB() RDB
 }
+
+type Worker interface {
+	Run(ctx context.Context, numWorkers int)
+}
