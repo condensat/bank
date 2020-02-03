@@ -2,15 +2,21 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"flag"
+	"fmt"
+	"io"
 
 	"git.condensat.tech/bank/api"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/security"
 
 	"git.condensat.tech/bank/database"
+
+	"github.com/shengdoushi/base58"
 )
 
 type Args struct {
@@ -40,12 +46,15 @@ func main() {
 
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
+	ctx = appcontext.WithHasherWorker(ctx, args.App.Hasher)
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
 
 	migrateDatabase(ctx)
+
+	go testPasswordHash(ctx)
 
 	api := new(api.Api)
 	api.Run(ctx)
@@ -59,5 +68,30 @@ func migrateDatabase(ctx context.Context) {
 		logger.Logger(ctx).
 			WithError(err).
 			Panic("Failed to migrate api models")
+	}
+}
+
+func testPasswordHash(ctx context.Context) {
+	var salt [16]byte
+	_, _ = io.ReadFull(rand.Reader, salt[:])
+
+	// simumlate clients
+	for i := 0; i < 100; i++ {
+		go func() {
+			var password [32]byte
+			_, _ = io.ReadFull(rand.Reader, password[:])
+
+			key := security.SaltedHash(ctx, password[:])
+			fmt.Println(base58.Encode(key, base58.BitcoinAlphabet))
+
+			if !security.SaltedHashVerify(ctx, password[:], key) {
+				logger.Logger(ctx).
+					Panic("Failed to Verify SaltedHash")
+			}
+			logger.Logger(ctx).
+				WithField("PasswordHash", base58.Encode(key, base58.BitcoinAlphabet)).
+				Info("Password Hashed")
+
+		}()
 	}
 }
