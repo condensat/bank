@@ -8,7 +8,7 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 )
 
 func TestNewSession(t *testing.T) {

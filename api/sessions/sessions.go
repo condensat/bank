@@ -11,7 +11,7 @@ import (
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 )
 
 const (
