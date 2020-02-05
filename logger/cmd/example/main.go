@@ -10,6 +10,7 @@ import (
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"github.com/sirupsen/logrus"
 )
 
 type Args struct {
@@ -32,19 +33,22 @@ func parseArgs() Args {
 }
 
 func echoHandler(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
-	logger.Logger(ctx).
-		WithField("Subject", subject).
-		WithField("Method", "echoHandler").
-		Infof("-> %s", string(message.Data))
+	log := logger.Logger(ctx).WithField("Method", "main.echoHandler")
+
+	log.WithFields(logrus.Fields{
+		"Subject": subject,
+		"Method":  "echoHandler",
+	}).Infof("-> %s", string(message.Data))
 
 	return message, nil
 }
 
 func natsClient(ctx context.Context) {
+	log := logger.Logger(ctx).WithField("Method", "main.natsClient")
+
 	messaging := appcontext.Messaging(ctx)
 	messaging.SubscribeWorkers(ctx, "Example.Request", 8, echoHandler)
 
-	log := logger.Logger(ctx)
 	message := bank.NewMessage()
 	message.Data = []byte("Hello, World!")
 
@@ -55,9 +59,7 @@ func natsClient(ctx context.Context) {
 				WithError(err).
 				Panicf("Request failed")
 		}
-		log.
-			WithField("Method", "natsClient").
-			Infof("<- %s", string(resp.Data))
+		log.Infof("<- %s", string(resp.Data))
 	}
 }
 
