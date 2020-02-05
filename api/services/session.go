@@ -13,8 +13,6 @@ import (
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/database"
 
-	"git.condensat.tech/bank/logger"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -73,9 +71,9 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 			Error("CheckCredential Failed")
 		return ErrInvalidCrendential
 	}
+	log = log.WithField("UserID", userID)
 	if !valid {
 		log.WithError(ErrInvalidCrendential).
-			WithField("UserID", userID).
 			Warning("InvalidCrendential")
 		return ErrInvalidCrendential
 	}
@@ -84,18 +82,18 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 	openSessionAllowed := OpenSessionAllowed(ctx, userID)
 	if !openSessionAllowed {
 		log.WithError(ErrTooManyOpenSession).
-			WithField("UserID", userID).
 			Warning("TooMany OpenSession for user")
 		return ErrTooManyOpenSession
 	}
 
 	// Create session
-	sessionID, err := session.CreateSession(ctx, SessionDuration)
+	sessionID, err := session.CreateSession(ctx, userID, SessionDuration)
 	if err != nil {
 		log.WithError(err).
 			Error("CreateSession Failed")
 		return ErrSessionCreationFailed
 	}
+	log = log.WithField("SessionID", sessionID)
 
 	// Reply
 	*reply = SessionReply{
@@ -108,8 +106,6 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 
 	log.WithFields(
 		logrus.Fields{
-			"UserID":     userID,
-			"SessionID":  reply.SessionID,
 			"Status":     reply.Status,
 			"ValidUntil": fromTimestampMillis(reply.ValidUntil),
 		}).Debug("Session Opened")
@@ -132,10 +128,13 @@ func (p *SessionService) Renew(r *http.Request, request *SessionArgs, reply *Ses
 
 	// Extend session
 	sessionID := sessions.SessionID(request.SessionID)
-	err = session.ExtendSession(ctx, sessionID, SessionDuration)
+	userID, err := session.ExtendSession(ctx, sessionID, SessionDuration)
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
 	if err != nil {
 		log.WithError(err).
-			WithField("SessionID", reply.SessionID).
 			Error("ExtendSession Failed")
 		return ErrSessionExpired
 	}
@@ -149,12 +148,10 @@ func (p *SessionService) Renew(r *http.Request, request *SessionArgs, reply *Ses
 		ValidUntil: makeTimestampMillis(time.Now().UTC().Add(SessionDuration)),
 	}
 
-	logger.Logger(ctx).
-		WithFields(logrus.Fields{
-			"SessionID":  reply.SessionID,
-			"Status":     reply.Status,
-			"ValidUntil": fromTimestampMillis(reply.ValidUntil),
-		}).Debug("Session Renewed")
+	log.WithFields(logrus.Fields{
+		"Status":     reply.Status,
+		"ValidUntil": fromTimestampMillis(reply.ValidUntil),
+	}).Debug("Session Renewed")
 
 	return nil
 }
@@ -174,10 +171,14 @@ func (p *SessionService) Close(r *http.Request, request *SessionArgs, reply *Ses
 
 	// Invalidate session
 	sessionID := sessions.SessionID(request.SessionID)
+	userID := session.UserSession(ctx, sessionID)
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
 	err = session.InvalidateSession(ctx, sessionID)
 	if err != nil {
 		log.WithError(err).
-			WithField("SessionID", reply.SessionID).
 			Error("InvalidateSession Failed")
 		return ErrSessionClose
 	}
@@ -191,12 +192,11 @@ func (p *SessionService) Close(r *http.Request, request *SessionArgs, reply *Ses
 		ValidUntil: makeTimestampMillis(time.Now().UTC()),
 	}
 
-	logger.Logger(ctx).
-		WithFields(logrus.Fields{
-			"SessionID":  reply.SessionID,
-			"Status":     reply.Status,
-			"ValidUntil": fromTimestampMillis(reply.ValidUntil),
-		}).Debug("Session Closed")
+	log.WithFields(logrus.Fields{
+		"SessionID":  reply.SessionID,
+		"Status":     reply.Status,
+		"ValidUntil": fromTimestampMillis(reply.ValidUntil),
+	}).Debug("Session Closed")
 
 	return nil
 }

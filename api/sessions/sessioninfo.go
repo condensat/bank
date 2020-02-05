@@ -11,6 +11,7 @@ import (
 type SessionID string
 
 const (
+	cstInvalidUserID    = uint64(0)
 	cstInvalidSessionID = SessionID("")
 )
 
@@ -19,6 +20,7 @@ func NewSessionID() SessionID {
 }
 
 type SessionInfo struct {
+	UserID     uint64
 	SessionID  SessionID
 	Expiration time.Time
 }
