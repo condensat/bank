@@ -12,6 +12,7 @@ import (
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/logger"
 
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
 
@@ -52,8 +53,10 @@ func (p *Api) Run(ctx context.Context, port int) {
 		}
 	}()
 
-	log.WithField("Port", port).
-		Info("Api Service started")
+	log.WithFields(logrus.Fields{
+		"Hostname": getHost(),
+		"Port":     port,
+	}).Info("Api Service started")
 
 	<-ctx.Done()
 }

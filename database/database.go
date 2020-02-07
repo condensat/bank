@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/appcontext"
 
 	"github.com/jinzhu/gorm"
 )
@@ -29,7 +30,7 @@ func (p *Database) Transaction(txFunc func(tx bank.Database) error) error {
 func NewDatabase(options Options) *Database {
 	db := connectMyql(
 		options.HostName, options.Port,
-		options.User, options.Password,
+		options.User, appcontext.SecretOrPassword(options.Password),
 		options.Database,
 	)
 
