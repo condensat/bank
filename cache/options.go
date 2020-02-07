@@ -15,6 +15,6 @@ func OptionArgs(args *RedisOptions) {
 		panic("Invalid redis options")
 	}
 
-	flag.StringVar(&args.HostName, "redisHost", "localhost", "Redis hostName (default 'localhost')")
+	flag.StringVar(&args.HostName, "redisHost", "cache", "Redis hostName (default 'cache')")
 	flag.IntVar(&args.Port, "redisPort", 6379, "Redis port (default 6379)")
 }
