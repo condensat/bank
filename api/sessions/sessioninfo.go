@@ -11,8 +11,9 @@ import (
 type SessionID string
 
 const (
-	cstInvalidUserID    = uint64(0)
-	cstInvalidSessionID = SessionID("")
+	cstInvalidUserID     = uint64(0)
+	cstInvalidSessionID  = SessionID("")
+	cstInvalidRemoteAddr = ""
 )
 
 func NewSessionID() SessionID {
@@ -21,6 +22,7 @@ func NewSessionID() SessionID {
 
 type SessionInfo struct {
 	UserID     uint64
+	RemoteAddr string
 	SessionID  SessionID
 	Expiration time.Time
 }
