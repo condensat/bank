@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 
 	"git.condensat.tech/bank"
@@ -27,10 +28,18 @@ func saltCredentials(ctx context.Context, login, password string) ([]byte, []byt
 	return loginHash, passwordHash
 }
 
+func HashEntry(entry string) string {
+	hash := utils.HashBytes([]byte(entry))
+	return hex.EncodeToString(hash[:])
+}
+
 func CreateOrUpdatedCredential(ctx context.Context, database bank.Database, userID uint64, login, password, otpSecret string) (*model.Credential, error) {
 	switch db := database.DB().(type) {
 	case *gorm.DB:
 
+		// perform a sha512 hex digest of login and password
+		login = HashEntry(login)
+		password = HashEntry(password)
 		password = login + password // password prefixed with login for uniqueness
 		loginHash := security.SaltedHash(ctx, []byte(login))
 		passwordHash := security.SaltedHash(ctx, []byte(password))
@@ -57,6 +66,10 @@ func CreateOrUpdatedCredential(ctx context.Context, database bank.Database, user
 func CheckCredential(ctx context.Context, database bank.Database, login, password string) (uint64, bool, error) {
 	switch db := database.DB().(type) {
 	case *gorm.DB:
+
+		// client should send a sha512 hex digest of the password
+		// login = hashEntry(login)
+		// password = hashEntry(password)
 
 		password = login + password // password prefixed with login for uniqueness
 		loginHash := security.SaltedHash(ctx, []byte(login))
