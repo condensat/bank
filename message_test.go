@@ -34,12 +34,11 @@ func TestMessage_SetCompressed(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			m.SetCompressed(tt.args.compressed)
 
@@ -79,12 +78,11 @@ func TestMessage_SetEncrypted(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			m.SetEncrypted(tt.args.compressed)
 
@@ -124,12 +122,11 @@ func TestMessage_SetSigned(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			m.SetSigned(tt.args.compressed)
 
@@ -167,12 +164,11 @@ func TestMessage_IsCompressed(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			if got := m.IsCompressed(); got != tt.want {
 				t.Errorf("Message.IsCompressed() = %v, want %v", got, tt.want)
@@ -208,12 +204,11 @@ func TestMessage_IsEncrypted(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			if got := m.IsEncrypted(); got != tt.want {
 				t.Errorf("Message.IsEncrypted() = %v, want %v", got, tt.want)
@@ -249,12 +244,11 @@ func TestMessage_IsSigned(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			if got := m.IsSigned(); got != tt.want {
 				t.Errorf("Message.IsSigned() = %v, want %v", got, tt.want)
@@ -280,19 +274,18 @@ func TestMessage_Encode(t *testing.T) {
 		want    int
 		wantErr bool
 	}{
-		{"Default", fields{}, 90, false},
-		{"Encode", fields{"1.0", "from", nil, "", 42, nil}, 103, false},
+		{"Default", fields{}, 76, false},
+		{"Encode", fields{"1.0", "from", nil, "", 42, nil}, 89, false},
 	}
 	for _, tt := range tests {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Message{
-				Version:   tt.fields.Version,
-				From:      tt.fields.From,
-				Data:      tt.fields.Data,
-				Signature: tt.fields.Signature,
-				Flags:     tt.fields.Flags,
-				Error:     tt.fields.Error,
+				Version: tt.fields.Version,
+				From:    tt.fields.From,
+				Data:    tt.fields.Data,
+				Flags:   tt.fields.Flags,
+				Error:   tt.fields.Error,
 			}
 			got, err := m.Encode()
 			if (err != nil) != tt.wantErr {
@@ -309,7 +302,7 @@ func TestMessage_Encode(t *testing.T) {
 func TestMessage_Decode(t *testing.T) {
 	t.Parallel()
 
-	message := Message{"1.0", "from", nil, "", 42, nil}
+	message := Message{"1.0", "from", nil, 42, nil}
 	data, _ := message.Encode()
 
 	type fields struct {
