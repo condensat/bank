@@ -27,6 +27,10 @@ func (p *WebHook) Run(ctx context.Context, port int, secrets Secrets) {
 	log := logger.Logger(ctx).WithField("Method", "webhook.WebHook.Run")
 
 	muxer := http.NewServeMux()
+	muxer.HandleFunc("/v1/api/verified", verified)
+	muxer.HandleFunc("/v1/api/failed", failed)
+	muxer.HandleFunc("/v1/api/revoked", revoked)
+	muxer.HandleFunc("/v1/api/ready", ready)
 
 	handler := negroni.New(&negroni.Recovery{})
 	handler.Use(services.StatsMiddleware)
