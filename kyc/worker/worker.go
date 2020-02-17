@@ -5,19 +5,20 @@ import (
 	"errors"
 
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/kyc/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/kyc"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	ErrRequestNotHandled   = errors.New("Request Not Handled")
 	ErrWorkerInternalError = errors.New("Worker Internal Error")
+	ErrKycSessionFailed    = errors.New("Kyc Session failed")
 )
 
 type Worker int
@@ -71,16 +72,17 @@ func (p *Worker) StartKyc(ctx context.Context, message *bank.Message) (*bank.Mes
 		"Email":  req.Email,
 	})
 
-	// Todo - generate kycID
-	kycID := uuid.New().String()
-
-	// Todo - Store to database
+	session, err := model.AddKycSession(ctx, req.UserID, req.Email)
+	if err != nil {
+		log.WithError(err).Error("Failed to AddKycSession")
+		return nil, ErrKycSessionFailed
+	}
 	resp := kyc.KycStartResponse{
-		ID: kycID,
+		ID: session.Token,
 	}
 
-	log.WithField("KycId", kycID).
-		Debug("Kyc session started")
+	log.WithField("Token", session.Token).
+		Info("Kyc session started")
 
 	message = bank.ToMessage("Kyc.Worker", &resp)
 	if message == nil {
