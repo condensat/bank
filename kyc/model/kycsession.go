@@ -11,13 +11,13 @@ import (
 )
 
 type KycSession struct {
-	ID     uint64 `gorm:"primary_key"`
-	UserID uint64 `gorm:"index;unique_index:idx_user_email"`
-	Email  string `gorm:"size:256;index;unique_index:idx_user_email;not null"`
-	Token  string `gorm:"size:36;index;not null"`
+	ID         uint64 `gorm:"primary_key"`
+	UserID     uint64 `gorm:"index;unique_index:idx_user_synaps"`
+	SynapsCode string `gorm:"index;unique_index:idx_user_synaps;size:64;not null"`
+	Token      string `gorm:"index;size:36;not null"`
 }
 
-func AddKycSession(ctx context.Context, userID uint64, email string) (*KycSession, error) {
+func AddKycSession(ctx context.Context, userID uint64, synapsCode string) (*KycSession, error) {
 	db := appcontext.Database(ctx)
 
 	switch db := db.DB().(type) {
@@ -26,8 +26,8 @@ func AddKycSession(ctx context.Context, userID uint64, email string) (*KycSessio
 		var session KycSession
 		err := db.
 			Where(&KycSession{
-				UserID: userID,
-				Email:  email,
+				UserID:     userID,
+				SynapsCode: synapsCode,
 			}).
 			Attrs(&KycSession{
 				Token: uuid.New().String(),

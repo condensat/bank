@@ -68,11 +68,11 @@ func (p *Worker) StartKyc(ctx context.Context, message *bank.Message) (*bank.Mes
 	}
 
 	log = log.WithFields(logrus.Fields{
-		"UserID": req.UserID,
-		"Email":  req.Email,
+		"UserID":     req.UserID,
+		"SynapsCode": req.SynapsCode,
 	})
 
-	session, err := model.AddKycSession(ctx, req.UserID, req.Email)
+	session, err := model.AddKycSession(ctx, req.UserID, req.SynapsCode)
 	if err != nil {
 		log.WithError(err).Error("Failed to AddKycSession")
 		return nil, ErrKycSessionFailed

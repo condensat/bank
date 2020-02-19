@@ -5,8 +5,8 @@ import (
 )
 
 type KycStart struct {
-	UserID uint64
-	Email  string
+	UserID     uint64
+	SynapsCode string
 }
 
 func (p *KycStart) Encode() ([]byte, error) {

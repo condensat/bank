@@ -24,7 +24,7 @@ type KycService int
 // KycStartRequest holds args for start requests
 type KycStartRequest struct {
 	SessionArgs
-	Email string `json:"email"`
+	SynapsCode string `json:"synapsCode"`
 }
 
 // KycStartResponse holds args for start requests
@@ -38,11 +38,6 @@ func (p *KycService) Start(r *http.Request, request *KycStartRequest, reply *Kyc
 	log := logger.Logger(ctx).WithField("Method", "services.KycService.Start")
 	log = GetServiceRequestLog(log, r, "Kyc", "Start")
 
-	if len(request.Email) == 0 {
-		log.WithError(ErrInvalidKycEmail).
-			Error("Can not start KYC")
-		return ErrInvalidKycEmail
-	}
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)
 	if err != nil {
@@ -59,12 +54,13 @@ func (p *KycService) Start(r *http.Request, request *KycStartRequest, reply *Kyc
 		return sessions.ErrInvalidSessionID
 	}
 	log = log.WithFields(logrus.Fields{
-		"SessionID": sessionID,
-		"UserID":    userID,
+		"SessionID":  sessionID,
+		"UserID":     userID,
+		"SynapsCode": request.SynapsCode,
 	})
 
 	// Request KycID from email
-	kycID, err := SendKycIdRequest(ctx, userID, request.Email)
+	kycID, err := SendKycIdRequest(ctx, userID, request.SynapsCode)
 	if err != nil {
 		log.WithError(err).
 			Error("SendKycIdRequest Failed")
@@ -83,12 +79,12 @@ func (p *KycService) Start(r *http.Request, request *KycStartRequest, reply *Kyc
 	return nil
 }
 
-func SendKycIdRequest(ctx context.Context, userId uint64, email string) (string, error) {
+func SendKycIdRequest(ctx context.Context, userId uint64, synapsCode string) (string, error) {
 	messaging := appcontext.Messaging(ctx)
 
 	request := bank.ToMessage("Bank.Api", &kyc.KycStart{
-		UserID: userId,
-		Email:  email,
+		UserID:     userId,
+		SynapsCode: synapsCode,
 	})
 	message, err := messaging.Request(ctx, "Kyc.Start", request)
 	if err != nil {
