@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"time"
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/monitor/processus"
 	"git.condensat.tech/bank/web"
 
 	"git.condensat.tech/bank/api"
@@ -25,6 +28,7 @@ type Args struct {
 	App appcontext.Options
 
 	Redis cache.RedisOptions
+	Nats  messaging.NatsOptions
 
 	WebApp WebApp
 }
@@ -35,6 +39,7 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "BankWebApp")
 
 	cache.OptionArgs(&args.Redis)
+	messaging.OptionArgs(&args.Nats)
 
 	flag.IntVar(&args.WebApp.Port, "port", 4420, "BankWebApp http port (default 4420)")
 	flag.StringVar(&args.WebApp.Directory, "webDirectory", "/var/www", "BankWebApp http web directory (default /var/www)")
@@ -54,6 +59,8 @@ func main() {
 	ctx = appcontext.WithOptions(ctx, args.App)
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
+	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
+	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
 	ctx = api.RegisterRateLimiter(ctx, args.WebApp.PeerRequestPerSecond)
 
