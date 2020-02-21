@@ -8,6 +8,11 @@ import (
 	logModel "git.condensat.tech/bank/logger/model"
 )
 
+type BankObject interface {
+	Encode() ([]byte, error)
+	Decode(data []byte) error
+}
+
 type ServerOptions struct {
 	HostName string
 	Port     int
