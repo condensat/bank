@@ -7,6 +7,7 @@ import (
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/monitor"
+	"git.condensat.tech/bank/monitor/messaging"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/logger"
@@ -36,8 +37,9 @@ func (p *Grabber) Run(ctx context.Context) {
 func (p *Grabber) registerHandlers(ctx context.Context) {
 	log := logger.Logger(ctx).WithField("Method", "monitor.Grabber.RegisterHandlers")
 
-	messaging := appcontext.Messaging(ctx)
-	messaging.SubscribeWorkers(ctx, "Condensat.Monitor.Inbound", 4, p.onProcessInfo)
+	nats := appcontext.Messaging(ctx)
+	nats.SubscribeWorkers(ctx, messaging.InboundSubject, 4, p.onProcessInfo)
+
 	log.Debug("Monitor Grabber registered")
 }
 

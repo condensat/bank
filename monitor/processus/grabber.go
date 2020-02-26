@@ -10,6 +10,7 @@ import (
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/monitor"
+	"git.condensat.tech/bank/monitor/messaging"
 	"git.condensat.tech/bank/utils"
 )
 
@@ -74,5 +75,5 @@ func processInfo(appName string, clock *monitor.Clock) monitor.ProcessInfo {
 
 func (p *Grabber) sendProcessInfo(ctx context.Context, processInfo *monitor.ProcessInfo) error {
 	request := bank.ToMessage(p.appName, processInfo)
-	return p.messaging.Publish(ctx, "Condensat.Monitor.Inbound", request)
+	return p.messaging.Publish(ctx, messaging.InboundSubject, request)
 }
