@@ -12,7 +12,6 @@ import (
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/logger"
 
-	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
@@ -28,10 +27,9 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
 	session := sessions.NewSession(ctx)
 	ctx = context.WithValue(ctx, sessions.KeySessions, session)
 
-	services.RegisterServices(ctx, muxer)
+	services.RegisterServices(ctx, muxer, corsAllowedOrigins)
 
 	handler := negroni.New(&negroni.Recovery{})
-	handler.Use(cors.New(cors.Options{AllowedOrigins: corsAllowedOrigins}))
 	handler.Use(services.StatsMiddleware)
 	handler.UseFunc(MiddlewarePeerRateLimiter)
 	handler.UseFunc(AddWorkerHeader)
