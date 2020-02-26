@@ -1,12 +1,18 @@
 package services
 
 import (
+	"context"
 	"net/http"
+	"sort"
+	"time"
 
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/monitor/messaging"
 
 	coreService "git.condensat.tech/bank/api/services"
+	"git.condensat.tech/bank/api/sessions"
 
 	"github.com/sirupsen/logrus"
 )
@@ -24,43 +30,68 @@ type StackInfoResponse struct {
 	Services []string `json:"services"`
 }
 
-// Info operation return user's email
+// ServiceList operation return the list of active services
 func (p *StackService) ServiceList(r *http.Request, request *StackInfoRequest, reply *StackInfoResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "services.StackService.ServiceList")
-	log = coreService.GetServiceRequestLog(log, r, "User", "Info")
+	log = coreService.GetServiceRequestLog(log, r, "Stack", "ServiceList")
 
-	// Retrieve context values
-	_, session, err := coreService.ContextValues(ctx)
+	verified, err := verifySessionId(ctx, sessions.SessionID(request.SessionID))
 	if err != nil {
 		log.WithError(err).
-			Error("ContextValues Failed")
+			Error("verifySessionId Failed")
 		return ErrServiceInternalError
 	}
 
-	// Get userID from session
-	sessionID := sessions.SessionID(request.SessionID)
-	userID := session.UserSession(ctx, sessionID)
-	if !sessions.IsUserValid(userID) {
-		log.Error("Invalid userSession")
+	if !verified {
+		log.Error("Invalid sessionId")
 		return sessions.ErrInvalidSessionID
 	}
-	log = log.WithFields(logrus.Fields{
-		"SessionID": sessionID,
-		"UserID":    userID,
-	})
 
 	// Request Service List
-	// Todo - Call messaging "Condensat.Monitor.Stack.List"
+	listService, err := StackListServiceRequest(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("StackListRequest Failed")
+		return ErrServiceInternalError
+	}
 
 	// Reply
-	*reply = StackInfoResponse{
-		Services: []string{"foo", "bar"},
-	}
+	reply.Services = listService.Services[:]
 
 	log.WithFields(logrus.Fields{
 		"Services": reply.Services,
 	}).Debug("Stack Services")
 
 	return nil
+}
+
+func StackListServiceRequest(ctx context.Context) (StackListService, error) {
+	log := logger.Logger(ctx).WithField("Method", "services.StackService.StackListServiceRequest")
+	nats := appcontext.Messaging(ctx)
+	var result StackListService
+
+	message := bank.ToMessage(appcontext.AppName(ctx), &StackListService{
+		Since: time.Hour,
+	})
+	response, err := nats.Request(ctx, messaging.StackListSubject, message)
+	if err != nil {
+		log.WithError(err).
+			WithField("Subject", messaging.StackListSubject).
+			Error("nats.Request Failed")
+		return result, ErrServiceInternalError
+	}
+
+	err = bank.FromMessage(response, &result)
+	if err != nil {
+		log.WithError(err).
+			Error("Message data is not StackListService")
+		return result, ErrServiceInternalError
+	}
+
+	sort.Slice(result.Services, func(i, j int) bool {
+		return result.Services[i] < result.Services[j]
+	})
+
+	return result, nil
 }
