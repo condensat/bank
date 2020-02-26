@@ -7,6 +7,7 @@ import (
 
 	"git.condensat.tech/bank/logger"
 
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,4 +61,17 @@ func GetServiceRequestLog(log *logrus.Entry, r *http.Request, service, operation
 	}
 
 	return log
+}
+
+func CreateCorsOptions(corsAllowedOrigins []string) *cors.Cors {
+	return cors.New(cors.Options{
+		AllowedOrigins: corsAllowedOrigins,
+		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Requested-With"},
+		AllowedMethods: []string{
+			http.MethodPost,
+		},
+		MaxAge:           1000,
+		AllowCredentials: true,
+	})
+
 }
