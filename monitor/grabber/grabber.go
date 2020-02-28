@@ -7,8 +7,8 @@ import (
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/monitor"
+	"git.condensat.tech/bank/monitor/common"
 	"git.condensat.tech/bank/monitor/messaging"
-	"git.condensat.tech/bank/monitor/services"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/logger"
@@ -51,7 +51,7 @@ func (p *Grabber) onProcessInfo(ctx context.Context, subject string, message *ba
 		"Subject": subject,
 	})
 
-	var req monitor.ProcessInfo
+	var req common.ProcessInfo
 	err := bank.FromMessage(message, &req)
 	if err != nil {
 		log.WithError(err).Error("Message data is not ProcessInfo")
@@ -78,7 +78,7 @@ func (p *Grabber) onStackList(ctx context.Context, subject string, message *bank
 		"Subject": subject,
 	})
 
-	var req services.StackListService
+	var req common.StackListService
 	err := bank.FromMessage(message, &req)
 	if err != nil {
 		log.WithError(err).Error("Message data is not StackListService")
@@ -91,7 +91,7 @@ func (p *Grabber) onStackList(ctx context.Context, subject string, message *bank
 		return nil, ErrInternalError
 	}
 
-	resp := services.StackListService{
+	resp := common.StackListService{
 		Services: list,
 	}
 

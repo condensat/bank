@@ -9,6 +9,7 @@ import (
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/monitor/common"
 	"git.condensat.tech/bank/monitor/messaging"
 
 	coreService "git.condensat.tech/bank/api/services"
@@ -66,12 +67,12 @@ func (p *StackService) ServiceList(r *http.Request, request *StackInfoRequest, r
 	return nil
 }
 
-func StackListServiceRequest(ctx context.Context) (StackListService, error) {
-	log := logger.Logger(ctx).WithField("Method", "services.StackService.StackListServiceRequest")
+func StackListServiceRequest(ctx context.Context) (common.StackListService, error) {
+	log := logger.Logger(ctx).WithField("Method", "StackService.StackListServiceRequest")
 	nats := appcontext.Messaging(ctx)
-	var result StackListService
+	var result common.StackListService
 
-	message := bank.ToMessage(appcontext.AppName(ctx), &StackListService{
+	message := bank.ToMessage(appcontext.AppName(ctx), &common.StackListService{
 		Since: time.Hour,
 	})
 	response, err := nats.Request(ctx, messaging.StackListSubject, message)

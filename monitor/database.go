@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/monitor/common"
 	"github.com/jinzhu/gorm"
 )
 
-func AddProcessInfo(ctx context.Context, processInfo *ProcessInfo) error {
+func AddProcessInfo(ctx context.Context, processInfo *common.ProcessInfo) error {
 	db, ok := appcontext.Database(ctx).DB().(*gorm.DB)
 	if !ok {
 		return errors.New("Wrong database")
@@ -27,7 +28,7 @@ func ListServices(ctx context.Context, since time.Duration) ([]string, error) {
 
 	var result []string
 
-	var list []*ProcessInfo
+	var list []*common.ProcessInfo
 
 	now := time.Now().UTC()
 	distinctAppName := fmt.Sprintf("distinct (%s)", gorm.ToColumnName("AppName"))
