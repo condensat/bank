@@ -4,11 +4,14 @@ package main
 import (
 	"context"
 	"flag"
+	"time"
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/monitor/processus"
 )
 
 type Args struct {
@@ -17,6 +20,7 @@ type Args struct {
 
 	Redis    cache.RedisOptions
 	Database database.Options
+	Nats     messaging.NatsOptions
 }
 
 func parseArgs() Args {
@@ -27,6 +31,7 @@ func parseArgs() Args {
 
 	cache.OptionArgs(&args.Redis)
 	database.OptionArgs(&args.Database)
+	messaging.OptionArgs(&args.Nats)
 
 	flag.Parse()
 
@@ -39,6 +44,8 @@ func main() {
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
+	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
+	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
 	if args.WithDatabase {
 		ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
