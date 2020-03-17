@@ -1,4 +1,4 @@
-package web
+package monitor
 
 import (
 	"context"
@@ -7,25 +7,28 @@ import (
 	"net/http"
 	"time"
 
-	"git.condensat.tech/bank/api"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
+
+	"git.condensat.tech/bank/api"
+	coreService "git.condensat.tech/bank/api/services"
+
+	"git.condensat.tech/bank/monitor/services"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
 
-// Version
-const Version string = "0.1"
+type StackMonitor int
 
-type Web int
-
-func (p *Web) Run(ctx context.Context, port int, webDirectory string) {
-	log := logger.Logger(ctx).WithField("Method", "web.Web.Run")
-
+func (p *StackMonitor) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
+	log := logger.Logger(ctx).WithField("Method", "monitor.StackMonitor.Run")
 	muxer := http.NewServeMux()
 
-	handler := negroni.New(negroni.NewRecovery(), negroni.NewStatic(http.Dir(webDirectory)))
+	services.RegisterServices(ctx, muxer, corsAllowedOrigins)
+
+	handler := negroni.New(&negroni.Recovery{})
+	handler.Use(coreService.StatsMiddleware)
 	handler.UseFunc(api.MiddlewarePeerRateLimiter)
 	handler.UseFunc(AddWorkerHeader)
 	handler.UseFunc(AddWorkerVersion)
@@ -35,7 +38,7 @@ func (p *Web) Run(ctx context.Context, port int, webDirectory string) {
 		Addr:           fmt.Sprintf(":%d", port),
 		Handler:        handler,
 		ReadTimeout:    3 * time.Second,
-		WriteTimeout:   30 * time.Second,
+		WriteTimeout:   3 * time.Second,
 		MaxHeaderBytes: 1 << 16, // 16 KiB
 		ConnContext:    func(conCtx context.Context, c net.Conn) context.Context { return ctx },
 	}
@@ -49,10 +52,9 @@ func (p *Web) Run(ctx context.Context, port int, webDirectory string) {
 	}()
 
 	log.WithFields(logrus.Fields{
-		"Hostname":     utils.Hostname(),
-		"Port":         port,
-		"WebDirectory": webDirectory,
-	}).Info("WebApp started")
+		"Hostname": utils.Hostname(),
+		"Port":     port,
+	}).Info("Stack Monintor Service started")
 
 	<-ctx.Done()
 }
@@ -65,6 +67,6 @@ func AddWorkerHeader(rw http.ResponseWriter, r *http.Request, next http.HandlerF
 
 // AddWorkerVersion - adds header of which version is installed
 func AddWorkerVersion(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	rw.Header().Add("X-Worker-Version", Version)
+	rw.Header().Add("X-Worker-Version", coreService.Version)
 	next(rw, r)
 }

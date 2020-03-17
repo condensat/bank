@@ -8,6 +8,11 @@ import (
 	logModel "git.condensat.tech/bank/logger/model"
 )
 
+type BankObject interface {
+	Encode() ([]byte, error)
+	Decode(data []byte) error
+}
+
 type ServerOptions struct {
 	HostName string
 	Port     int
@@ -28,6 +33,8 @@ type Messaging interface {
 
 	SubscribeWorkers(ctx context.Context, subject string, workerCount int, handle MessageHandler)
 	Subscribe(ctx context.Context, subject string, handle MessageHandler)
+
+	Publish(ctx context.Context, subject string, message *Message) error
 
 	Request(ctx context.Context, subject string, message *Message) (*Message, error)
 	RequestWithTimeout(ctx context.Context, subject string, message *Message, timeout time.Duration) (*Message, error)
