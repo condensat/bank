@@ -23,6 +23,8 @@ const (
 
 var (
 	ErrInvalidCrendential    = errors.New("InvalidCredentials")
+	ErrMissingCookie         = errors.New("MissingCookie")
+	ErrInvalidCookie         = errors.New("ErrInvalidCookie")
 	ErrSessionCreationFailed = errors.New("SessionCreationFailed")
 	ErrTooManyOpenSession    = errors.New("TooManyOpenSession")
 	ErrSessionExpired        = sessions.ErrSessionExpired
@@ -34,7 +36,7 @@ type SessionService int
 
 // SessionArgs holds SessionID for operation requests and repls
 type SessionArgs struct {
-	SessionID string `json:"sessionId"`
+	SessionID string `json:"-"` // SessionID is transmit to client via cookie
 }
 
 // SessionOpenRequest holds args for open requests
@@ -49,6 +51,29 @@ type SessionReply struct {
 	SessionArgs
 	Status     string `json:"status"`
 	ValidUntil int64  `json:"valid_until"`
+}
+
+func setSessionCookie(w http.ResponseWriter, reply *SessionReply) {
+	http.SetCookie(w, &http.Cookie{
+		Name:    "sessionId",
+		Value:   reply.SessionID,
+		Path:    "/api/v1",
+		Domain:  "condensat.space",
+		Expires: fromTimestampMillis(reply.ValidUntil),
+
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func getSessionCookie(r *http.Request) string {
+	cookie, err := r.Cookie("sessionId")
+	if err != nil {
+		return ""
+	}
+
+	return cookie.Value
 }
 
 // Open operation perform check regarding credentials and return a sessionID
@@ -104,7 +129,7 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 			SessionID: string(sessionID),
 		},
 		Status:     "open",
-		ValidUntil: makeTimestampMillis(time.Now().UTC().Add(time.Minute)),
+		ValidUntil: makeTimestampMillis(time.Now().UTC().Add(SessionDuration)),
 	}
 
 	log.WithFields(logrus.Fields{
@@ -130,6 +155,7 @@ func (p *SessionService) Renew(r *http.Request, request *SessionArgs, reply *Ses
 	}
 
 	// Extend session
+	request.SessionID = getSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	remoteAddr := RequesterIP(r)
 	userID, err := session.ExtendSession(ctx, remoteAddr, sessionID, SessionDuration)
@@ -203,6 +229,7 @@ func (p *SessionService) Close(r *http.Request, request *SessionArgs, reply *Ses
 	}
 
 	// Invalidate session
+	request.SessionID = getSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	log = log.WithFields(logrus.Fields{
@@ -212,6 +239,7 @@ func (p *SessionService) Close(r *http.Request, request *SessionArgs, reply *Ses
 	err = session.InvalidateSession(ctx, sessionID)
 	if err != nil {
 		log.WithError(err).
+			WithField("SessionID", sessionID).
 			Warning("Session close failed")
 		return ErrSessionClose
 	}

@@ -38,6 +38,7 @@ func (p *UserService) Info(r *http.Request, request *UserInfoRequest, reply *Use
 	}
 
 	// Get userID from session
+	request.SessionID = getSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
