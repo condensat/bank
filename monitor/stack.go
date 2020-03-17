@@ -1,4 +1,4 @@
-package api
+package monitor
 
 import (
 	"context"
@@ -7,32 +7,29 @@ import (
 	"net/http"
 	"time"
 
-	"git.condensat.tech/bank/api/services"
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
+
+	"git.condensat.tech/bank/api"
+	coreService "git.condensat.tech/bank/api/services"
+
+	"git.condensat.tech/bank/monitor/services"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
 
-type Api int
+type StackMonitor int
 
-func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
-	log := logger.Logger(ctx).WithField("Method", "api.Api.Run")
-
+func (p *StackMonitor) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
+	log := logger.Logger(ctx).WithField("Method", "monitor.StackMonitor.Run")
 	muxer := http.NewServeMux()
 
-	// create session and and to context
-	session := sessions.NewSession(ctx)
-	ctx = context.WithValue(ctx, sessions.KeySessions, session)
-
-	services.RegisterMessageHandlers(ctx)
 	services.RegisterServices(ctx, muxer, corsAllowedOrigins)
 
 	handler := negroni.New(&negroni.Recovery{})
-	handler.Use(services.StatsMiddleware)
-	handler.UseFunc(MiddlewarePeerRateLimiter)
+	handler.Use(coreService.StatsMiddleware)
+	handler.UseFunc(api.MiddlewarePeerRateLimiter)
 	handler.UseFunc(AddWorkerHeader)
 	handler.UseFunc(AddWorkerVersion)
 	handler.UseHandler(muxer)
@@ -57,7 +54,7 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),
 		"Port":     port,
-	}).Info("Api Service started")
+	}).Info("Stack Monintor Service started")
 
 	<-ctx.Done()
 }
@@ -70,6 +67,6 @@ func AddWorkerHeader(rw http.ResponseWriter, r *http.Request, next http.HandlerF
 
 // AddWorkerVersion - adds header of which version is installed
 func AddWorkerVersion(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	rw.Header().Add("X-Worker-Version", services.Version)
+	rw.Header().Add("X-Worker-Version", coreService.Version)
 	next(rw, r)
 }
