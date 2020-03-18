@@ -9,6 +9,8 @@ import (
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/currency/rate"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/monitor/processus"
 
 	"git.condensat.tech/bank/database"
 )
@@ -23,6 +25,7 @@ type Args struct {
 	App appcontext.Options
 
 	Redis    cache.RedisOptions
+	Nats     messaging.NatsOptions
 	Database database.Options
 
 	CurrencyRate CurrencyRate
@@ -34,6 +37,7 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "CurrencyRateGrabber")
 
 	cache.OptionArgs(&args.Redis)
+	messaging.OptionArgs(&args.Nats)
 	database.OptionArgs(&args.Database)
 
 	flag.StringVar(&args.CurrencyRate.AppID, "appId", "", "OpenExchangeRates application Id")
@@ -53,7 +57,9 @@ func main() {
 	ctx = appcontext.WithOptions(ctx, args.App)
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
+	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
 	migrateDatabase(ctx)
 
