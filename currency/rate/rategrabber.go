@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -57,7 +56,19 @@ func (p *RateGrabber) scheduledGrabber(ctx context.Context, appID string, interv
 	log.Info("Start grabber Scheduler")
 
 	for epoch := range utils.Scheduler(ctx, interval, delay) {
-		var currencyRates []model.Currency
+		currencyRates, err := FetchLatestRates(ctx, appID)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to FetchLatestRates")
+			continue
+		}
+
+		if len(currencyRates) == 0 {
+			log.
+				Warning("FetchLatestRates returns empty currency rates")
+			continue
+		}
+
 		log.WithFields(logrus.Fields{
 			"Epoch": epoch.Truncate(time.Millisecond),
 			"Count": len(currencyRates),
