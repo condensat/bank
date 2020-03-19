@@ -34,7 +34,7 @@ type Args struct {
 func parseArgs() Args {
 	var args Args
 
-	appcontext.OptionArgs(&args.App, "CurrencyRateGrabber")
+	appcontext.OptionArgs(&args.App, "RateGrabber")
 
 	cache.OptionArgs(&args.Redis)
 	messaging.OptionArgs(&args.Nats)
