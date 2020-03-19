@@ -3,10 +3,21 @@ package database
 import (
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 
 	"git.condensat.tech/bank/database/model"
 )
+
+func Test_currencyColumnNames(t *testing.T) {
+	fields := getSortedTypeFileds(reflect.TypeOf(model.Currency{}))
+	names := currencyColumnNames()
+	sort.Strings(names)
+
+	if !reflect.DeepEqual(names, fields) {
+		t.Errorf("columnsNames() = %v, want %v", names, fields)
+	}
+}
 
 func TestCurrency(t *testing.T) {
 	const databaseName = "TestAddCurrency"

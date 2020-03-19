@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database/model"
@@ -59,4 +61,21 @@ func migrateDatabase(ctx context.Context, models []model.Model) {
 			WithField("Method", "main.migrateDatabase").
 			Panic("Failed to migrate database models")
 	}
+}
+
+func getSortedTypeFileds(t reflect.Type) []string {
+	count := t.NumField()
+	result := make([]string, 0, count)
+
+	for i := 0; i < count; i++ {
+		field := gorm.TheNamingStrategy.Column(t.Field(i).Name)
+		result = append(result, field)
+	}
+
+	for i, field := range result {
+		result[i] = gorm.TheNamingStrategy.Column(field)
+	}
+	sort.Strings(result)
+
+	return result
 }
