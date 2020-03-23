@@ -15,6 +15,10 @@ const (
 	FlagCurencyAvailable = 1
 )
 
+var (
+	ErrCurrencyNotFound = errors.New("Currency not found")
+)
+
 // AddOrUpdateCurrency
 func AddOrUpdateCurrency(ctx context.Context, currency model.Currency) (model.Currency, error) {
 	var result model.Currency
@@ -31,6 +35,13 @@ func AddOrUpdateCurrency(ctx context.Context, currency model.Currency) (model.Cu
 		FirstOrCreate(&result).Error
 
 	return result, err
+}
+
+// CurrencyExists
+func CurrencyExists(ctx context.Context, name string) bool {
+	entry, err := GetCurrencyByName(ctx, name)
+
+	return err == nil && entry.Name == name
 }
 
 // GetCurrencyByName
