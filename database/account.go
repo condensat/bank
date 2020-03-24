@@ -10,6 +10,10 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+const (
+	AccountNameDefault = "default"
+)
+
 var (
 	ErrAccountExists = errors.New("Account Exists")
 )
@@ -18,6 +22,10 @@ func CreateAccount(ctx context.Context, account model.Account) (model.Account, e
 	db := appcontext.Database(ctx)
 	switch db := db.DB().(type) {
 	case *gorm.DB:
+
+		if len(account.Name) == 0 {
+			account.Name = AccountNameDefault
+		}
 
 		if !UserExists(ctx, account.UserID) {
 			return model.Account{}, ErrUserNotFound
@@ -72,16 +80,13 @@ func QueryAccountList(ctx context.Context, userID uint64, currency, name string)
 		return nil, errors.New("UserId is mandatory")
 	}
 
+	if len(name) == 0 {
+		name = AccountNameDefault
+	}
+
 	filters = append(filters, ScopeUserID(userID))
-	if len(currency) > 0 {
-		filters = append(filters, ScopeAccountCurrencyName(currency))
-	}
-	if len(currency) > 0 {
-		filters = append(filters, ScopeAccountCurrencyName(currency))
-	}
-	if len(name) > 0 {
-		filters = append(filters, ScopeAccountName(name))
-	}
+	filters = append(filters, ScopeAccountCurrencyName(currency))
+	filters = append(filters, ScopeAccountName(name))
 
 	var list []*model.Account
 	err := db.Model(&model.Account{}).
