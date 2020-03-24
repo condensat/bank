@@ -6,6 +6,7 @@ import (
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 
 	"github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ func (p *UserService) Info(r *http.Request, request *UserInfoRequest, reply *Use
 	})
 
 	// Request UserID from email
-	user, err := database.FindUserById(db, userID)
+	user, err := database.FindUserById(db, model.UserID(userID))
 	if err != nil {
 		log.WithError(err).
 			Error("database.FindUserById Failed")
@@ -62,7 +63,7 @@ func (p *UserService) Info(r *http.Request, request *UserInfoRequest, reply *Use
 
 	// Reply
 	*reply = UserInfoResponse{
-		Email: user.Email,
+		Email: string(user.Email),
 	}
 
 	log.WithFields(logrus.Fields{

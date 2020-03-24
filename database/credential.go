@@ -28,9 +28,9 @@ func saltCredentials(ctx context.Context, login, password string) ([]byte, []byt
 	return loginHash, passwordHash
 }
 
-func HashEntry(entry string) string {
+func HashEntry(entry model.Base58) model.Base58 {
 	hash := utils.HashBytes([]byte(entry))
-	return hex.EncodeToString(hash[:])
+	return model.Base58(hex.EncodeToString(hash[:]))
 }
 
 func CreateOrUpdatedCredential(ctx context.Context, db bank.Database, credential model.Credential) (model.Credential, error) {
@@ -50,8 +50,8 @@ func CreateOrUpdatedCredential(ctx context.Context, db bank.Database, credential
 		err := gdb.
 			Where(&model.Credential{UserID: credential.UserID}).
 			Assign(&model.Credential{
-				LoginHash:    base58.Encode(loginHash, base58.BitcoinAlphabet),
-				PasswordHash: base58.Encode(passwordHash, base58.BitcoinAlphabet),
+				LoginHash:    model.Base58(base58.Encode(loginHash, base58.BitcoinAlphabet)),
+				PasswordHash: model.Base58(base58.Encode(passwordHash, base58.BitcoinAlphabet)),
 				TOTPSecret:   credential.TOTPSecret,
 			}).
 			FirstOrCreate(&result).Error
@@ -63,7 +63,7 @@ func CreateOrUpdatedCredential(ctx context.Context, db bank.Database, credential
 	}
 }
 
-func CheckCredential(ctx context.Context, db bank.Database, login, password string) (uint64, bool, error) {
+func CheckCredential(ctx context.Context, db bank.Database, login, password model.Base58) (model.UserID, bool, error) {
 	switch gdb := db.DB().(type) {
 	case *gorm.DB:
 
@@ -77,7 +77,7 @@ func CheckCredential(ctx context.Context, db bank.Database, login, password stri
 
 		var cred model.Credential
 		err := gdb.
-			Where(&model.Credential{LoginHash: base58.Encode(loginHash, base58.BitcoinAlphabet)}).
+			Where(&model.Credential{LoginHash: model.Base58(base58.Encode(loginHash, base58.BitcoinAlphabet))}).
 			First(&cred).Error
 		if err != nil {
 			return 0, false, ErrDatabaseError
@@ -86,7 +86,7 @@ func CheckCredential(ctx context.Context, db bank.Database, login, password stri
 			return 0, false, ErrUserNotFound
 		}
 
-		passwordHash, err := base58.Decode(cred.PasswordHash, base58.BitcoinAlphabet)
+		passwordHash, err := base58.Decode(string(cred.PasswordHash), base58.BitcoinAlphabet)
 		defer utils.Memzero(passwordHash)
 		if err != nil {
 			return 0, false, ErrInvalidPasswordHash

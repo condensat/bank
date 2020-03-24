@@ -81,9 +81,9 @@ func TestAccountsExists(t *testing.T) {
 	_, _ = CreateAccount(db, refAccount)
 
 	type args struct {
-		userID   uint64
-		currency string
-		name     string
+		userID   model.UserID
+		currency model.CurrencyName
+		name     model.AccountName
 	}
 	tests := []struct {
 		name string
@@ -93,7 +93,7 @@ func TestAccountsExists(t *testing.T) {
 		{"Default", args{0, "", ""}, false},
 		{"Valid", args{refAccount.UserID, refAccount.CurrencyName, refAccount.Name}, true},
 
-		{"InvalidUserID", args{0, refAccount.Name, refAccount.Name}, false},
+		{"InvalidUserID", args{0, refAccount.CurrencyName, refAccount.Name}, false},
 		{"InvalidCurrency", args{refAccount.UserID, "", refAccount.Name}, false},
 		{"InvalidName", args{refAccount.UserID, refAccount.CurrencyName, "not-default"}, false},
 
@@ -129,9 +129,9 @@ func TestQueryAccountList(t *testing.T) {
 	_, _ = CreateAccount(db, refAccount)
 
 	type args struct {
-		userID   uint64
-		currency string
-		name     string
+		userID   model.UserID
+		currency model.CurrencyName
+		name     model.AccountName
 	}
 	tests := []struct {
 		name    string
@@ -142,7 +142,7 @@ func TestQueryAccountList(t *testing.T) {
 		{"Default", args{0, "", ""}, 0, true},
 		{"Valid", args{refAccount.UserID, refAccount.CurrencyName, refAccount.Name}, 1, false},
 
-		{"InvalidUserID", args{0, refAccount.Name, refAccount.Name}, 0, true},
+		{"InvalidUserID", args{0, refAccount.CurrencyName, refAccount.Name}, 0, true},
 		{"InvalidCurrency", args{refAccount.UserID, "", refAccount.Name}, 0, false},
 		{"InvalidName", args{refAccount.UserID, refAccount.CurrencyName, "not-default"}, 0, false},
 
@@ -166,7 +166,7 @@ func TestQueryAccountList(t *testing.T) {
 type AccountTestData struct {
 	Users      []model.User
 	Currencies []model.Currency
-	Names      []string
+	Names      []model.AccountName
 }
 
 func createTestAccountData(db bank.Database) AccountTestData {
