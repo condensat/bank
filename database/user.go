@@ -1,25 +1,22 @@
 package database
 
 import (
-	"context"
-
 	"git.condensat.tech/bank"
 
-	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database/model"
 
 	"github.com/jinzhu/gorm"
 )
 
-func FindOrCreateUser(ctx context.Context, database bank.Database, name, email string) (*model.User, error) {
-	switch db := database.DB().(type) {
+func FindOrCreateUser(db bank.Database, name, email string) (*model.User, error) {
+	switch gdb := db.DB().(type) {
 	case *gorm.DB:
 
 		result := model.User{
 			Name:  name,
 			Email: email,
 		}
-		err := db.
+		err := gdb.
 			Where("name = ?", name).
 			Where("email = ?", email).
 			FirstOrCreate(&result).Error
@@ -31,20 +28,18 @@ func FindOrCreateUser(ctx context.Context, database bank.Database, name, email s
 	}
 }
 
-func UserExists(ctx context.Context, userID uint64) bool {
-	entry, err := FindUserById(ctx, userID)
+func UserExists(db bank.Database, userID uint64) bool {
+	entry, err := FindUserById(db, userID)
 
 	return err == nil && entry != nil && entry.ID > 0
 }
 
-func FindUserById(ctx context.Context, userID uint64) (*model.User, error) {
-	db := appcontext.Database(ctx)
-
-	switch db := db.DB().(type) {
+func FindUserById(db bank.Database, userID uint64) (*model.User, error) {
+	switch gdb := db.DB().(type) {
 	case *gorm.DB:
 
 		var result model.User
-		err := db.
+		err := gdb.
 			Where(&model.User{ID: userID}).
 			First(&result).Error
 
