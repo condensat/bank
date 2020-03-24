@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	AccountNameDefault = "default"
+	AccountNameDefault  = "default"
+	AccountNameWildcard = "*"
 )
 
 var (
@@ -80,13 +81,17 @@ func QueryAccountList(ctx context.Context, userID uint64, currency, name string)
 		return nil, errors.New("UserId is mandatory")
 	}
 
+	// default account name if empty
 	if len(name) == 0 {
 		name = AccountNameDefault
 	}
 
 	filters = append(filters, ScopeUserID(userID))
 	filters = append(filters, ScopeAccountCurrencyName(currency))
-	filters = append(filters, ScopeAccountName(name))
+	// manage wildcard search (no account name filter selects all accounts)
+	if name != "*" {
+		filters = append(filters, ScopeAccountName(name))
+	}
 
 	var list []*model.Account
 	err := db.Model(&model.Account{}).
