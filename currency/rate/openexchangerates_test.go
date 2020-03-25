@@ -9,6 +9,8 @@ import (
 )
 
 func TestFetchLatestRates(t *testing.T) {
+	t.Parallel()
+
 	// ctx := context.TODO()
 	type args struct {
 		ctx   context.Context
@@ -24,6 +26,7 @@ func TestFetchLatestRates(t *testing.T) {
 		// {"Fetch", args{ctx, "app_id"}, nil, false},
 	}
 	for _, tt := range tests {
+		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := FetchLatestRates(tt.args.ctx, tt.args.appID)
 			if (err != nil) != tt.wantErr {
@@ -38,6 +41,8 @@ func TestFetchLatestRates(t *testing.T) {
 }
 
 func Test_parseRate(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		jsonBody string
 	}
@@ -50,6 +55,7 @@ func Test_parseRate(t *testing.T) {
 		{"parse", args{mockJsonBody}, 193, false},
 	}
 	for _, tt := range tests {
+		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseRate(tt.args.jsonBody)
 			if (err != nil) != tt.wantErr {
