@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	FlagCurencyAll       = 0
+	FlagCurencyAll = 0
+
+	FlagCurencyDisable   = 0
 	FlagCurencyAvailable = 1
 )
 

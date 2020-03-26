@@ -61,6 +61,9 @@ func AppendAccountOperation(db bank.Database, operation model.AccountOperation) 
 		if !accountState.State.Valid() {
 			return ErrInvalidAccountState
 		}
+		if accountState.State != model.AccountStatusNormal {
+			return ErrAccountIsDisabled
+		}
 
 		// update PrevID with last operation ID
 		previousOperation, err := GetLastAccountOperation(db, accountID)
