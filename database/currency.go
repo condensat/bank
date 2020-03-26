@@ -146,7 +146,7 @@ func reqName() string {
 	var req [len(colCurrencyName) + len(reqEQ)]byte
 	off := 0
 	off += copy(req[off:], colCurrencyName)
-	off += copy(req[off:], reqEQ)
+	copy(req[off:], reqEQ)
 
 	return string(req[:])
 }
@@ -155,7 +155,7 @@ func reqAvailable() string {
 	var req [len(colCurrencyAvailable) + len(reqGTE)]byte
 	off := 0
 	off += copy(req[off:], colCurrencyAvailable)
-	off += copy(req[off:], reqGTE)
+	copy(req[off:], reqGTE)
 
 	return string(req[:])
 }
