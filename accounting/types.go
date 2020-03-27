@@ -13,6 +13,11 @@ type AccountInfo struct {
 	Status    string
 }
 
+type AccountCreation struct {
+	UserID uint64
+	Info   AccountInfo
+}
+
 type UserAccounts struct {
 	UserID uint64
 
@@ -40,6 +45,14 @@ type AccountHistory struct {
 	To        time.Time
 
 	History []AccountEntry
+}
+
+func (p *AccountCreation) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AccountCreation) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *UserAccounts) Encode() ([]byte, error) {
