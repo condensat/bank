@@ -9,19 +9,33 @@ import (
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/logger"
+
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	ErrLockError = errors.New("Failed to acquire lock")
 )
 
 func ListUserAccounts(ctx context.Context, userID uint64) ([]AccountInfo, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.ListUserAccounts")
 	var result []AccountInfo
 
-	lock := LockUser(ctx, userID)
-	if lock == nil {
-		return result, errors.New("Failed to lock user")
+	log = log.WithField("UserID", userID)
+
+	// Acquire Lock
+	lock, err := LockUser(ctx, userID)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to lock user")
+		return result, ErrLockError
 	}
 	defer lock.Unlock()
 
+	// Database Query
 	db := appcontext.Database(ctx)
-	err := db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db bank.Database) error {
 		accounts, err := database.GetAccountsByUserAndCurrencyAndName(db, model.UserID(userID), "", "*")
 		if err != nil {
 			return err
@@ -44,19 +58,36 @@ func ListUserAccounts(ctx context.Context, userID uint64) ([]AccountInfo, error)
 		return nil
 	})
 
+	if err == nil {
+		log.WithField("Count", len(result)).
+			Debug("User accounts retrieved")
+	}
+
 	return result, err
 }
 
 func GetAccountHistory(ctx context.Context, accountID uint64, from, to time.Time) ([]AccountEntry, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.GetAccountHistory")
 	var result []AccountEntry
-	lock := LockAccount(ctx, accountID)
-	if lock == nil {
-		return result, errors.New("Failed to lock account")
+
+	log = log.WithFields(logrus.Fields{
+		"AccountID": accountID,
+		"From":      from,
+		"To":        to,
+	})
+
+	// Acquire Lock
+	lock, err := LockAccount(ctx, accountID)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to lock account")
+		return result, ErrLockError
 	}
 	defer lock.Unlock()
 
+	// Database Query
 	db := appcontext.Database(ctx)
-	err := db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db bank.Database) error {
 		account, err := database.GetAccountByID(db, model.AccountID(accountID))
 		if err != nil {
 			return err
@@ -91,6 +122,12 @@ func GetAccountHistory(ctx context.Context, accountID uint64, from, to time.Time
 
 		return nil
 	})
+
+	if err == nil {
+		log.
+			WithField("Count", len(result)).
+			Debug("Account history retrieved")
+	}
 
 	return result, err
 }
