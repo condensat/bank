@@ -9,6 +9,7 @@ type AccountStatus String
 const (
 	AccountStatusInvalid AccountStatus = ""
 
+	AccountStatusCreated  AccountStatus = "created"
 	AccountStatusNormal   AccountStatus = "normal"
 	AccountStatusLocked   AccountStatus = "locked"
 	AccountStatusDisabled AccountStatus = "disabled"
@@ -25,6 +26,8 @@ type AccountState struct {
 
 func (p AccountStatus) Valid() bool {
 	switch p {
+	case AccountStatusCreated:
+		fallthrough
 	case AccountStatusNormal:
 		fallthrough
 	case AccountStatusLocked:
@@ -56,6 +59,7 @@ func knownAccountStatus() []AccountStatus {
 	return []AccountStatus{
 		AccountStatusInvalid,
 
+		AccountStatusCreated,
 		AccountStatusNormal,
 		AccountStatusLocked,
 		AccountStatusDisabled,
