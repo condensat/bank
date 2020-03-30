@@ -1,11 +1,16 @@
-package accounting
+package internal
 
 import (
 	"context"
+	"errors"
 )
 
 const (
 	RedisLockerKey = "Key.RedisLockerKey"
+)
+
+var (
+	ErrInternalError = errors.New("InternalError")
 )
 
 func RedisMutexContext(ctx context.Context) context.Context {

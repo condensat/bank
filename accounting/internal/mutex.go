@@ -1,4 +1,4 @@
-package accounting
+package internal
 
 import (
 	"context"
@@ -21,6 +21,7 @@ const (
 
 var (
 	ErrRedisMutexNotFound = errors.New("RedisMutex Not Found")
+	ErrLockError          = errors.New("Failed to acquire lock")
 )
 
 type Lock interface {
