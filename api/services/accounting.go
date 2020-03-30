@@ -4,12 +4,12 @@ import (
 	"math"
 	"net/http"
 
-	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/currency/rate"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/security/secureid"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/networking"

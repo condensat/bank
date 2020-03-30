@@ -3,7 +3,6 @@ module git.condensat.tech/bank
 go 1.14
 
 require (
-	code.condensat.tech/bank/secureid v0.1.0
 	github.com/bsm/redislock v0.6.0
 	github.com/emef/bitfield v0.0.0-20170503144143-7d3f8f823065
 	github.com/go-redis/redis/v8 v8.3.1

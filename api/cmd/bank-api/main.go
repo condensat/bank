@@ -17,7 +17,7 @@ import (
 	"git.condensat.tech/bank/api"
 	"git.condensat.tech/bank/api/oauth"
 	"git.condensat.tech/bank/networking/ratelimiter"
-	"git.condensat.tech/bank/security/secureid"
+	"git.condensat.tech/bank/security"
 )
 
 type Api struct {
@@ -83,7 +83,7 @@ func main() {
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithDatabase(ctx, database.New(args.Database))
 	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
-	ctx = appcontext.WithSecureID(ctx, secureid.FromFile(args.Api.SecureID))
+	ctx = appcontext.WithSecureID(ctx, security.SecureIDFromFile(args.Api.SecureID))
 
 	ctx = networking.RegisterRateLimiter(ctx, args.Api.PeerRequestPerSecond)
 	ctx = api.RegisterOpenSessionRateLimiter(ctx, args.Api.OpenSessionPerMinute)

@@ -6,11 +6,11 @@ import (
 	"errors"
 	"net/http"
 
-	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/security/secureid"
 
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
