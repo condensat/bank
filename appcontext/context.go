@@ -17,6 +17,7 @@ const (
 	AppNameKey = iota
 	LoggerKey
 	ProcessusGrabberKey
+	SecureIDKey
 	WriterKey
 	LogLevelKey
 	CacheKey
@@ -93,6 +94,10 @@ func WithProcessusGrabber(ctx context.Context, grabber bank.Worker) context.Cont
 	return context.WithValue(ctx, ProcessusGrabberKey, grabber)
 }
 
+func WithSecureID(ctx context.Context, secureID bank.SecureID) context.Context {
+	return context.WithValue(ctx, SecureIDKey, secureID)
+}
+
 func AppName(ctx context.Context) string {
 	if ctxAppName, ok := ctx.Value(AppNameKey).(string); ok {
 		return ctxAppName
@@ -140,6 +145,13 @@ func Database(ctx context.Context) bank.Database {
 func HasherWorker(ctx context.Context) bank.Worker {
 	if ctxWorker, ok := ctx.Value(hasherWorkerKey).(bank.Worker); ok {
 		return ctxWorker
+	}
+	return nil
+}
+
+func SecureID(ctx context.Context) bank.SecureID {
+	if ctxSecureID, ok := ctx.Value(SecureIDKey).(bank.SecureID); ok {
+		return ctxSecureID
 	}
 	return nil
 }

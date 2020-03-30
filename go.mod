@@ -3,6 +3,7 @@ module git.condensat.tech/bank
 go 1.13
 
 require (
+	code.condensat.tech/bank/secureid v0.1.0
 	github.com/bsm/redislock v0.5.0
 	github.com/emef/bitfield v0.0.0-20170503144143-7d3f8f823065
 	github.com/go-redis/redis/v7 v7.2.0
@@ -21,5 +22,5 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/thoas/stats v0.0.0-20190407194641-965cb2de1678
 	github.com/urfave/negroni v1.0.0
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
+	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
 )
