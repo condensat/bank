@@ -11,6 +11,10 @@ type CurrencyInfo struct {
 	Available bool
 }
 
+type CurrencyList struct {
+	Currencies []CurrencyInfo
+}
+
 type AccountInfo struct {
 	AccountID uint64
 	Currency  string
@@ -50,6 +54,14 @@ type AccountHistory struct {
 	To        time.Time
 
 	History []AccountEntry
+}
+
+func (p *CurrencyList) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *CurrencyList) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *CurrencyInfo) Encode() ([]byte, error) {
