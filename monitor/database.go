@@ -21,10 +21,9 @@ func AddProcessInfo(ctx context.Context, processInfo *common.ProcessInfo) error 
 }
 
 func ListServices(ctx context.Context, since time.Duration) ([]string, error) {
-	var result []string
 	db, ok := appcontext.Database(ctx).DB().(*gorm.DB)
 	if !ok {
-		return result, errors.New("Wrong database")
+		return nil, errors.New("Wrong database")
 	}
 
 	now := time.Now().UTC()
@@ -34,10 +33,12 @@ func ListServices(ctx context.Context, since time.Duration) ([]string, error) {
 	err := db.Select(distinctAppName).
 		Where("timestamp BETWEEN ? AND ?", now.Add(-since), now).
 		Find(&list).Error
-	if err != nil {
-		return result, err
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
 	}
 
+	var result []string
 	for _, entry := range list {
 		result = append(result, entry.AppName)
 	}
@@ -46,7 +47,6 @@ func ListServices(ctx context.Context, since time.Duration) ([]string, error) {
 }
 
 func LastServicesStatus(ctx context.Context) ([]common.ProcessInfo, error) {
-	var result []common.ProcessInfo
 	db, ok := appcontext.Database(ctx).DB().(*gorm.DB)
 	if !ok {
 		return nil, errors.New("Wrong database")
@@ -63,10 +63,11 @@ func LastServicesStatus(ctx context.Context) ([]common.ProcessInfo, error) {
 		Order("app_name ASC, hostname ASC, timestamp DESC").
 		Find(&list).Error
 
-	if err != nil {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
+	var result []common.ProcessInfo
 	for _, entry := range list {
 		result = append(result, *entry)
 	}
@@ -75,7 +76,6 @@ func LastServicesStatus(ctx context.Context) ([]common.ProcessInfo, error) {
 }
 
 func LastServiceHistory(ctx context.Context, appName string, from, to time.Time, step time.Duration, round time.Duration) ([]common.ProcessInfo, error) {
-	var result []common.ProcessInfo
 	db, ok := appcontext.Database(ctx).DB().(*gorm.DB)
 	if !ok {
 		return nil, errors.New("Wrong database")
@@ -96,10 +96,11 @@ func LastServiceHistory(ctx context.Context, appName string, from, to time.Time,
 		Order("timestamp, hostname DESC").
 		Find(&list).Error
 
-	if err != nil {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
+	var result []common.ProcessInfo
 	for _, entry := range list {
 		entry.Timestamp = entry.Timestamp.Round(round)
 		result = append(result, *entry)
