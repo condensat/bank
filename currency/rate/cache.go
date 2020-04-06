@@ -73,7 +73,13 @@ func FetchRedisRate(ctx context.Context, name, base string) (Rate, error) {
 		return Rate{}, errors.New("Internal Error")
 	}
 
-	key := formatRateKey(name, base)
+	alias := name
+	// 1 LBTC == 1 BTC
+	if name == "LBTC" {
+		alias = "BTC"
+	}
+
+	key := formatRateKey(alias, base)
 
 	data, err := rdb.Get(key).Bytes()
 	if err != nil {
@@ -89,6 +95,8 @@ func FetchRedisRate(ctx context.Context, name, base string) (Rate, error) {
 			Error("Failed to decode object")
 		return Rate{}, errors.New("Internal Error")
 	}
+	// override aliases
+	result.Name = name
 	return result, nil
 }
 
