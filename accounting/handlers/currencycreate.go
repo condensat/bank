@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CurrencyCreate(ctx context.Context, currencyName string) (common.CurrencyInfo, error) {
+func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, precision uint) (common.CurrencyInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.CurrencyCreate")
 	var result common.CurrencyInfo
 
@@ -34,8 +34,12 @@ func CurrencyCreate(ctx context.Context, currencyName string) (common.CurrencyIn
 
 		// create if not exists
 		if len(currency.Name) == 0 {
+			var crypto int
+			if isCrypto {
+				crypto = 1
+			}
 			currency, err = database.AddOrUpdateCurrency(db,
-				model.NewCurrency(model.CurrencyName(currencyName), model.Int(0)),
+				model.NewCurrency(model.CurrencyName(currencyName), model.Int(0), model.Int(crypto), model.Int(precision)),
 			)
 			if err != nil {
 				log.WithError(err).Error("Failed to AddOrUpdateCurrency")
@@ -44,8 +48,10 @@ func CurrencyCreate(ctx context.Context, currencyName string) (common.CurrencyIn
 		}
 
 		result = common.CurrencyInfo{
-			Name:      string(currency.Name),
-			Available: currency.IsAvailable(),
+			Name:             string(currency.Name),
+			Available:        currency.IsAvailable(),
+			Crypto:           currency.IsCrypto(),
+			DisplayPrecision: uint(currency.DisplayPrecision()),
 		}
 
 		return nil
@@ -53,8 +59,10 @@ func CurrencyCreate(ctx context.Context, currencyName string) (common.CurrencyIn
 
 	if err == nil {
 		log.WithFields(logrus.Fields{
-			"Name":      result.Name,
-			"Available": result.Available,
+			"Name":             result.Name,
+			"Available":        result.Available,
+			"Crypto":           result.Crypto,
+			"DisplayPrecision": result.DisplayPrecision,
 		}).Warn("Currency created")
 	}
 
@@ -74,7 +82,7 @@ func OnCurrencyCreate(ctx context.Context, subject string, message *bank.Message
 				"Name": request.Name,
 			})
 
-			currency, err := CurrencyCreate(ctx, request.Name)
+			currency, err := CurrencyCreate(ctx, request.Name, request.Crypto, request.DisplayPrecision)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CurrencyCreate")
