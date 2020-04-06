@@ -66,4 +66,7 @@ type Worker interface {
 type SecureID interface {
 	ToSecureID(context string, value secureid.Value) (secureid.SecureID, error)
 	FromSecureID(context string, secureID secureid.SecureID) (secureid.Value, error)
+
+	ToString(secureID secureid.SecureID) string
+	Parse(secureID string) secureid.SecureID
 }
