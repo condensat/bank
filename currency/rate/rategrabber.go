@@ -28,6 +28,15 @@ func (p *RateGrabber) Run(ctx context.Context, appID string, interval time.Durat
 		"Hostname": utils.Hostname(),
 	}).Info("RateGrabber started")
 
+	// get currency from database and store to redis
+	currencyRates, err := database.GetLastCurencyRates(ctx)
+	if err != nil {
+		log.WithError(err).
+			Warning("No currencies found in database")
+	}
+
+	UpdateRedisRate(ctx, currencyRates)
+
 	go p.scheduledGrabber(ctx, appID, interval, delay)
 
 	<-ctx.Done()
@@ -81,5 +90,7 @@ func (p *RateGrabber) scheduledGrabber(ctx context.Context, appID string, interv
 			"Epoch": epoch.Truncate(time.Millisecond),
 			"Count": len(currencyRates),
 		}).Debug("CurrencyRates stored")
+
+		UpdateRedisRate(ctx, currencyRates)
 	}
 }
