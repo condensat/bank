@@ -39,8 +39,10 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 		if currency.IsAvailable() == available {
 			// NOOP
 			result = common.CurrencyInfo{
-				Name:      string(currency.Name),
-				Available: currency.IsAvailable(),
+				Name:             string(currency.Name),
+				Available:        currency.IsAvailable(),
+				Crypto:           currency.IsCrypto(),
+				DisplayPrecision: uint(currency.DisplayPrecision()),
 			}
 			return nil
 		}
@@ -50,9 +52,14 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 			availableState = 1
 		}
 
+		var crypto model.Int
+		if currency.IsCrypto() {
+			crypto = 1
+		}
+
 		// update currency available
 		currency, err = database.AddOrUpdateCurrency(db,
-			model.NewCurrency(model.CurrencyName(currencyName), model.Int(availableState)),
+			model.NewCurrency(model.CurrencyName(currencyName), model.Int(availableState), crypto, currency.DisplayPrecision()),
 		)
 		if err != nil {
 			log.WithError(err).Error("Failed to AddOrUpdateCurrency")
@@ -60,8 +67,10 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 		}
 
 		result = common.CurrencyInfo{
-			Name:      string(currency.Name),
-			Available: currency.IsAvailable(),
+			Name:             string(currency.Name),
+			Available:        currency.IsAvailable(),
+			Crypto:           currency.IsCrypto(),
+			DisplayPrecision: uint(currency.DisplayPrecision()),
 		}
 
 		return nil
@@ -101,8 +110,10 @@ func OnCurrencySetAvailable(ctx context.Context, subject string, message *bank.M
 
 			// create & return response
 			return &common.CurrencyInfo{
-				Name:      currency.Name,
-				Available: currency.Available,
+				Name:             currency.Name,
+				Available:        currency.Available,
+				Crypto:           currency.Crypto,
+				DisplayPrecision: currency.DisplayPrecision,
 			}, nil
 		})
 }

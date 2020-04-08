@@ -15,8 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, precision uint) (common.CurrencyInfo, error) {
-	log := logger.Logger(ctx).WithField("Method", "accounting.CurrencyCreate")
+func CurrencyInfo(ctx context.Context, currencyName string) (common.CurrencyInfo, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.CurrencyInfo")
 	var result common.CurrencyInfo
 
 	log = log.WithField("CurrencyName", currencyName)
@@ -32,19 +32,8 @@ func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, pre
 			return err
 		}
 
-		// create if not exists
-		if len(currency.Name) == 0 {
-			var crypto int
-			if isCrypto {
-				crypto = 1
-			}
-			currency, err = database.AddOrUpdateCurrency(db,
-				model.NewCurrency(model.CurrencyName(currencyName), model.Int(0), model.Int(crypto), model.Int(precision)),
-			)
-			if err != nil {
-				log.WithError(err).Error("Failed to AddOrUpdateCurrency")
-				return err
-			}
+		if string(currency.Name) != currencyName {
+			return database.ErrCurrencyNotFound
 		}
 
 		result = common.CurrencyInfo{
@@ -59,18 +48,16 @@ func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, pre
 
 	if err == nil {
 		log.WithFields(logrus.Fields{
-			"Name":             result.Name,
-			"Available":        result.Available,
-			"Crypto":           result.Crypto,
-			"DisplayPrecision": result.DisplayPrecision,
-		}).Warn("Currency created")
+			"Name":      result.Name,
+			"Available": result.Available,
+		}).Warn("Currency updated")
 	}
 
 	return result, err
 }
 
-func OnCurrencyCreate(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
-	log := logger.Logger(ctx).WithField("Method", "Currencying.OnCurrencyCreate")
+func OnCurrencyInfo(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+	log := logger.Logger(ctx).WithField("Method", "Currencying.OnCurrencyInfo")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})
@@ -82,19 +69,19 @@ func OnCurrencyCreate(ctx context.Context, subject string, message *bank.Message
 				"Name": request.Name,
 			})
 
-			currency, err := CurrencyCreate(ctx, request.Name, request.Crypto, request.DisplayPrecision)
+			currency, err := CurrencyInfo(ctx, request.Name)
 			if err != nil {
 				log.WithError(err).
-					Errorf("Failed to CurrencyCreate")
+					Errorf("Failed to CurrencyInfo")
 				return nil, internal.ErrInternalError
 			}
 
-			log.Info("Currency Created")
-
 			// create & return response
 			return &common.CurrencyInfo{
-				Name:      currency.Name,
-				Available: currency.Available,
+				Name:             currency.Name,
+				Available:        currency.Available,
+				Crypto:           currency.Crypto,
+				DisplayPrecision: currency.DisplayPrecision,
 			}, nil
 		})
 }

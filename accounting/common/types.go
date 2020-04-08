@@ -7,8 +7,10 @@ import (
 )
 
 type CurrencyInfo struct {
-	Name      string
-	Available bool
+	Name             string
+	Available        bool
+	Crypto           bool
+	DisplayPrecision uint
 }
 
 type CurrencyList struct {
@@ -16,10 +18,13 @@ type CurrencyList struct {
 }
 
 type AccountInfo struct {
-	AccountID uint64
-	Currency  string
-	Name      string
-	Status    string
+	Timestamp   time.Time
+	AccountID   uint64
+	Currency    CurrencyInfo
+	Name        string
+	Status      string
+	Balance     float64
+	TotalLocked float64
 }
 
 type AccountCreation struct {
@@ -59,10 +64,11 @@ type AccountTransfert struct {
 
 type AccountHistory struct {
 	AccountID uint64
+	Currency  string
 	From      time.Time
 	To        time.Time
 
-	History []AccountEntry
+	Entries []AccountEntry
 }
 
 func (p *CurrencyList) Encode() ([]byte, error) {

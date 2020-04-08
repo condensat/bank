@@ -3,6 +3,7 @@ package common
 const (
 	chanPrefix = "Condensat.Accounting."
 
+	CurrencyInfoSubject         = chanPrefix + "Currency.Info"
 	CurrencyCreateSubject       = chanPrefix + "Currency.Create"
 	CurrencyListSubject         = chanPrefix + "Currency.List"
 	CurrencySetAvailableSubject = chanPrefix + "Currency.SetAvailable"
