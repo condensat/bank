@@ -9,6 +9,7 @@ import (
 
 	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -26,6 +27,9 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
 	// create session and and to context
 	session := sessions.NewSession(ctx)
 	ctx = context.WithValue(ctx, sessions.KeySessions, session)
+	if len(corsAllowedOrigins) > 0 {
+		ctx = appcontext.WithDomain(ctx, corsAllowedOrigins[0])
+	}
 
 	services.RegisterMessageHandlers(ctx)
 	services.RegisterServices(ctx, muxer, corsAllowedOrigins)

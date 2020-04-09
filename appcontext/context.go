@@ -15,6 +15,7 @@ import (
 
 const (
 	AppNameKey = iota
+	DomainKey
 	LoggerKey
 	ProcessusGrabberKey
 	SecureIDKey
@@ -31,6 +32,11 @@ const (
 // WithAppName returns a context with the Application name set
 func WithAppName(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, AppNameKey, name)
+}
+
+// WithDomain returns a context with the Domain name set
+func WithDomain(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, DomainKey, name)
 }
 
 // WithLogger returns a context with the log Writer set
@@ -103,6 +109,13 @@ func AppName(ctx context.Context) string {
 		return ctxAppName
 	}
 	return "NoAppName"
+}
+
+func Domain(ctx context.Context) string {
+	if ctxDomain, ok := ctx.Value(DomainKey).(string); ok {
+		return ctxDomain
+	}
+	return "condensat.space"
 }
 
 func Level(ctx context.Context) log.Level {
