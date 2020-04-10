@@ -13,6 +13,7 @@ import (
 	"git.condensat.tech/bank/monitor/processus"
 
 	"git.condensat.tech/bank/api"
+	"git.condensat.tech/bank/api/oauth"
 	"git.condensat.tech/bank/api/ratelimiter"
 	"git.condensat.tech/bank/api/secureid"
 
@@ -22,6 +23,7 @@ import (
 type Api struct {
 	Port              int
 	CorsAllowedDomain string
+	OAuth             oauth.Options
 
 	SecureID string
 
@@ -50,6 +52,8 @@ func parseArgs() Args {
 
 	flag.IntVar(&args.Api.Port, "port", 4242, "BankApi rpc port (default 4242)")
 	flag.StringVar(&args.Api.CorsAllowedDomain, "corsAllowedDomain", "condensat.space", "Cors Allowed Domain (default condensat.space)")
+
+	flag.StringVar(&args.Api.OAuth.Keys, "oauthkeys", "oauth.env", "OAuth env file for providers keys")
 
 	flag.StringVar(&args.Api.SecureID, "secureId", "secureid.json", "SecureID json file")
 
@@ -83,7 +87,7 @@ func main() {
 	migrateDatabase(ctx)
 
 	var api api.Api
-	api.Run(ctx, args.Api.Port, corsAllowedOrigins(args.Api.CorsAllowedDomain))
+	api.Run(ctx, args.Api.Port, corsAllowedOrigins(args.Api.CorsAllowedDomain), args.Api.OAuth)
 }
 
 func corsAllowedOrigins(corsAllowedDomain string) []string {
