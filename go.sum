@@ -1,3 +1,4 @@
+cloud.google.com/go v0.30.0 h1:xKvyLgk56d0nksWq49J0UyGEeUIicTl4+UBiX1NPX9g=
 cloud.google.com/go v0.30.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 code.condensat.tech/bank/secureid v0.1.0 h1:uc2cos9QrW9UPYFP9zQ+x4ZwZ+dVJgK9vlyr2vvSl00=
 code.condensat.tech/bank/secureid v0.1.0/go.mod h1:MzQzGt0AikwTuMYEU6qugPC4o5gVoYHtnz6P1JXo82w=
