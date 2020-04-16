@@ -5,29 +5,45 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
+	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/utils"
+
+	"git.condensat.tech/bank/api/oauth"
 	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
-	"git.condensat.tech/bank/logger"
 
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
 
 type Api int
 
-func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
+func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string, oauthOptions oauth.Options) {
 	log := logger.Logger(ctx).WithField("Method", "api.Api.Run")
-
-	muxer := http.NewServeMux()
 
 	// create session and and to context
 	session := sessions.NewSession(ctx)
 	ctx = context.WithValue(ctx, sessions.KeySessions, session)
+	// Add Domain to context
+	if len(oauthOptions.Domain) > 0 {
+		ctx = appcontext.WithDomain(ctx, oauthOptions.Domain)
+	}
 
+	err := oauth.Init(oauthOptions)
+	if err != nil {
+		log.WithError(err).
+			Warning("OAuth Init failed")
+	}
+	muxer := mux.NewRouter()
+
+	services.RegisterMessageHandlers(ctx)
 	services.RegisterServices(ctx, muxer, corsAllowedOrigins)
+
+	oauth.RegisterHandlers(ctx, muxer)
 
 	handler := negroni.New(&negroni.Recovery{})
 	handler.Use(services.StatsMiddleware)
@@ -54,7 +70,7 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
 	}()
 
 	log.WithFields(logrus.Fields{
-		"Hostname": GetHost(),
+		"Hostname": utils.Hostname(),
 		"Port":     port,
 	}).Info("Api Service started")
 
@@ -63,7 +79,7 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string) {
 
 // AddWorkerHeader - adds header of which node actually processed request
 func AddWorkerHeader(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	rw.Header().Add("X-Worker", GetHost())
+	rw.Header().Add("X-Worker", utils.Hostname())
 	next(rw, r)
 }
 
@@ -71,13 +87,4 @@ func AddWorkerHeader(rw http.ResponseWriter, r *http.Request, next http.HandlerF
 func AddWorkerVersion(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	rw.Header().Add("X-Worker-Version", services.Version)
 	next(rw, r)
-}
-
-func GetHost() string {
-	var err error
-	host, err := os.Hostname()
-	if err != nil {
-		host = "Unknown"
-	}
-	return host
 }
