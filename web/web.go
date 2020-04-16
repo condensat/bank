@@ -11,6 +11,7 @@ import (
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
@@ -20,12 +21,24 @@ const Version string = "0.1"
 
 type Web int
 
-func (p *Web) Run(ctx context.Context, port int, webDirectory string) {
+func (p *Web) Run(ctx context.Context, port int, webDirectory string, singlePageApplication bool) {
 	log := logger.Logger(ctx).WithField("Method", "web.Web.Run")
 
-	muxer := http.NewServeMux()
+	muxer := mux.NewRouter()
 
-	handler := negroni.New(negroni.NewRecovery(), negroni.NewStatic(http.Dir(webDirectory)))
+	// create handlers
+	var handlers = []negroni.Handler{negroni.NewRecovery()}
+	if !singlePageApplication {
+		handlers = append(handlers, negroni.NewStatic(http.Dir(webDirectory)))
+	} else {
+		muxer.PathPrefix("/").Handler(&SpaHandler{
+			StaticPath: webDirectory,
+			IndexPath:  "index.html",
+		})
+	}
+
+	// setup global handler with midlewate
+	handler := negroni.New(handlers...)
 	handler.UseFunc(api.MiddlewarePeerRateLimiter)
 	handler.UseFunc(AddWorkerHeader)
 	handler.UseFunc(AddWorkerVersion)
@@ -52,6 +65,7 @@ func (p *Web) Run(ctx context.Context, port int, webDirectory string) {
 		"Hostname":     utils.Hostname(),
 		"Port":         port,
 		"WebDirectory": webDirectory,
+		"SinglePage":   singlePageApplication,
 	}).Info("WebApp started")
 
 	<-ctx.Done()
