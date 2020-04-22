@@ -5,8 +5,8 @@ import (
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/accounting/handlers"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -18,7 +18,7 @@ type Accounting int
 func (p *Accounting) Run(ctx context.Context) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.Run")
 
-	p.registerHandlers(internal.RedisMutexContext(ctx))
+	p.registerHandlers(cache.RedisMutexContext(ctx))
 
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),

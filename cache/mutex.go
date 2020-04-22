@@ -1,4 +1,4 @@
-package internal
+package cache
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/cache"
 
 	"github.com/bsm/redislock"
 )
@@ -37,7 +36,7 @@ type RedisMutex struct {
 }
 
 func NewRedisMutex(ctx context.Context) Mutex {
-	client := cache.ToRedis(appcontext.Cache(ctx))
+	client := ToRedis(appcontext.Cache(ctx))
 	if client == nil {
 		panic("Invalid Redis client")
 	}
