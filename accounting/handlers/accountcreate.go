@@ -4,12 +4,14 @@ import (
 	"context"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/common"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/accounting/common"
+
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
@@ -22,11 +24,11 @@ func AccountCreate(ctx context.Context, userID uint64, info common.AccountInfo) 
 	log = log.WithField("UserID", userID)
 
 	// Acquire Lock
-	lock, err := internal.LockUser(ctx, userID)
+	lock, err := cache.LockUser(ctx, userID)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to lock user")
-		return result, internal.ErrLockError
+		return result, cache.ErrLockError
 	}
 	defer lock.Unlock()
 
@@ -93,7 +95,7 @@ func OnAccountCreate(ctx context.Context, subject string, message *bank.Message)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to AccountCreate")
-				return nil, internal.ErrInternalError
+				return nil, cache.ErrInternalError
 			}
 
 			log = log.WithFields(logrus.Fields{
