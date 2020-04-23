@@ -6,6 +6,8 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/wallet/bitcoin"
@@ -79,6 +81,7 @@ func checkParams(interval time.Duration) time.Duration {
 
 func (p *Wallet) scheduledUpdate(ctx context.Context, chains []string, interval time.Duration) {
 	log := logger.Logger(ctx).WithField("Method", "Wallet.scheduledUpdate")
+	db := appcontext.Database(ctx)
 
 	interval = checkParams(interval)
 
@@ -106,6 +109,43 @@ func (p *Wallet) scheduledUpdate(ctx context.Context, chains []string, interval 
 			log.WithError(err).
 				Error("Failed to UpdateRedisChain")
 			continue
+		}
+
+		for _, state := range chainsStates {
+			addresses, err := database.AllUnusedCryptoAddresses(db, model.String(state.Chain))
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to AllUnusedCryptoAddresses")
+				continue
+			}
+
+			var list []string
+			for _, addr := range addresses {
+				list = append(list, string(addr.PublicAddress))
+			}
+
+			infos, err := FetchChainAddressesInfo(ctx, state.Chain, list...)
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to FetchChainAddressesInfo")
+				continue
+			}
+
+			for _, info := range infos {
+				addr, err := database.GetCryptoAddressWithPublicAddress(db, model.String(info.PublicAddress))
+				if err != nil {
+					log.WithError(err).
+						Error("Failed to GetCryptoAddressWithPublicAddress")
+					continue
+				}
+				addr.FirstBlockId = model.BlockID(info.Mined)
+				_, err = database.AddOrUpdateCryptoAddress(db, addr)
+				if err != nil {
+					log.WithError(err).
+						Error("Failed to FetchChainAddressesInfo")
+					continue
+				}
+			}
 		}
 	}
 }
