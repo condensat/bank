@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"git.condensat.tech/bank/logger"
+	"github.com/btcsuite/btcd/chaincfg"
 	rpc "github.com/btcsuite/btcd/rpcclient"
 )
 
@@ -17,6 +18,15 @@ var (
 type BitcoinClient struct {
 	conn   *rpc.ConnConfig
 	client *rpc.Client
+	params *chaincfg.Params
+}
+
+func paramsFromRPCPort(port int) *chaincfg.Params {
+	params := &chaincfg.MainNetParams
+	if port == 18332 {
+		params = &chaincfg.TestNet3Params
+	}
+	return params
 }
 
 func New(ctx context.Context, options BitcoinOptions) *BitcoinClient {
@@ -37,6 +47,7 @@ func New(ctx context.Context, options BitcoinOptions) *BitcoinClient {
 	return &BitcoinClient{
 		conn:   connCfg,
 		client: client,
+		params: paramsFromRPCPort(options.Port),
 	}
 }
 
