@@ -12,6 +12,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	rpc "github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcutil"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -19,6 +21,10 @@ var (
 	ErrRPCError       = errors.New("RPC Error")
 	ErrInvalidAccount = errors.New("Invalid Account")
 	ErrInvalidAddress = errors.New("Invalid Address format")
+)
+
+const (
+	AddressTypeBech32 = "bech32"
 )
 
 type BitcoinClient struct {
@@ -111,7 +117,7 @@ func (p *BitcoinClient) GetNewAddress(ctx context.Context, account string) (stri
 		return "", ErrInvalidAccount
 	}
 
-	address, err := client.GetNewAddress(account)
+	address, err := client.GetNewAddressWithType(account, AddressTypeBech32)
 	if err != nil {
 		log.WithError(err).
 			Error("GetNewAddress failed")
@@ -120,10 +126,13 @@ func (p *BitcoinClient) GetNewAddress(ctx context.Context, account string) (stri
 
 	result := address.EncodeAddress()
 	log.
-		WithField("Address", result).
-		Debug("Bitcoin RPC")
+		WithFields(logrus.Fields{
+			"Account": account,
+			"Address": result,
+			"Type":    AddressTypeBech32,
+		}).Debug("Bitcoin RPC")
 
-	return result, err
+	return result, nil
 }
 
 func (p *BitcoinClient) ListUnspent(ctx context.Context, minConf, maxConf int, addresses ...string) ([]common.AddressInfo, error) {
