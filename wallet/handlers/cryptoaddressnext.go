@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
@@ -15,17 +16,25 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/messaging"
 
+	"github.com/shengdoushi/base58"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	ErrInvalidChain     = errors.New("Invalid Chain")
 	ErrInvalidAccountID = errors.New("Invalid AccountID")
+	ErrGenAddress       = errors.New("Gen Address Error")
 )
 
 func CryptoAddressNextDeposit(ctx context.Context, address common.CryptoAddress) (common.CryptoAddress, error) {
 	log := logger.Logger(ctx).WithField("Method", "wallet.CryptoAddressNextDeposit")
 	var result common.CryptoAddress
+
+	chainHandler := ChainHandlerFromContext(ctx)
+	if chainHandler == nil {
+		log.Error("Failed to ChainHandlerFromContext")
+		return result, ErrInternalError
+	}
 
 	log = log.WithFields(logrus.Fields{
 		"Chain":     address.Chain,
@@ -52,6 +61,8 @@ func CryptoAddressNextDeposit(ctx context.Context, address common.CryptoAddress)
 
 		addresses, err := database.AllUnusedAccountCryptoAddresses(db, accountID)
 		if err != nil {
+			log.WithError(err).
+				Error("Failed to AllUnusedAccountCryptoAddresses")
 			return err
 		}
 
@@ -69,15 +80,22 @@ func CryptoAddressNextDeposit(ctx context.Context, address common.CryptoAddress)
 			return nil
 		}
 
-		// Todo: RPC call to chain daemon
-		publicAddress := model.String("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
+		account := genAccountLabelFromAccountID(accountID)
+		publicAddress, err := chainHandler.GetNewAddress(ctx, string(chain), account)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to GetNewAddress")
+			return ErrGenAddress
+		}
 
 		addr, err := database.AddOrUpdateCryptoAddress(db, model.CryptoAddress{
 			Chain:         chain,
 			AccountID:     accountID,
-			PublicAddress: publicAddress,
+			PublicAddress: model.String(publicAddress),
 		})
 		if err != nil {
+			log.WithError(err).
+				Error("Failed to AddOrUpdateCryptoAddress")
 			return err
 		}
 
@@ -132,4 +150,10 @@ func OnCryptoAddressNextDeposit(ctx context.Context, subject string, message *ba
 				PublicAddress: nextDeposit.PublicAddress,
 			}, nil
 		})
+}
+
+func genAccountLabelFromAccountID(accountID model.AccountID) string {
+	// create account label from accountID
+	accountHash := fmt.Sprintf("bank.account:%d", accountID)
+	return base58.Encode([]byte(accountHash), base58.BitcoinAlphabet)
 }
