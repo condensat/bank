@@ -25,7 +25,7 @@ func TestCreateAccount(t *testing.T) {
 	const databaseName = "TestCreateAccount"
 	t.Parallel()
 
-	db := setup(databaseName, AccountModel())
+	db := setup(databaseName, AccountOperationModel())
 	defer teardown(db, databaseName)
 
 	data := createTestAccountData(db)
@@ -71,7 +71,7 @@ func TestAccountsExists(t *testing.T) {
 	const databaseName = "TestAccountsExists"
 	t.Parallel()
 
-	db := setup(databaseName, AccountModel())
+	db := setup(databaseName, AccountOperationModel())
 	defer teardown(db, databaseName)
 
 	data := createTestAccountData(db)
@@ -117,7 +117,7 @@ func TestQueryAccountList(t *testing.T) {
 	const databaseName = "TestQueryAccountList"
 	t.Parallel()
 
-	db := setup(databaseName, AccountModel())
+	db := setup(databaseName, AccountOperationModel())
 	defer teardown(db, databaseName)
 
 	data := createTestAccountData(db)
