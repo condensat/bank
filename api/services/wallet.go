@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"git.condensat.tech/bank/api/sessions"
@@ -28,7 +29,9 @@ type WalletNextDepositRequest struct {
 
 // WalletNextDepositResponse holds args for accounting requests
 type WalletNextDepositResponse struct {
-	PublicAddress string `json:"public_address"`
+	Currency      string `json:"currency"`
+	PublicAddress string `json:"publicAddress"`
+	URL           string `json:"url"`
 }
 
 // WalletService operation return deposit address for account
@@ -98,12 +101,24 @@ func (p *WalletService) NextDeposit(r *http.Request, request *WalletNextDepositR
 	}
 
 	// Reply
+	protocol, err := getProtocolFromCurrencyName(account.Currency.Name)
 	*reply = WalletNextDepositResponse{
+		Currency:      account.Currency.Name,
 		PublicAddress: addr.PublicAddress,
+		URL:           fmt.Sprintf("%s:%s", protocol, addr.PublicAddress),
+	}
+	if err != nil {
+		log.WithError(err).
+			WithField("AccountID", request.AccountID).
+			WithField("CurrencyName", account.Currency.Name).
+			Error("getProtocolFromCurrencyName failed")
+		return sessions.ErrInternalError
 	}
 
 	log.WithFields(logrus.Fields{
-		"PublicAddress": len(reply.PublicAddress),
+		"CurrencyName":  reply.Currency,
+		"PublicAddress": reply.PublicAddress,
+		"Url":           reply.URL,
 	}).Info("CryptoAddressNextDeposit")
 
 	return nil
@@ -117,6 +132,20 @@ func getChainFromCurrencyName(currencyName string) (string, error) {
 		return "bitcoin-testnet", nil
 	case "LBTC":
 		return "liquid-mainnet", nil
+
+	default:
+		return "", ErrWalletChainNotFoundError
+	}
+}
+
+func getProtocolFromCurrencyName(currencyName string) (string, error) {
+	switch currencyName {
+	case "BTC":
+		return "bitcoin", nil
+	case "TBTC":
+		return "bitcoin", nil
+	case "LBTC":
+		return "liquid", nil
 
 	default:
 		return "", ErrWalletChainNotFoundError
