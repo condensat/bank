@@ -21,6 +21,7 @@ type ChainState struct {
 
 type TransactionInfo struct {
 	TxID          string
+	Amount        float64
 	Confirmations int64
 }
 type AddressInfo struct {
@@ -108,7 +109,7 @@ func fetchChainState(ctx context.Context, chain string) (ChainState, error) {
 	}, nil
 }
 
-func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight uint64, publicAddresses ...string) ([]AddressInfo, error) {
+func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, minConf, maxConf uint64, publicAddresses ...string) ([]AddressInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "wallet.FetchChainAddresses")
 
 	log = log.WithField("Chain", chain)
@@ -116,6 +117,11 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight ui
 	client := ChainClientFromContext(ctx, chain)
 	if client == nil {
 		return nil, ErrChainClientNotFound
+	}
+
+	if len(publicAddresses) == 0 {
+		log.Debug("No addresses provided")
+		return nil, nil
 	}
 
 	// Acquire Lock
@@ -127,7 +133,11 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight ui
 	}
 	defer lock.Unlock()
 
-	list, err := client.ListUnspent(ctx, 0, 6, publicAddresses...)
+	if minConf > maxConf {
+		maxConf, minConf = minConf, maxConf
+	}
+
+	list, err := client.ListUnspent(ctx, int(minConf), int(maxConf), publicAddresses...)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to ListUnspent")
@@ -161,6 +171,7 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight ui
 		addr := firsts[utxo.Address]
 		addr.Transactions = append(addr.Transactions, TransactionInfo{
 			TxID:          utxo.TxID,
+			Amount:        utxo.Amount,
 			Confirmations: utxo.Confirmations,
 		})
 	}
