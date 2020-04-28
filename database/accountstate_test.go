@@ -12,7 +12,7 @@ func TestAddOrUpdateAccountState(t *testing.T) {
 	const databaseName = "TestAddOrUpdateAccountState"
 	t.Parallel()
 
-	db := setup(databaseName, AccountStateModel())
+	db := setup(databaseName, AccountOperationModel())
 	defer teardown(db, databaseName)
 
 	data := createTestAccountStateData(db)
@@ -63,7 +63,7 @@ func TestGetAccountStatusByAccountID(t *testing.T) {
 	const databaseName = "TestGetAccountStatusByAccountID"
 	t.Parallel()
 
-	db := setup(databaseName, AccountStateModel())
+	db := setup(databaseName, AccountOperationModel())
 	defer teardown(db, databaseName)
 
 	data := createTestAccountStateData(db)
