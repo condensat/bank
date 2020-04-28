@@ -4,9 +4,11 @@ import (
 	"context"
 	"time"
 
-	"git.condensat.tech/bank/accounting/common"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/accounting/common"
+
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
@@ -16,12 +18,12 @@ func AccountDeposit(ctx context.Context, accountID, referenceID uint64, amount f
 	log := logger.Logger(ctx).WithField("Method", "Client.AccountDeposit")
 
 	if accountID == 0 {
-		return common.AccountEntry{}, internal.ErrInternalError
+		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
 	// Deposit amount must be positive
 	if amount <= 0.0 {
-		return common.AccountEntry{}, internal.ErrInternalError
+		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
 	log = log.WithField("AccountID", accountID)
@@ -62,12 +64,12 @@ func AccountWithdraw(ctx context.Context, accountID, referenceID uint64, amount 
 	log := logger.Logger(ctx).WithField("Method", "Client.AccountWithdraw")
 
 	if accountID == 0 {
-		return common.AccountEntry{}, internal.ErrInternalError
+		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
 	// Deposit amount must be positive
 	if amount <= 0.0 {
-		return common.AccountEntry{}, internal.ErrInternalError
+		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
 	log = log.WithField("AccountID", accountID)
@@ -108,20 +110,20 @@ func AccountTransfert(ctx context.Context, srcAccountID, dstAccountID, reference
 	log := logger.Logger(ctx).WithField("Method", "Client.AccountTransfert")
 
 	if srcAccountID == 0 || dstAccountID == 0 {
-		return common.AccountTransfert{}, internal.ErrInternalError
+		return common.AccountTransfert{}, cache.ErrInternalError
 	}
 	if srcAccountID == dstAccountID {
-		return common.AccountTransfert{}, internal.ErrInternalError
+		return common.AccountTransfert{}, cache.ErrInternalError
 	}
 
 	// currency must be valid
 	if len(currency) == 0 {
-		return common.AccountTransfert{}, internal.ErrInternalError
+		return common.AccountTransfert{}, cache.ErrInternalError
 	}
 
 	// deposit amount must be positive
 	if amount <= 0.0 {
-		return common.AccountTransfert{}, internal.ErrInternalError
+		return common.AccountTransfert{}, cache.ErrInternalError
 	}
 
 	log = log.WithFields(logrus.Fields{
