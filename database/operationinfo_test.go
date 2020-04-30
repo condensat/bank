@@ -29,7 +29,8 @@ func TestAddOperationInfo(t *testing.T) {
 		{"invalidUpdate", args{model.OperationInfo{ID: 1, CryptoAddressID: 42, TxID: ":txid"}}, model.OperationInfo{}, true},
 
 		{"valid", args{model.OperationInfo{CryptoAddressID: 42, TxID: ":txid1"}}, model.OperationInfo{CryptoAddressID: 42, TxID: ":txid1"}, false},
-		{"validWithData", args{model.OperationInfo{CryptoAddressID: 42, TxID: ":txid2", Data: data}}, model.OperationInfo{CryptoAddressID: 42, TxID: ":txid2", Data: data}, false},
+		{"validWithAmount", args{model.OperationInfo{CryptoAddressID: 42, TxID: ":txid2", Amount: 0.1337, Data: data}}, model.OperationInfo{CryptoAddressID: 42, TxID: ":txid2", Amount: 0.1337, Data: data}, false},
+		{"validWithData", args{model.OperationInfo{CryptoAddressID: 42, TxID: ":txid3", Data: data}}, model.OperationInfo{CryptoAddressID: 42, TxID: ":txid3", Data: data}, false},
 	}
 	for _, tt := range tests {
 		tt := tt // capture range variable
@@ -58,6 +59,7 @@ func TestGetOperationInfo(t *testing.T) {
 
 	const cryptoAddressID = model.ID(42)
 	ref1, _ := AddOperationInfo(db, model.OperationInfo{CryptoAddressID: cryptoAddressID, TxID: ":txid1"})
+	ref2, _ := AddOperationInfo(db, model.OperationInfo{CryptoAddressID: cryptoAddressID, TxID: ":txid2", Amount: 0.1337})
 
 	type args struct {
 		operationID model.ID
@@ -72,6 +74,7 @@ func TestGetOperationInfo(t *testing.T) {
 		{"notExists", args{1337}, model.OperationInfo{}, true},
 
 		{"valid", args{ref1.ID}, ref1, false},
+		{"validWithAmount", args{ref2.ID}, ref2, false},
 	}
 	for _, tt := range tests {
 		tt := tt // capture range variable
