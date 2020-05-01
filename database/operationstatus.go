@@ -71,7 +71,7 @@ func FindActiveOperationStatus(db bank.Database) ([]model.OperationStatus, error
 
 	var list []*model.OperationStatus
 	err := gdb.
-		Where("accounted NOT IN (?)", "settled").
+		Where("accounted <> ?", "settled").
 		Find(&list).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -86,7 +86,7 @@ func FindActiveOperationInfo(db bank.Database) ([]model.OperationInfo, error) {
 
 	subQueryState := gdb.Model(&model.OperationStatus{}).
 		Select("operation_info_id").
-		Where("state <> ?", "settled").
+		Where("accounted <> ?", "settled").
 		SubQuery()
 
 	var list []*model.OperationInfo
