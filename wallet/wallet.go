@@ -141,7 +141,7 @@ func scheduledChainUpdate(ctx context.Context, chains []string, interval time.Du
 					continue
 				}
 
-				appendAddresses(allAddresses, unused...)
+				addNewAddress(allAddresses, unused...)
 			}
 
 			// fetch unconfirmed addresses from database
@@ -153,7 +153,7 @@ func scheduledChainUpdate(ctx context.Context, chains []string, interval time.Du
 					continue
 				}
 
-				appendAddresses(allAddresses, unconfirmed...)
+				addNewAddress(allAddresses, unconfirmed...)
 			}
 
 			// fetch missing addresses from database
@@ -165,7 +165,7 @@ func scheduledChainUpdate(ctx context.Context, chains []string, interval time.Du
 					continue
 				}
 
-				appendAddresses(allAddresses, missing...)
+				addNewAddress(allAddresses, missing...)
 			}
 
 			// fetch addresses with status received from database
@@ -177,11 +177,11 @@ func scheduledChainUpdate(ctx context.Context, chains []string, interval time.Du
 					continue
 				}
 
-				appendAddresses(allAddresses, received...)
+				addNewAddress(allAddresses, received...)
 			}
 
 			// create final addresses lists
-			list, addresses := uniqueAddresses(allAddresses)
+			list, addresses := getAddressLists(allAddresses)
 
 			log.WithField("List", list).
 				Trace("Final publicAddresses")
@@ -467,23 +467,22 @@ func getOperationInfos(db bank.Database, operationInfoID model.OperationInfoID) 
 
 type AddressMap map[string]model.CryptoAddress
 
-func appendAddresses(allAddresses AddressMap, addresses ...model.CryptoAddress) {
-	for _, addresse := range addresses {
-		publicAddress := string(addresse.PublicAddress)
+func addNewAddress(allAddresses AddressMap, addresses ...model.CryptoAddress) {
+	for _, address := range addresses {
+		publicAddress := string(address.PublicAddress)
 		if _, ok := allAddresses[publicAddress]; !ok {
-			allAddresses[publicAddress] = addresse
+			allAddresses[publicAddress] = address
 		}
 	}
 }
 
-func uniqueAddresses(allAddresses AddressMap) ([]string, []model.CryptoAddress) {
+func getAddressLists(allAddresses AddressMap) ([]string, []model.CryptoAddress) {
 	// create final addresses lists
 	var list []string                   // list for rpc call
 	var addresses []model.CryptoAddress // list for operations update
-	for publicAddress, addr := range allAddresses {
+	for publicAddress, address := range allAddresses {
 		list = append(list, publicAddress)
-		addresses = append(addresses, addr)
+		addresses = append(addresses, address)
 	}
-
 	return list, addresses
 }
