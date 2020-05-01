@@ -51,7 +51,7 @@ func AddOperationInfo(db bank.Database, operation model.OperationInfo) (model.Op
 }
 
 // GetOperationInfo
-func GetOperationInfo(db bank.Database, operationID model.ID) (model.OperationInfo, error) {
+func GetOperationInfo(db bank.Database, operationID model.OperationInfoID) (model.OperationInfo, error) {
 	gdb := db.DB().(*gorm.DB)
 	if db == nil {
 		return model.OperationInfo{}, errors.New("Invalid appcontext.Database")
@@ -99,7 +99,7 @@ func GetOperationInfoByTxId(db bank.Database, txID model.TxID) (model.OperationI
 }
 
 // GetOperationInfoByCryptoAddress
-func GetOperationInfoByCryptoAddress(db bank.Database, cryptoAddressID model.ID) ([]model.OperationInfo, error) {
+func GetOperationInfoByCryptoAddress(db bank.Database, cryptoAddressID model.CryptoAddressID) ([]model.OperationInfo, error) {
 	gdb := db.DB().(*gorm.DB)
 	if db == nil {
 		return nil, errors.New("Invalid appcontext.Database")
