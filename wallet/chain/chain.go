@@ -1,4 +1,4 @@
-package wallet
+package chain
 
 import (
 	"context"
@@ -7,7 +7,16 @@ import (
 
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/wallet/common"
+
+	"git.condensat.tech/bank/utils"
+
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	AddressBatchSize = 16 // maximum address count for RPC requests
 )
 
 var (
@@ -36,7 +45,7 @@ func GetNewAddress(ctx context.Context, chain, account string) (string, error) {
 
 	log = log.WithField("Chain", chain)
 
-	client := ChainClientFromContext(ctx, chain)
+	client := common.ChainClientFromContext(ctx, chain)
 	if client == nil {
 		return "", ErrChainClientNotFound
 	}
@@ -78,7 +87,7 @@ func fetchChainState(ctx context.Context, chain string) (ChainState, error) {
 
 	log = log.WithField("Chain", chain)
 
-	client := ChainClientFromContext(ctx, chain)
+	client := common.ChainClientFromContext(ctx, chain)
 	if client == nil {
 		return ChainState{}, ErrChainClientNotFound
 	}
@@ -109,12 +118,15 @@ func fetchChainState(ctx context.Context, chain string) (ChainState, error) {
 	}, nil
 }
 
-func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, minConf, maxConf uint64, publicAddresses ...string) ([]AddressInfo, error) {
+func FetchChainAddressesInfo(ctx context.Context, state ChainState, minConf, maxConf uint64, publicAddresses ...string) ([]AddressInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "wallet.FetchChainAddresses")
 
-	log = log.WithField("Chain", chain)
+	log = log.WithFields(logrus.Fields{
+		"Chain":  state.Chain,
+		"Height": state.Height,
+	})
 
-	client := ChainClientFromContext(ctx, chain)
+	client := common.ChainClientFromContext(ctx, state.Chain)
 	if client == nil {
 		return nil, ErrChainClientNotFound
 	}
@@ -125,7 +137,7 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, m
 	}
 
 	// Acquire Lock
-	lock, err := cache.LockChain(ctx, chain)
+	lock, err := cache.LockChain(ctx, state.Chain)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to lock chain")
@@ -138,15 +150,17 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, m
 	}
 
 	firsts := make(map[string]*AddressInfo)
-	batches := batchAddresses(16, publicAddresses...)
+	batches := utils.BatchString(AddressBatchSize, publicAddresses...)
 	for _, batch := range batches {
 
+		// RPC requets
 		list, err := client.ListUnspent(ctx, int(minConf), int(maxConf), batch...)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to ListUnspent")
 			return nil, err
 		}
+
 		// Order oldest first
 		sort.Slice(list, func(i, j int) bool {
 			return list[i].Confirmations > list[j].Confirmations
@@ -159,12 +173,12 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, m
 				// zero confirmation mean in mempool
 				var blockHeight uint64
 				if utxo.Confirmations > 0 {
-					blockHeight = currentHeight - uint64(utxo.Confirmations)
+					blockHeight = state.Height - uint64(utxo.Confirmations)
 				}
 
 				// create new map entry
 				firsts[utxo.Address] = &AddressInfo{
-					Chain:         chain,
+					Chain:         state.Chain,
 					PublicAddress: utxo.Address,
 					Mined:         blockHeight,
 				}
@@ -189,21 +203,4 @@ func FetchChainAddressesInfo(ctx context.Context, chain string, currentHeight, m
 	}
 
 	return result, nil
-}
-
-func batchAddresses(batchSize int, addresses ...string) [][]string {
-	if batchSize < 1 {
-		batchSize = 1
-	}
-	if batchSize > 32 {
-		batchSize = 32
-	}
-	batches := make([][]string, 0, (len(addresses)+batchSize-1)/batchSize)
-
-	for batchSize < len(addresses) {
-		addresses, batches = addresses[batchSize:], append(batches, addresses[0:batchSize:batchSize])
-	}
-	batches = append(batches, addresses)
-
-	return batches[:]
 }
