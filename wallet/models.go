@@ -6,5 +6,8 @@ import (
 )
 
 func Models() []model.Model {
-	return database.CryptoAddressModel()
+	var result []model.Model
+	result = append(result, database.CryptoAddressModel()...)
+	result = append(result, database.OperationInfoModel()...)
+	return result
 }

@@ -42,3 +42,10 @@ func CryptoAddressModel() []model.Model {
 		model.Model(new(model.CryptoAddress)),
 	}
 }
+
+func OperationInfoModel() []model.Model {
+	return append(CryptoAddressModel(), []model.Model{
+		model.Model(new(model.OperationInfo)),
+		model.Model(new(model.OperationStatus)),
+	}...)
+}
