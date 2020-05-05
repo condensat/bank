@@ -10,7 +10,7 @@ type CryptoAddress struct {
 	PublicAddress string
 }
 
-type AddressInfo struct {
+type TransactionInfo struct {
 	Chain         string
 	Account       string
 	Address       string
