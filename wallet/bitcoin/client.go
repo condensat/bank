@@ -93,7 +93,7 @@ func (p *BitcoinClient) GetNewAddress(ctx context.Context, account string) (stri
 	return string(result), nil
 }
 
-func (p *BitcoinClient) ListUnspent(ctx context.Context, minConf, maxConf int, addresses ...string) ([]common.AddressInfo, error) {
+func (p *BitcoinClient) ListUnspent(ctx context.Context, minConf, maxConf int, addresses ...string) ([]common.TransactionInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "bitcoin.ListUnspent")
 
 	client := p.client
@@ -117,9 +117,9 @@ func (p *BitcoinClient) ListUnspent(ctx context.Context, minConf, maxConf int, a
 		return nil, ErrRPCError
 	}
 
-	var result []common.AddressInfo
+	var result []common.TransactionInfo
 	for _, tx := range list {
-		result = append(result, common.AddressInfo{
+		result = append(result, common.TransactionInfo{
 			Account:       tx.Label,
 			Address:       string(tx.Address),
 			TxID:          tx.TxID,
