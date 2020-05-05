@@ -159,6 +159,7 @@ func (p *BitcoinClient) ListUnspent(ctx context.Context, minConf, maxConf int, a
 		result = append(result, common.TransactionInfo{
 			Account:       tx.Label,
 			Address:       string(tx.Address),
+			Asset:         string(tx.Asset),
 			TxID:          tx.TxID,
 			Amount:        tx.Amount,
 			Confirmations: tx.Confirmations,
