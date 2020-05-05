@@ -20,6 +20,12 @@ type TransactionInfo struct {
 	Spendable     bool
 }
 
+type AddressInfo struct {
+	Chain          string
+	PublicAddress  string
+	Unconfidential string
+}
+
 func (p *CryptoAddress) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
