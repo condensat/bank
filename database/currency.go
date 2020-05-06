@@ -17,6 +17,7 @@ const (
 )
 
 var (
+	ErrInvalidCurrencyName  = errors.New("Invalid Currency Name")
 	ErrCurrencyNotFound     = errors.New("Currency Not found")
 	ErrCurrencyNotAvailable = errors.New("Currency Not Available")
 	ErrCurrencyNotCrypto    = errors.New("Currency Not Crypto")
