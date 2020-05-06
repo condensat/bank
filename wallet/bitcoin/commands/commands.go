@@ -8,5 +8,6 @@ const (
 	CmdListUnspent     = Command("listunspent")
 	CmdLockUnspent     = Command("lockunspent")
 	CmdListLockUnspent = Command("listlockunspent")
+	CmdGetTransaction  = Command("gettransaction")
 	CmdGetAddressInfo  = Command("getaddressinfo")
 )
