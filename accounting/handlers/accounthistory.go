@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"git.condensat.tech/bank"
@@ -33,6 +34,16 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 	if err != nil {
 		return "", nil, err
 	}
+	currency, err := database.GetCurrencyByName(db, account.CurrencyName)
+	if err != nil {
+		return "", nil, err
+	}
+
+	isAsset := strings.HasPrefix(string(currency.Name), "Li#")
+	tickerPrecision := -1 // no ticker precison
+	if isAsset {
+		tickerPrecision = 0
+	}
 
 	operations, err := database.GeAccountHistoryRange(db, account.ID, from, to)
 	if err != nil {
@@ -59,11 +70,11 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 
 			Timestamp: op.Timestamp,
 			Label:     "N/A",
-			Amount:    float64(*op.Amount),
-			Balance:   float64(*op.Balance),
+			Amount:    convertAssetAmount(float64(*op.Amount), tickerPrecision),
+			Balance:   convertAssetAmount(float64(*op.Balance), tickerPrecision),
 
-			LockAmount:  float64(*op.LockAmount),
-			TotalLocked: float64(*op.TotalLocked),
+			LockAmount:  convertAssetAmount(float64(*op.LockAmount), tickerPrecision),
+			TotalLocked: convertAssetAmount(float64(*op.TotalLocked), tickerPrecision),
 		})
 	}
 

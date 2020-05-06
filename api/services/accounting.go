@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/http"
+	"strings"
 
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
@@ -26,6 +27,7 @@ type AccountRequest struct {
 type CurrencyInfo struct {
 	Name             string `json:"name"`
 	IsCrypto         bool   `json:"isCrypto"`
+	IsAsset          bool   `json:"isAsset"`
 	DisplayPrecision uint   `json:"displayPrecision"`
 }
 
@@ -152,25 +154,39 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 			info.DisplayPrecision = account.Currency.DisplayPrecision
 		}
 
+		info.Asset = strings.HasPrefix(string(account.Currency.Name), "Li#")
+
+		if info.Asset {
+			finaleRate = 1.0
+		}
+
+		notional := Notional{
+			RateBase:         request.RateBase,
+			DisplayPrecision: info.DisplayPrecision,
+			Rate:             utils.ToFixed(finaleRate, 12), // maximum precision for rates
+			Balance:          utils.ToFixed(account.Balance/finaleRate, int(info.DisplayPrecision)),
+			TotalLocked:      utils.ToFixed(account.TotalLocked/finaleRate, int(info.DisplayPrecision)),
+		}
+
+		if info.Asset {
+			// asset does not have notional
+			notional = Notional{}
+		}
+
 		result = append(result, AccountInfo{
 			Timestamp: makeTimestampMillis(account.Timestamp),
 			AccountID: sID.ToString(secureID),
 			Currency: CurrencyInfo{
 				Name:             account.Currency.Name,
 				IsCrypto:         account.Currency.Crypto,
+				IsAsset:          info.Asset,
 				DisplayPrecision: account.Currency.DisplayPrecision,
 			},
 			Name:        account.Name,
 			Status:      account.Status,
 			Balance:     account.Balance,
 			TotalLocked: account.TotalLocked,
-			Notional: Notional{
-				RateBase:         request.RateBase,
-				DisplayPrecision: info.DisplayPrecision,
-				Rate:             utils.ToFixed(finaleRate, 12), // maximum precision for rates
-				Balance:          utils.ToFixed(account.Balance/finaleRate, int(info.DisplayPrecision)),
-				TotalLocked:      utils.ToFixed(account.TotalLocked/finaleRate, int(info.DisplayPrecision)),
-			},
+			Notional:    notional,
 		})
 	}
 
