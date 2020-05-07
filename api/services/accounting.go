@@ -1,6 +1,7 @@
 package services
 
 import (
+	"math"
 	"net/http"
 	"strings"
 
@@ -21,7 +22,8 @@ type AccountingService int
 // AccountRequest holds args for accounting requests
 type AccountRequest struct {
 	SessionArgs
-	RateBase string `json:"rateBase"`
+	RateBase        string `json:"rateBase"`
+	WithEmptyCrypto bool   `json:"withEmptyCrypto"`
 }
 
 type CurrencyInfo struct {
@@ -102,6 +104,10 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 	// prepare response
 	var result []AccountInfo
 	for _, account := range list.Accounts {
+		// skip empty crypto accounts
+		if account.Currency.Crypto && !request.WithEmptyCrypto && math.Abs(account.Balance) <= 0.0 {
+			continue
+		}
 		// create SecureID from AccountID
 		secureID, err := sID.ToSecureID("account", secureid.Value(account.AccountID))
 		if err != nil {
@@ -206,6 +212,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 type AccountHistoryRequest struct {
 	SessionArgs
 	AccountID string `json:"accountId"`
+	WithEmpty bool   `json:"withEmpty"`
 	From      int64  `json:"from"`
 	To        int64  `json:"to"`
 }
@@ -303,6 +310,10 @@ func (p *AccountingService) History(r *http.Request, request *AccountHistoryRequ
 		to = history.Entries[0].Timestamp
 	}
 	for _, entry := range history.Entries {
+		// skip entries with zero amount (unlock operations)
+		if !request.WithEmpty && math.Abs(entry.Amount) <= 0.0 {
+			continue
+		}
 		// update date range from entry timestamp
 		if from.After(entry.Timestamp) {
 			from = entry.Timestamp
