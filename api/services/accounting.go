@@ -3,7 +3,6 @@ package services
 import (
 	"math"
 	"net/http"
-	"strings"
 
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
@@ -160,7 +159,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 			info.DisplayPrecision = account.Currency.DisplayPrecision
 		}
 
-		info.Asset = strings.HasPrefix(string(account.Currency.Name), "Li#")
+		info.Asset = account.Currency.Asset
 
 		if info.Asset {
 			finaleRate = 1.0
