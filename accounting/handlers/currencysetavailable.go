@@ -42,8 +42,12 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 			// NOOP
 			result = common.CurrencyInfo{
 				Name:             string(currency.Name),
+				DisplayName:      string(currency.DisplayName),
 				Available:        currency.IsAvailable(),
+				AutoCreate:       currency.AutoCreate,
 				Crypto:           currency.IsCrypto(),
+				Type:             common.CurrencyType(currency.GetType()),
+				Asset:            currency.GetType() == 2,
 				DisplayPrecision: uint(currency.DisplayPrecision()),
 			}
 			return nil
@@ -61,7 +65,14 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 
 		// update currency available
 		currency, err = database.AddOrUpdateCurrency(db,
-			model.NewCurrency(model.CurrencyName(currencyName), model.Int(availableState), crypto, currency.DisplayPrecision()),
+			model.NewCurrency(
+				model.CurrencyName(currencyName),
+				model.CurrencyName(currency.DisplayName),
+				model.Int(currency.GetType()),
+				model.Int(availableState),
+				crypto,
+				currency.DisplayPrecision(),
+			),
 		)
 		if err != nil {
 			log.WithError(err).Error("Failed to AddOrUpdateCurrency")
@@ -70,8 +81,12 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 
 		result = common.CurrencyInfo{
 			Name:             string(currency.Name),
+			DisplayName:      string(currency.DisplayName),
 			Available:        currency.IsAvailable(),
+			AutoCreate:       currency.AutoCreate,
 			Crypto:           currency.IsCrypto(),
+			Type:             common.CurrencyType(currency.GetType()),
+			Asset:            currency.GetType() == 2,
 			DisplayPrecision: uint(currency.DisplayPrecision()),
 		}
 
@@ -80,8 +95,13 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 
 	if err == nil {
 		log.WithFields(logrus.Fields{
-			"Name":      result.Name,
-			"Available": result.Available,
+			"Name":        result.Name,
+			"DisplayName": result.DisplayName,
+			"Available":   result.Available,
+			"AutoCreate":  result.AutoCreate,
+			"Type":        result.Type,
+			"Asset":       result.Asset,
+			"Crypto":      result.Crypto,
 		}).Warn("Currency updated")
 	}
 
@@ -109,13 +129,8 @@ func OnCurrencySetAvailable(ctx context.Context, subject string, message *bank.M
 			}
 
 			log.Info("Currency updated")
-
 			// create & return response
-			return &common.CurrencyInfo{
-				Name:             currency.Name,
-				Available:        currency.Available,
-				Crypto:           currency.Crypto,
-				DisplayPrecision: currency.DisplayPrecision,
-			}, nil
+			result := currency
+			return &result, nil
 		})
 }
