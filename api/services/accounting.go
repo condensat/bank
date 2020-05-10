@@ -30,6 +30,7 @@ type CurrencyInfo struct {
 	IsCrypto         bool   `json:"isCrypto"`
 	IsAsset          bool   `json:"isAsset"`
 	DisplayPrecision uint   `json:"displayPrecision"`
+	Icon             []byte `json:"icon,omitempty"`
 }
 
 type Notional struct {
@@ -174,6 +175,8 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 			notional = Notional{}
 		}
 
+		icon := getTickerIcon(ctx, account.Currency.Name)
+
 		result = append(result, AccountInfo{
 			Timestamp: makeTimestampMillis(account.Timestamp),
 			AccountID: sID.ToString(secureID),
@@ -182,6 +185,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 				IsCrypto:         account.Currency.Crypto,
 				IsAsset:          info.Asset,
 				DisplayPrecision: account.Currency.DisplayPrecision,
+				Icon:             icon,
 			},
 			Name:        account.Name,
 			Status:      account.Status,
