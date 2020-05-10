@@ -338,7 +338,7 @@ func (p *AccountingService) History(r *http.Request, request *AccountHistoryRequ
 	// Reply
 	*reply = AccountHistoryResponse{
 		AccountID: request.AccountID,
-		Currency:  history.Currency,
+		Currency:  history.DisplayName,
 		From:      makeTimestampMillis(from),
 		To:        makeTimestampMillis(to),
 
