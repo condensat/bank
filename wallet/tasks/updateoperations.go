@@ -7,6 +7,7 @@ import (
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/accounting/client"
 
@@ -154,6 +155,8 @@ func createUserAssetAccount(ctx context.Context, userID, accountID uint64, asset
 		return accountID, nil
 	}
 
+	log = log.WithField("CurrencyName", asset.CurrencyName)
+
 	// check if account exists
 	accounts, err := client.AccountList(ctx, userID)
 	if err != nil {
@@ -164,9 +167,8 @@ func createUserAssetAccount(ctx context.Context, userID, accountID uint64, asset
 
 	// find account with currency
 	for _, account := range accounts.Accounts {
-		if account.Currency.Name == string(asset.CurrencyName) {
+		if account.Currency.Name == string(asset.CurrencyName) || account.Currency.Name == utils.EllipsisCentral(string(asset.Hash), 5) {
 			log.
-				WithField("CurrencyName", asset.CurrencyName).
 				WithField("AccountID", account.AccountID).
 				Debug("Account Exists")
 			return account.AccountID, nil
