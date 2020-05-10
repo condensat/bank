@@ -26,7 +26,8 @@ type AccountRequest struct {
 }
 
 type CurrencyInfo struct {
-	Name             string `json:"name"`
+	DisplayName      string `json:"displayName"`
+	Ticker           string `json:"ticker"`
 	IsCrypto         bool   `json:"isCrypto"`
 	IsAsset          bool   `json:"isAsset"`
 	DisplayPrecision uint   `json:"displayPrecision"`
@@ -156,7 +157,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 			info.DisplayPrecision = account.Currency.DisplayPrecision
 		}
 
-		info.Asset = account.Currency.Asset
+		info.Asset = account.Currency.Type == 2 && account.Currency.Name != "LBTC"
 
 		if info.Asset {
 			finaleRate = 1.0
@@ -177,11 +178,17 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 
 		icon := getTickerIcon(ctx, account.Currency.Name)
 
+		displayName := account.Currency.DisplayName
+		if account.Currency.Name == "TBTC" {
+			displayName = "Bitcoin testnet"
+		}
+
 		result = append(result, AccountInfo{
 			Timestamp: makeTimestampMillis(account.Timestamp),
 			AccountID: sID.ToString(secureID),
 			Currency: CurrencyInfo{
-				Name:             account.Currency.Name,
+				DisplayName:      displayName,
+				Ticker:           account.Currency.Name,
 				IsCrypto:         account.Currency.Crypto,
 				IsAsset:          info.Asset,
 				DisplayPrecision: account.Currency.DisplayPrecision,
@@ -228,11 +235,12 @@ type AccountOperation struct {
 
 // AccountHistoryResponse holds args for accounting requests
 type AccountHistoryResponse struct {
-	AccountID  string             `json:"accountId"`
-	Currency   string             `json:"currency"`
-	From       int64              `json:"from"`
-	To         int64              `json:"to"`
-	Operations []AccountOperation `json:"operations"`
+	AccountID   string             `json:"accountId"`
+	DisplayName string             `json:"displayName"`
+	Ticker      string             `json:"ticker"`
+	From        int64              `json:"from"`
+	To          int64              `json:"to"`
+	Operations  []AccountOperation `json:"operations"`
 }
 
 // AccountingService operation return user's accounts
@@ -339,12 +347,18 @@ func (p *AccountingService) History(r *http.Request, request *AccountHistoryRequ
 		})
 	}
 
+	displayName := history.DisplayName
+	if history.DisplayName == "TBTC" {
+		displayName = "Bitcoin testnet"
+	}
+
 	// Reply
 	*reply = AccountHistoryResponse{
-		AccountID: request.AccountID,
-		Currency:  history.DisplayName,
-		From:      makeTimestampMillis(from),
-		To:        makeTimestampMillis(to),
+		AccountID:   request.AccountID,
+		DisplayName: displayName,
+		Ticker:      history.Ticker,
+		From:        makeTimestampMillis(from),
+		To:          makeTimestampMillis(to),
 
 		Operations: result[:],
 	}
