@@ -4,11 +4,13 @@ import (
 	"context"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/common"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/accounting/common"
+
+	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
@@ -32,7 +34,10 @@ func CurrencyList(ctx context.Context) (common.CurrencyList, error) {
 		for _, currency := range list {
 			result.Currencies = append(result.Currencies, common.CurrencyInfo{
 				Name:             string(currency.Name),
+				DisplayName:      string(currency.DisplayName),
 				Available:        currency.IsAvailable(),
+				AutoCreate:       currency.AutoCreate,
+				Type:             common.CurrencyType(currency.GetType()),
 				Crypto:           currency.IsCrypto(),
 				DisplayPrecision: uint(currency.DisplayPrecision()),
 			})
@@ -64,7 +69,7 @@ func OnCurrencyList(ctx context.Context, subject string, message *bank.Message) 
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CurrencyList")
-				return nil, internal.ErrInternalError
+				return nil, cache.ErrInternalError
 			}
 
 			// return response
