@@ -16,6 +16,7 @@ type BankObject interface {
 }
 
 type ServerOptions struct {
+	Protocol string
 	HostName string
 	Port     int
 }
