@@ -1,4 +1,4 @@
-package internal
+package cache
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/cache"
 
 	"github.com/bsm/redislock"
 )
@@ -37,7 +36,7 @@ type RedisMutex struct {
 }
 
 func NewRedisMutex(ctx context.Context) Mutex {
-	client := cache.ToRedis(appcontext.Cache(ctx))
+	client := ToRedis(appcontext.Cache(ctx))
 	if client == nil {
 		panic("Invalid Redis client")
 	}
@@ -103,6 +102,10 @@ func lockKeyAccountID(accountID uint64) string {
 	return lockKeyString("lock.Account", accountID)
 }
 
+func lockKeyChain(chain string) string {
+	return lockKeyString("lock.Chain", chain)
+}
+
 func LockUser(ctx context.Context, userID uint64) (Lock, error) {
 	mutex := RedisMutexFromContext(ctx)
 	if mutex == nil {
@@ -117,4 +120,12 @@ func LockAccount(ctx context.Context, accountID uint64) (Lock, error) {
 		return nil, ErrRedisMutexNotFound
 	}
 	return mutex.Lock(ctx, lockKeyAccountID(accountID), DefaultLockTTL)
+}
+
+func LockChain(ctx context.Context, chain string) (Lock, error) {
+	mutex := RedisMutexFromContext(ctx)
+	if mutex == nil {
+		return nil, ErrRedisMutexNotFound
+	}
+	return mutex.Lock(ctx, lockKeyChain(chain), DefaultLockTTL)
 }

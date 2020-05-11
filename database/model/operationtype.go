@@ -7,6 +7,7 @@ type OperationType String
 const (
 	OperationTypeInvalid OperationType = ""
 
+	OperationTypeInit       OperationType = "init"
 	OperationTypeDeposit    OperationType = "deposit"
 	OperationTypeWithdraw   OperationType = "withdraw"
 	OperationTypeTransfert  OperationType = "transfert"
@@ -22,6 +23,8 @@ var (
 
 func (p OperationType) Valid() bool {
 	switch p {
+	case OperationTypeInit:
+		fallthrough
 	case OperationTypeDeposit:
 		fallthrough
 	case OperationTypeWithdraw:
@@ -60,6 +63,7 @@ func knownOperationType() []OperationType {
 	return []OperationType{
 		OperationTypeInvalid,
 
+		OperationTypeInit,
 		OperationTypeDeposit,
 		OperationTypeWithdraw,
 		OperationTypeTransfert,

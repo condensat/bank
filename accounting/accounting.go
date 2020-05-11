@@ -5,8 +5,8 @@ import (
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/accounting/handlers"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -18,7 +18,7 @@ type Accounting int
 func (p *Accounting) Run(ctx context.Context) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.Run")
 
-	p.registerHandlers(internal.RedisMutexContext(ctx))
+	p.registerHandlers(cache.RedisMutexContext(ctx))
 
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),
@@ -40,6 +40,7 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 	nats.SubscribeWorkers(ctx, common.CurrencySetAvailableSubject, 2*concurencyLevel, handlers.OnCurrencySetAvailable)
 
 	nats.SubscribeWorkers(ctx, common.AccountCreateSubject, 2*concurencyLevel, handlers.OnAccountCreate)
+	nats.SubscribeWorkers(ctx, common.AccountInfoSubject, 2*concurencyLevel, handlers.OnAccountInfo)
 	nats.SubscribeWorkers(ctx, common.AccountListSubject, 2*concurencyLevel, handlers.OnAccountList)
 	nats.SubscribeWorkers(ctx, common.AccountHistorySubject, 2*concurencyLevel, handlers.OnAccountHistory)
 	nats.SubscribeWorkers(ctx, common.AccountSetStatusSubject, 2*concurencyLevel, handlers.OnAccountSetStatus)
