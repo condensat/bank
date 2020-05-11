@@ -66,4 +66,5 @@ func getGormDB(db bank.Database) *gorm.DB {
 const (
 	reqEQ  = " = ?"
 	reqGTE = " >= ?"
+	reqLTE = " <= ?"
 )

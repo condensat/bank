@@ -4,18 +4,20 @@ import (
 	"context"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/common"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/accounting/common"
+
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
 )
 
-func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, precision uint) (common.CurrencyInfo, error) {
+func CurrencyCreate(ctx context.Context, currencyName, displayName string, currencyType common.CurrencyType, isCrypto bool, precision uint) (common.CurrencyInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.CurrencyCreate")
 	var result common.CurrencyInfo
 
@@ -39,7 +41,13 @@ func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, pre
 				crypto = 1
 			}
 			currency, err = database.AddOrUpdateCurrency(db,
-				model.NewCurrency(model.CurrencyName(currencyName), model.Int(0), model.Int(crypto), model.Int(precision)),
+				model.NewCurrency(
+					model.CurrencyName(currencyName),
+					model.CurrencyName(displayName),
+					model.Int(currencyType),
+					model.Int(0), model.Int(crypto),
+					model.Int(precision),
+				),
 			)
 			if err != nil {
 				log.WithError(err).Error("Failed to AddOrUpdateCurrency")
@@ -49,7 +57,10 @@ func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, pre
 
 		result = common.CurrencyInfo{
 			Name:             string(currency.Name),
+			DisplayName:      string(currency.DisplayName),
 			Available:        currency.IsAvailable(),
+			AutoCreate:       currency.AutoCreate,
+			Type:             common.CurrencyType(currency.GetType()),
 			Crypto:           currency.IsCrypto(),
 			DisplayPrecision: uint(currency.DisplayPrecision()),
 		}
@@ -60,7 +71,10 @@ func CurrencyCreate(ctx context.Context, currencyName string, isCrypto bool, pre
 	if err == nil {
 		log.WithFields(logrus.Fields{
 			"Name":             result.Name,
+			"DisplayName":      result.DisplayName,
 			"Available":        result.Available,
+			"AutoCreate":       result.AutoCreate,
+			"Type":             result.Type,
 			"Crypto":           result.Crypto,
 			"DisplayPrecision": result.DisplayPrecision,
 		}).Warn("Currency created")
@@ -82,19 +96,17 @@ func OnCurrencyCreate(ctx context.Context, subject string, message *bank.Message
 				"Name": request.Name,
 			})
 
-			currency, err := CurrencyCreate(ctx, request.Name, request.Crypto, request.DisplayPrecision)
+			currency, err := CurrencyCreate(ctx, request.Name, request.DisplayName, request.Type, request.Crypto, request.DisplayPrecision)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CurrencyCreate")
-				return nil, internal.ErrInternalError
+				return nil, cache.ErrInternalError
 			}
 
 			log.Info("Currency Created")
 
 			// create & return response
-			return &common.CurrencyInfo{
-				Name:      currency.Name,
-				Available: currency.Available,
-			}, nil
+			result := currency
+			return &result, nil
 		})
 }

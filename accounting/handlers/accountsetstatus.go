@@ -4,12 +4,14 @@ import (
 	"context"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/common"
-	"git.condensat.tech/bank/accounting/internal"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/accounting/common"
+
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
@@ -91,7 +93,7 @@ func OnAccountSetStatus(ctx context.Context, subject string, message *bank.Messa
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to AccountSetStatus")
-				return nil, internal.ErrInternalError
+				return nil, cache.ErrInternalError
 			}
 
 			log.Info("Account status updated")
