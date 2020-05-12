@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	MaxAssetIconDataLen = (1 << 16) - 1
+	MaxAssetIconDataLen = (256 << 10) - 1
 )
 
 var (
