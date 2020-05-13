@@ -31,4 +31,15 @@ func main() {
 	if !proposal.Payload.Valid() {
 		panic(common.ErrInvalidPayload)
 	}
+
+	payload := proposal.Payload
+	if info, err := client.InfoSwapProposal(ctx, 42, payload); true {
+		if err != nil {
+			panic(err)
+		}
+		if !info.Payload.Valid() {
+			panic(common.ErrInvalidPayload)
+		}
+		log.Printf("Info: %+v", info)
+	}
 }

@@ -18,7 +18,6 @@ const (
 	SwapCommandInfo     = SwapCommand("info")
 	SwapCommandPropose  = SwapCommand("propose")
 	SwapCommandFinalize = SwapCommand("finalize")
-	SwapCommandAccept   = SwapCommand("accept")
 
 	FeeRatePrecision       = 9 // BTC/Kb = 1000 / 100000000 sat/B
 	FeeRatePrecisionFormat = "%.9f"
@@ -71,4 +70,8 @@ func LiquidSwapPropose(address common.ConfidentialAddress, proposal common.Propo
 		SwapCommandPropose,
 		"--fee-rate", fmt.Sprintf(FeeRatePrecisionFormat, feeRate),
 		proposal)
+}
+
+func LiquidSwapInfo(payload common.Payload) shellexec.Options {
+	return liquidSwapOptions(SwapCommandInfo, payload)
 }
