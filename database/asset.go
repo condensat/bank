@@ -2,9 +2,12 @@ package database
 
 import (
 	"errors"
+	"strings"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/utils"
+
 	"github.com/jinzhu/gorm"
 )
 
@@ -86,6 +89,10 @@ func GetAssetByHash(db bank.Database, assetHash model.AssetHash) (model.Asset, e
 		return model.Asset{}, ErrInvalidAssetHash
 	}
 
+	if utils.ContainEllipsis(string(assetHash)) {
+		assetHash = getFullAssetHash(gdb, assetHash)
+	}
+
 	var result model.Asset
 	err := gdb.
 		Where(&model.Asset{Hash: assetHash}).
@@ -137,4 +144,22 @@ func AssetHashExists(db bank.Database, assetHash model.AssetHash) bool {
 	}
 
 	return true
+}
+
+func getFullAssetHash(gdb *gorm.DB, assetHash model.AssetHash) model.AssetHash {
+	tips := utils.SplitEllipsis(string(assetHash))
+	if len(tips) != 2 {
+		return assetHash
+	}
+
+	var result model.Asset
+	err := gdb.
+		Where("asset LIKE ?", strings.Join(tips, "%")).
+		Where(&model.Asset{Hash: assetHash}).
+		First(&result).Error
+	if err != nil {
+		return assetHash
+	}
+
+	return result.Hash
 }
