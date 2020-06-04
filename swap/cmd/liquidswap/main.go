@@ -14,11 +14,17 @@ import (
 	"git.condensat.tech/bank/swap/liquid"
 )
 
+type Swap struct {
+	ElementsConf string
+}
+
 type Args struct {
 	App appcontext.Options
 
 	Redis cache.RedisOptions
 	Nats  messaging.NatsOptions
+
+	Swap Swap
 }
 
 func parseArgs() Args {
@@ -28,6 +34,8 @@ func parseArgs() Args {
 
 	cache.OptionArgs(&args.Redis)
 	messaging.OptionArgs(&args.Nats)
+
+	flag.StringVar(&args.Swap.ElementsConf, "elementsConf", "/etc/liquidswap/elements.conf", "Elements conf file for RPC")
 
 	flag.Parse()
 
@@ -45,5 +53,5 @@ func main() {
 	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
 	var swap liquid.Swap
-	swap.Run(ctx)
+	swap.Run(ctx, args.Swap.ElementsConf)
 }
