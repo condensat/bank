@@ -10,8 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CryptoAddressNextDeposit(ctx context.Context, chain string, accountID uint64) (common.CryptoAddress, error) {
-	log := logger.Logger(ctx).WithField("Method", "wallet.client.CryptoAddressNextDeposit")
+func CryptoAddressNewDeposit(ctx context.Context, chain string, accountID uint64) (common.CryptoAddress, error) {
+	log := logger.Logger(ctx).WithField("Method", "wallet.client.CryptoAddressNewDeposit")
 
 	request := common.CryptoAddress{
 		Chain:     chain,
@@ -19,7 +19,7 @@ func CryptoAddressNextDeposit(ctx context.Context, chain string, accountID uint6
 	}
 
 	var result common.CryptoAddress
-	err := messaging.RequestMessage(ctx, common.CryptoAddressNextDepositSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, common.CryptoAddressNewDepositSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

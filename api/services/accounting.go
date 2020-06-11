@@ -7,6 +7,8 @@ import (
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/currency/rate"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -30,6 +32,7 @@ type CurrencyInfo struct {
 	Ticker           string `json:"ticker"`
 	IsCrypto         bool   `json:"isCrypto"`
 	IsAsset          bool   `json:"isAsset"`
+	AssetHash        string `json:"assetHash"`
 	DisplayPrecision uint   `json:"displayPrecision"`
 	Icon             []byte `json:"icon,omitempty"`
 }
@@ -183,6 +186,13 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 			displayName = "Bitcoin testnet"
 		}
 
+		var assetHash string
+		if info.Asset {
+			if asset, err := database.GetAssetByCurrencyName(appcontext.Database(ctx), model.CurrencyName(account.Currency.Name)); err == nil {
+				assetHash = string(asset.Hash)
+			}
+		}
+
 		result = append(result, AccountInfo{
 			Timestamp: makeTimestampMillis(account.Timestamp),
 			AccountID: sID.ToString(secureID),
@@ -191,6 +201,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 				Ticker:           account.Currency.Name,
 				IsCrypto:         account.Currency.Crypto,
 				IsAsset:          info.Asset,
+				AssetHash:        assetHash,
 				DisplayPrecision: account.Currency.DisplayPrecision,
 				Icon:             icon,
 			},
