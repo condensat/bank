@@ -57,3 +57,10 @@ func AssetModel() []model.Model {
 		model.Model(new(model.AssetIcon)),
 	}
 }
+
+func SwapModel() []model.Model {
+	return []model.Model{
+		model.Model(new(model.Swap)),
+		model.Model(new(model.SwapInfo)),
+	}
+}
