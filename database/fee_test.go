@@ -14,8 +14,12 @@ func TestAddFee(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	ref1, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
-	ref2, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	ref1, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
+	ref2, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	type args struct {
 		withdrawID model.WithdrawID
@@ -60,7 +64,11 @@ func TestGetFee(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	withdraw, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	withdraw, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	ref, _ := AddFee(db, withdraw.ID, 0.1, "{}")
 
@@ -98,7 +106,11 @@ func TestGetFeeByWithdrawID(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	withdraw, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	withdraw, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	ref, _ := AddFee(db, withdraw.ID, 0.1, "{}")
 
