@@ -15,7 +15,11 @@ func TestAddWithdrawInfo(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	ref, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	ref, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	type args struct {
 		withdrawID model.WithdrawID
@@ -67,7 +71,11 @@ func TestGetWithdrawInfo(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	withdraw, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	withdraw, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	ref, _ := AddWithdrawInfo(db, withdraw.ID, model.WithdrawStatusCreated, "{}")
 
@@ -112,7 +120,11 @@ func TestGetWithdrawHistory(t *testing.T) {
 	db := setup(databaseName, WithdrawModel())
 	defer teardown(db, databaseName)
 
-	ref, _ := AddWithdraw(db, 42, 1337, 0.1, model.BatchModeNormal, "{}")
+	data := createTestAccountStateData(db)
+	a1 := data.Accounts[0]
+	a2 := data.Accounts[2]
+
+	ref, _ := AddWithdraw(db, a1.ID, a2.ID, 0.1, model.BatchModeNormal, "{}")
 
 	ref1, _ := AddWithdrawInfo(db, ref.ID, model.WithdrawStatusCreated, "{}")
 	ref2, _ := AddWithdrawInfo(db, ref.ID, model.WithdrawStatusProcessing, "{}")
