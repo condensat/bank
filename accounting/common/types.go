@@ -79,6 +79,10 @@ type AccountHistory struct {
 	Entries []AccountEntry
 }
 
+type AccountTransferWithdraw struct {
+	Source AccountEntry
+}
+
 func (p *CurrencyList) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
@@ -140,5 +144,13 @@ func (p *AccountHistory) Encode() ([]byte, error) {
 }
 
 func (p *AccountHistory) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *AccountTransferWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AccountTransferWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
