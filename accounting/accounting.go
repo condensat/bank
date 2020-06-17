@@ -7,6 +7,7 @@ import (
 	"git.condensat.tech/bank/accounting/handlers"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -15,8 +16,9 @@ import (
 
 type Accounting int
 
-func (p *Accounting) Run(ctx context.Context) {
+func (p *Accounting) Run(ctx context.Context, bankUser model.User) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.Run")
+	ctx = common.BankUserContext(ctx, bankUser)
 
 	p.registerHandlers(cache.RedisMutexContext(ctx))
 
