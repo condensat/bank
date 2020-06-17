@@ -30,7 +30,7 @@ func AccountTransferWithdraw(ctx context.Context, accountID uint64, currency str
 			AccountID: accountID,
 			Currency:  currency,
 
-			OperationType:    "transfert",
+			OperationType:    "transfer",
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
 
@@ -46,7 +46,7 @@ func AccountTransferWithdraw(ctx context.Context, accountID uint64, currency str
 	return uint64(transfer.Source.ReferenceID), nil
 }
 
-func accountTransferWithdrawRequest(ctx context.Context, withdraw common.AccountTransferWithdraw) (common.AccountTransfert, error) {
+func accountTransferWithdrawRequest(ctx context.Context, withdraw common.AccountTransferWithdraw) (common.AccountTransfer, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.accountTransferWithdrawRequest")
 	log = log.WithFields(logrus.Fields{
 		"AccountID": withdraw.Source.AccountID,
@@ -54,12 +54,12 @@ func accountTransferWithdrawRequest(ctx context.Context, withdraw common.Account
 		"Label":     withdraw.Source.Label,
 	})
 
-	var result common.AccountTransfert
+	var result common.AccountTransfer
 	err := messaging.RequestMessage(ctx, common.AccountTransferWithdrawSubject, &withdraw, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")
-		return common.AccountTransfert{}, messaging.ErrRequestFailed
+		return common.AccountTransfer{}, messaging.ErrRequestFailed
 	}
 
 	log.WithFields(logrus.Fields{
