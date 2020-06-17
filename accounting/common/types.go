@@ -80,7 +80,8 @@ type AccountHistory struct {
 }
 
 type AccountTransferWithdraw struct {
-	Source AccountEntry
+	BatchMode string
+	Source    AccountEntry
 }
 
 func (p *CurrencyList) Encode() ([]byte, error) {
