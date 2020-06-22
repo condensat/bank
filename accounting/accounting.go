@@ -2,6 +2,8 @@ package accounting
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/accounting/handlers"
@@ -16,6 +18,11 @@ import (
 
 type Accounting int
 
+const (
+	DefaultInterval time.Duration = 30 * time.Second
+	DefaultDelay    time.Duration = 0 * time.Second
+)
+
 func (p *Accounting) Run(ctx context.Context, bankUser model.User) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.Run")
 	ctx = common.BankUserContext(ctx, bankUser)
@@ -25,6 +32,8 @@ func (p *Accounting) Run(ctx context.Context, bankUser model.User) {
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),
 	}).Info("Accounting Service started")
+
+	go p.scheduledWithdrawBatch(ctx, DefaultInterval, DefaultDelay)
 
 	<-ctx.Done()
 }
@@ -52,4 +61,60 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 	nats.SubscribeWorkers(ctx, common.AccountTransferWithdrawSubject, 2*concurencyLevel, handlers.OnAccountTransferWithdraw)
 
 	log.Debug("Bank Accounting registered")
+}
+
+func checkParams(interval time.Duration, delay time.Duration) (time.Duration, time.Duration) {
+	if interval < time.Second {
+		interval = DefaultInterval
+	}
+	if delay < 0 {
+		delay = DefaultDelay
+	}
+
+	return interval, delay
+}
+
+func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.Duration, delay time.Duration) {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.scheduledWithdrawBatch")
+
+	interval, delay = checkParams(interval, delay)
+
+	log = log.WithFields(logrus.Fields{
+		"Interval": fmt.Sprintf("%v", interval),
+		"Delay":    fmt.Sprintf("%v", delay),
+	})
+
+	log.Info("Start batch Scheduler")
+
+	for epoch := range utils.Scheduler(ctx, interval, delay) {
+		log := log.WithFields(logrus.Fields{
+			"Epoch": epoch.Truncate(time.Millisecond),
+		})
+
+		withdraws, err := FetchCreatedWithdraws(ctx)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to FetchCreatedWithdraws")
+			continue
+		}
+
+		if len(withdraws) == 0 {
+			log.
+				Debug("FetchCreatedWithdraws returns empty withdraw target")
+			continue
+		}
+
+		err = ProcessWithdraws(ctx, withdraws)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to ProcessWithdraws")
+			continue
+		}
+
+		log.Debug("Withdraw processed")
+
+		log.WithFields(logrus.Fields{
+			"Epoch": epoch.Truncate(time.Millisecond),
+		}).Debug("ProcessWithdraws processed")
+	}
 }
