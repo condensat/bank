@@ -33,8 +33,7 @@ type BatchInfo struct {
 
 // BatchInfoCryptoData data type for BatchInfo crypto
 type BatchInfoCryptoData struct {
-	Chain String `json:"chain,omitempty"`
-	TxID  String `json:"txid,omitempty"`
+	TxID String `json:"txid,omitempty"`
 }
 
 func (p *BatchInfo) CryptoData() (BatchInfoCryptoData, error) {
