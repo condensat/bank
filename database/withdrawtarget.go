@@ -82,7 +82,7 @@ func GetWithdrawTargetByWithdrawID(db bank.Database, withdrawID model.WithdrawID
 	return result, nil
 }
 
-func GetWithdrawTargetByStatus(db bank.Database, status model.WithdrawStatus) ([]model.WithdrawTarget, error) {
+func GetLastWithdrawTargetByStatus(db bank.Database, status model.WithdrawStatus) ([]model.WithdrawTarget, error) {
 	gdb := db.DB().(*gorm.DB)
 	if db == nil {
 		return nil, errors.New("Invalid appcontext.Database")
@@ -92,9 +92,17 @@ func GetWithdrawTargetByStatus(db bank.Database, status model.WithdrawStatus) ([
 		return nil, ErrInvalidWithdrawStatus
 	}
 
+	subQueryLast := gdb.Model(&model.WithdrawInfo{}).
+		Select("MAX(id)").
+		Group("withdraw_id").
+		SubQuery()
+
 	subQueryInfo := gdb.Model(&model.WithdrawInfo{}).
 		Select("withdraw_id").
-		Where("status = ?", status).
+		Where("id IN (?)", subQueryLast).
+		Where(model.WithdrawInfo{
+			Status: status,
+		}).
 		SubQuery()
 
 	var list []*model.WithdrawTarget
