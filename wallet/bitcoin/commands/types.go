@@ -1,6 +1,7 @@
 package commands
 
 type Address string
+type Transaction string
 
 type TransactionInfo struct {
 	// Bitcoin
@@ -79,4 +80,9 @@ type AddressInfo struct {
 type UTXOInfo struct {
 	TxID string `json:"txid"`
 	Vout int    `json:"vout"`
+}
+
+type SpendInfo struct {
+	Address string
+	Amount  float64
 }
