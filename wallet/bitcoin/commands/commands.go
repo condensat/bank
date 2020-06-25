@@ -11,4 +11,6 @@ const (
 	CmdGetTransaction  = Command("gettransaction")
 	CmdGetAddressInfo  = Command("getaddressinfo")
 	CmdSendMany        = Command("sendmany")
+
+	CmdCreateRawTransaction = Command("createrawtransaction")
 )
