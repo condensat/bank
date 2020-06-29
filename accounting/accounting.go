@@ -9,6 +9,7 @@ import (
 	"git.condensat.tech/bank/accounting/handlers"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
@@ -95,30 +96,84 @@ func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.D
 			"Epoch": epoch.Truncate(time.Millisecond),
 		})
 
-		withdraws, err := FetchCreatedWithdraws(ctx)
+		err := processPendingWithdraws(ctx)
 		if err != nil {
 			log.WithError(err).
-				Error("Failed to FetchCreatedWithdraws")
-			continue
+				Error("Failed to processPendingWithdraws")
+			// continue to next task
 		}
 
-		if len(withdraws) == 0 {
-			log.
-				Debug("FetchCreatedWithdraws returns empty withdraw target")
-			continue
-		}
-
-		err = ProcessWithdraws(ctx, withdraws)
+		err = processPendingBatches(ctx)
 		if err != nil {
 			log.WithError(err).
-				Error("Failed to ProcessWithdraws")
-			continue
+				Error("Failed to processPendingBatches")
+			// continue to next task
 		}
-
-		log.Debug("Withdraw processed")
-
-		log.WithFields(logrus.Fields{
-			"Epoch": epoch.Truncate(time.Millisecond),
-		}).Debug("ProcessWithdraws processed")
 	}
+}
+
+func processPendingWithdraws(ctx context.Context) error {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.processPendingWithdraws")
+
+	withdraws, err := FetchCreatedWithdraws(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to FetchCreatedWithdraws")
+		return err
+	}
+
+	if len(withdraws) == 0 {
+		log.
+			Debug("FetchCreatedWithdraws returns empty withdraw target")
+		return err
+	}
+
+	err = ProcessWithdraws(ctx, withdraws)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to ProcessWithdraws")
+		return err
+	}
+
+	return nil
+}
+
+func processPendingBatches(ctx context.Context) error {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.processPendingBatches")
+	db := appcontext.Database(ctx)
+
+	log.Info("Process batches")
+
+	batches, err := database.FetchBatchReady(db)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to ProcessWithdraws")
+		return err
+	}
+
+	for _, batch := range batches {
+		if !batch.IsComplete() {
+			continue
+		}
+		info, err := database.GetLastBatchInfo(db, batch.ID)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to GetLastBatchInfo")
+			continue
+		}
+		if info.Status != model.BatchStatusCreated {
+			log.
+				Warning("Batch status is not BatchStatusCreated")
+			continue
+		}
+
+		_, err = database.AddBatchInfo(db, batch.ID, model.BatchStatusReady, info.Type, info.Data)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to AddBatchInfo")
+			continue
+		}
+	}
+
+	return nil
 }
