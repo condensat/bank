@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/database/model"
+	"github.com/jinzhu/gorm"
 )
 
 func TestAddBatch(t *testing.T) {
@@ -47,6 +49,8 @@ func TestAddBatch(t *testing.T) {
 
 			tt.want.ID = got.ID
 			tt.want.Timestamp = got.Timestamp
+			tt.want.ExecuteAfter = got.ExecuteAfter
+			tt.want.Capacity = got.Capacity
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AddBatch() = %v, want %v", got, tt.want)
 			}
@@ -84,14 +88,60 @@ func TestGetBatch(t *testing.T) {
 				if got.Timestamp.IsZero() || got.Timestamp.After(time.Now()) {
 					t.Errorf("GetBatch() wrong Timestamp %v", got.Timestamp)
 				}
+
+				if got.Capacity != DefaultBatchCapacity {
+					t.Errorf("GetBatch() wrong default capacity = %v, want %v", got.Capacity, DefaultBatchCapacity)
+				}
+				if !got.ExecuteAfter.After(got.Timestamp.Add(DefaultBatchExecutionDelay).Add(-30 * time.Second)) {
+					t.Errorf("GetBatch() wrong default execute after = %v", got.ExecuteAfter)
+				}
 			}
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBatch() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetBatch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFetchBatchReady(t *testing.T) {
+	const databaseName = "TestFetchBatchReady"
+	t.Parallel()
+
+	db := setup(databaseName, WithdrawModel())
+	defer teardown(db, databaseName)
+
+	// add not ready
+	ref, _ := AddBatch(db, "bitcoin", "")
+	_, _ = AddBatchInfo(db, ref.ID, model.BatchStatusCreated, model.BatchInfoCrypto, "")
+
+	// add ready
+	ready, _ := AddBatch(db, "bitcoin", "")
+	ready = updateExecuteAfter(db, ready, ready.Timestamp.Add(-time.Minute), ready.Timestamp.Add(-10*time.Second))
+	_, _ = AddBatchInfo(db, ready.ID, model.BatchStatusCreated, model.BatchInfoCrypto, "")
+
+	tests := []struct {
+		name    string
+		want    []model.Batch
+		wantErr bool
+	}{
+		{"ready", []model.Batch{ready}, false},
+	}
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := FetchBatchReady(db)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FetchBatchReady() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FetchBatchReady() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -148,4 +198,23 @@ func createBatch(network model.BatchNetwork, data model.BatchData) model.Batch {
 		Network: network,
 		Data:    data,
 	}
+}
+
+func updateExecuteAfter(db bank.Database, ready model.Batch, newTimestamp, newExecuteAfter time.Time) model.Batch {
+	gdb := db.DB().(*gorm.DB)
+
+	ready.Timestamp = newTimestamp
+	ready.ExecuteAfter = newExecuteAfter
+
+	// update
+	_ = gdb.Model(&model.Batch{}).
+		Where(model.Batch{ID: ready.ID}).
+		Update(&ready).Error
+
+	// get from db
+	_ = gdb.Model(&model.Batch{}).
+		Where(model.Batch{ID: ready.ID}).
+		First(&ready).Error
+
+	return ready
 }
