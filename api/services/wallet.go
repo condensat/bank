@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
@@ -17,6 +18,8 @@ import (
 
 var (
 	ErrWalletChainNotFoundError = errors.New("Chain Not Found")
+	ErrInvalidPublicAddress     = errors.New("Invalid Public Address")
+	ErrInvalidWithdraw          = errors.New("Invalid Withdraw")
 )
 
 type WalletService int
@@ -143,12 +146,124 @@ func getChainFromCurrencyName(isCrypto bool, currencyName string) (string, error
 	}
 }
 
+// WalletSendFundsRequest holds args for wallet requests
+type WalletSendFundsRequest struct {
+	SessionArgs
+	AccountID     string  `json:"accountId"`
+	PublicAddress string  `json:"publicAddress"`
+	Amount        float64 `json:"amount"`
+}
+
+// WalletSendFundsResponse holds args for wallet requests
+type WalletSendFundsResponse struct {
+	WithdrawID string `json:"withdrawID"`
+}
+
+func (p *WalletService) SendFunds(r *http.Request, request *WalletSendFundsRequest, reply *WalletSendFundsResponse) error {
+	ctx := r.Context()
+	log := logger.Logger(ctx).WithField("Method", "WalletService.SendFunds")
+	log = GetServiceRequestLog(log, r, "Wallet", "SendFunds")
+
+	// Retrieve context values
+	_, session, err := ContextValues(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("ContextValues Failed")
+		return ErrServiceInternalError
+	}
+
+	// Get userID from session
+	request.SessionID = getSessionCookie(r)
+	sessionID := sessions.SessionID(request.SessionID)
+	userID := session.UserSession(ctx, sessionID)
+	if !sessions.IsUserValid(userID) {
+		log.Error("Invalid userSession")
+		return sessions.ErrInvalidSessionID
+	}
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
+
+	sID := appcontext.SecureID(ctx)
+	accountID, err := sID.FromSecureID("account", sID.Parse(request.AccountID))
+	if err != nil {
+		log.WithError(err).
+			WithField("AccountID", request.AccountID).
+			Error("Wrong AccountID")
+		return sessions.ErrInternalError
+	}
+
+	account, err := accounting.AccountInfo(ctx, uint64(accountID))
+	if err != nil {
+		log.WithError(err).Error("AccountInfo failed")
+		return err
+	}
+	if account.Status != "normal" {
+		log.WithFields(logrus.Fields{
+			"AccountID": request.AccountID,
+			"Status":    account.Status,
+		}).Error("Account status does not allow to send fund")
+		return ErrInvalidAccountID
+	}
+	if !account.Currency.Crypto {
+		log.WithField("AccountID", request.AccountID).
+			Error("Non Crypto Account")
+		return sessions.ErrInternalError
+	}
+	chain, err := getChainFromCurrencyName(account.Currency.Crypto, account.Currency.Name)
+	if err != nil {
+		log.WithError(err).
+			WithField("AccountID", request.AccountID).
+			Error("getChainFromCurrencyName failed")
+		return sessions.ErrInternalError
+	}
+
+	log = log.WithFields(logrus.Fields{
+		"Chain":     chain,
+		"AccountID": accountID,
+	})
+
+	addr, err := client.AddressInfo(ctx, chain, request.PublicAddress)
+	if err != nil {
+		log.WithError(err).
+			Error("AddressInfo Failed")
+		return ErrInvalidPublicAddress
+	}
+
+	if !addr.IsValid {
+		log.WithError(ErrInvalidPublicAddress).
+			Error("PublicAddress is not valid")
+		return ErrInvalidPublicAddress
+	}
+
+	withdrawID, err := accounting.AccountTransferWithdrawCrypto(ctx, account.AccountID, account.Currency.Name, request.Amount, "normal", "Api SendFunds", chain, request.PublicAddress)
+	if err != nil {
+		log.WithError(err).
+			Error("AccountTransferWithdrawCrypto Failed")
+		return ErrInvalidWithdraw
+	}
+
+	secureID, err := sID.ToSecureID("withdraw", secureid.Value(withdrawID))
+	if err != nil {
+		log.WithError(err).
+			Error("ToSecureID Failed")
+		return ErrServiceInternalError
+	}
+
+	*reply = WalletSendFundsResponse{
+		WithdrawID: sID.ToString(secureID),
+	}
+
+	return nil
+}
+
 func getProtocolFromCurrencyName(isCrypto bool, currencyName string) (string, error) {
 	switch currencyName {
 	case "BTC":
 		return "bitcoin", nil
 	case "TBTC":
-		return "bitcoin", nil
+		return "bitcoin-testnet", nil
 	case "LBTC":
 		return "liquid", nil
 
