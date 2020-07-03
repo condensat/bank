@@ -28,6 +28,7 @@ type AddressInfo struct {
 	Chain          string
 	PublicAddress  string
 	Unconfidential string
+	IsValid        bool
 }
 
 type UTXOInfo struct {
@@ -49,5 +50,13 @@ func (p *CryptoAddress) Encode() ([]byte, error) {
 }
 
 func (p *CryptoAddress) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *AddressInfo) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AddressInfo) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
