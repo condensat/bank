@@ -64,7 +64,7 @@ type AccountEntry struct {
 	TotalLocked float64
 }
 
-type AccountTransfert struct {
+type AccountTransfer struct {
 	Source      AccountEntry
 	Destination AccountEntry
 }
@@ -77,6 +77,17 @@ type AccountHistory struct {
 	To          time.Time
 
 	Entries []AccountEntry
+}
+
+type CryptoTransfert struct {
+	Chain     string
+	PublicKey string
+}
+
+type AccountTransferWithdraw struct {
+	BatchMode string
+	Source    AccountEntry
+	Crypto    CryptoTransfert
 }
 
 func (p *CurrencyList) Encode() ([]byte, error) {
@@ -127,11 +138,11 @@ func (p *AccountEntry) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
-func (p *AccountTransfert) Encode() ([]byte, error) {
+func (p *AccountTransfer) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
 
-func (p *AccountTransfert) Decode(data []byte) error {
+func (p *AccountTransfer) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
@@ -140,5 +151,13 @@ func (p *AccountHistory) Encode() ([]byte, error) {
 }
 
 func (p *AccountHistory) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *AccountTransferWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AccountTransferWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
