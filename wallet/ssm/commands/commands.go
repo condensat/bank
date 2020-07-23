@@ -4,6 +4,7 @@ type Command string
 
 const (
 	CmdNewAddress = Command("new_address")
+	CmdSignTx     = Command("sign_tx")
 )
 
 type RpcClient interface {
