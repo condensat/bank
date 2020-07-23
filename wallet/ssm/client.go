@@ -7,7 +7,9 @@ import (
 
 	"git.condensat.tech/bank"
 
+	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/wallet/rpc"
+	"git.condensat.tech/bank/wallet/ssm/commands"
 )
 
 var (
@@ -34,4 +36,26 @@ func New(ctx context.Context, options SsmOptions) *SsmClient {
 	return &SsmClient{
 		client: client,
 	}
+}
+
+func (p *SsmClient) NewAddress(ctx context.Context, chain, fingerprint, path string) (string, error) {
+	log := logger.Logger(ctx).WithField("Method", "ssm.NewAddress")
+
+	client := p.client
+	if p.client == nil {
+		return "", ErrInternalError
+	}
+
+	result, err := commands.NewAddress(ctx, client.Client, chain, fingerprint, path)
+	if err != nil {
+		log.WithError(err).Error("NewAddress failed")
+		return "", ErrRPCError
+	}
+
+	log.
+		WithField("Chain", result.Chain).
+		WithField("Address", result.Address).
+		Debug("SSM RPC")
+
+	return result.Address, nil
 }
