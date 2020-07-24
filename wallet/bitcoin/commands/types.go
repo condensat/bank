@@ -1,6 +1,7 @@
 package commands
 
 type Address string
+type PubKey string
 type Transaction string
 type TransactionID string
 
