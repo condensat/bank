@@ -2,6 +2,7 @@ package commands
 
 type Address string
 type Transaction string
+type TransactionID string
 
 type TransactionInfo struct {
 	// Bitcoin
