@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -41,9 +42,18 @@ type SignTxResponse struct {
 func main() {
 	ctx := context.Background()
 
-	os.Setenv("HTTP_PROXY", "socks5://127.0.0.1:9050")
+	proxyURL, err := url.Parse("socks5://127.0.0.1:9050")
+	if err != nil {
+		panic(err)
+	}
 	const endpoint = "http://f3ughmonacr57liewfw6uzuzwu5vs3rl5znotyd525vcr2232gstbsid.onion/api/v1"
-	rpcClient := jsonrpc.NewClient(endpoint)
+	rpcClient := jsonrpc.NewClientWithOpts(endpoint, &jsonrpc.RPCClientOpts{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			},
+		},
+	})
 
 	var actions []int
 	batchSize := 32
