@@ -10,7 +10,8 @@ const (
 	OperationTypeInit       OperationType = "init"
 	OperationTypeDeposit    OperationType = "deposit"
 	OperationTypeWithdraw   OperationType = "withdraw"
-	OperationTypeTransfert  OperationType = "transfert"
+	OperationTypeTransfer   OperationType = "transfer"
+	OperationTypeRefund     OperationType = "refund"
 	OperationTypeAdjustment OperationType = "adjustment"
 
 	OperationTypeNone  OperationType = "none"
@@ -29,7 +30,9 @@ func (p OperationType) Valid() bool {
 		fallthrough
 	case OperationTypeWithdraw:
 		fallthrough
-	case OperationTypeTransfert:
+	case OperationTypeTransfer:
+		fallthrough
+	case OperationTypeRefund:
 		fallthrough
 	case OperationTypeAdjustment:
 		fallthrough
@@ -66,7 +69,8 @@ func knownOperationType() []OperationType {
 		OperationTypeInit,
 		OperationTypeDeposit,
 		OperationTypeWithdraw,
-		OperationTypeTransfert,
+		OperationTypeTransfer,
+		OperationTypeRefund,
 		OperationTypeAdjustment,
 
 		OperationTypeNone,
