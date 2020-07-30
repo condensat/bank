@@ -4,6 +4,13 @@ import (
 	"git.condensat.tech/bank"
 )
 
+type CryptoMode string
+
+const (
+	CryptoModeBitcoinCore CryptoMode = "bitcoin-core"
+	CryptoModeCryptoSsm   CryptoMode = "crypto-ssm"
+)
+
 type CryptoAddress struct {
 	CryptoAddressID uint64
 	Chain           string
