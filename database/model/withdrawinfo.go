@@ -12,6 +12,7 @@ const (
 	WithdrawStatusCreated    WithdrawStatus = "created"
 	WithdrawStatusProcessing WithdrawStatus = "processing"
 	WithdrawStatusSettled    WithdrawStatus = "settled"
+	WithdrawStatusCanceling  WithdrawStatus = "canceling"
 	WithdrawStatusCanceled   WithdrawStatus = "canceled"
 )
 
