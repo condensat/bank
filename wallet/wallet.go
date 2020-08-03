@@ -12,6 +12,7 @@ import (
 	"git.condensat.tech/bank/wallet/chain"
 	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/handlers"
+	"git.condensat.tech/bank/wallet/ssm"
 	"git.condensat.tech/bank/wallet/tasks"
 
 	"git.condensat.tech/bank/cache"
@@ -59,6 +60,15 @@ func (p *Wallet) Run(ctx context.Context, options WalletOptions) {
 			User: chainOption.User,
 			Pass: chainOption.Pass,
 		}))
+	}
+
+	ssmOptions := loadSsmOptionsFromFile(options.FileName)
+	// create all ssm rpc clients
+	for _, ssmOptions := range ssmOptions.Ssm {
+		log.WithField("Device", ssmOptions.Device).
+			Info("Adding ssm rpc client")
+
+		ctx = common.SsmClientContext(ctx, ssmOptions.Device, ssm.NewWithTorEndpoint(ctx, ssmOptions.Endpoint))
 	}
 
 	p.registerHandlers(ctx)
