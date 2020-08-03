@@ -3,9 +3,12 @@ package ssm
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/url"
 	"sync"
 
 	"git.condensat.tech/bank"
+	"github.com/ybbus/jsonrpc"
 
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/wallet/rpc"
@@ -38,7 +41,26 @@ func New(ctx context.Context, options SsmOptions) *SsmClient {
 	}
 }
 
-func (p *SsmClient) NewAddress(ctx context.Context, chain, fingerprint, path string) (string, error) {
+func NewWithTorEndpoint(ctx context.Context, endpoint string) *SsmClient {
+	proxyURL, err := url.Parse("socks5://127.0.0.1:9050")
+	if err != nil {
+		panic(err)
+	}
+
+	return &SsmClient{
+		client: &rpc.Client{
+			Client: jsonrpc.NewClientWithOpts(endpoint, &jsonrpc.RPCClientOpts{
+				HTTPClient: &http.Client{
+					Transport: &http.Transport{
+						Proxy: http.ProxyURL(proxyURL),
+					},
+				},
+			}),
+		},
+	}
+}
+
+func (p *SsmClient) NewAddress(ctx context.Context, ssmPath commands.SsmPath) (string, error) {
 	log := logger.Logger(ctx).WithField("Method", "ssm.NewAddress")
 
 	client := p.client
@@ -46,7 +68,7 @@ func (p *SsmClient) NewAddress(ctx context.Context, chain, fingerprint, path str
 		return "", ErrInternalError
 	}
 
-	result, err := commands.NewAddress(ctx, client.Client, chain, fingerprint, path)
+	result, err := commands.NewAddress(ctx, client.Client, ssmPath.Chain, ssmPath.Fingerprint, ssmPath.Path)
 	if err != nil {
 		log.WithError(err).Error("NewAddress failed")
 		return "", ErrRPCError
@@ -60,7 +82,7 @@ func (p *SsmClient) NewAddress(ctx context.Context, chain, fingerprint, path str
 	return result.Address, nil
 }
 
-func (p *SsmClient) SignTx(ctx context.Context, chain, inputransaction string, inputs []commands.SignTxInputs) (string, error) {
+func (p *SsmClient) SignTx(ctx context.Context, chain, inputransaction string, inputs ...commands.SignTxInputs) (string, error) {
 	log := logger.Logger(ctx).WithField("Method", "ssm.SignTx")
 
 	client := p.client
