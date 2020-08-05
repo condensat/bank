@@ -23,6 +23,7 @@ import (
 
 const (
 	DefaultChainInterval      time.Duration = 30 * time.Second
+	DefaultSsmInterval        time.Duration = 30 * time.Second
 	DefaultOperationsInterval time.Duration = 5 * time.Second
 	DefaultAssetInfoInterval  time.Duration = 30 * time.Second
 
@@ -77,7 +78,7 @@ func (p *Wallet) Run(ctx context.Context, options WalletOptions) {
 		"Hostname": utils.Hostname(),
 	}).Info("Wallet Service started")
 
-	go mainScheduler(ctx, chainsOptions.Names())
+	go mainScheduler(ctx, chainsOptions.Names(), ssmOptions.Devices())
 
 	<-ctx.Done()
 }
@@ -98,10 +99,11 @@ func (p *Wallet) registerHandlers(ctx context.Context) {
 	log.Debug("Bank Wallet registered")
 }
 
-func mainScheduler(ctx context.Context, chains []string) {
+func mainScheduler(ctx context.Context, chains, devices []string) {
 	log := logger.Logger(ctx).WithField("Method", "Wallet.mainScheduler")
 
 	taskChainUpdate := utils.Scheduler(ctx, DefaultChainInterval, 0)
+	taskSsmPool := utils.Scheduler(ctx, DefaultSsmInterval, 0)
 	taskOperationsUpdate := utils.Scheduler(ctx, DefaultOperationsInterval, 0)
 	taskAssetInfoUpdate := utils.Scheduler(ctx, DefaultAssetInfoInterval, 0)
 	taskBatchWithdraw := utils.Scheduler(ctx, DefaultBatchInterval, 0)
@@ -113,6 +115,7 @@ func mainScheduler(ctx context.Context, chains []string) {
 	const singleCallPrefix = "bank.wallet."
 	singleCalls := []string{
 		singleCallPrefix + "UpdateChains",
+		singleCallPrefix + "SsmPool",
 		singleCallPrefix + "UpdateOperations",
 		singleCallPrefix + "UpdateAssetInfo",
 		singleCallPrefix + "BatchWithdraw",
@@ -132,6 +135,14 @@ func mainScheduler(ctx context.Context, chains []string) {
 			_ = cache.ExecuteSingleCall(ctx, singleCallPrefix+"UpdateChains",
 				func(ctx context.Context) error {
 					tasks.UpdateChains(ctx, epoch, chains)
+					return nil
+				})
+
+		// update chains
+		case epoch := <-taskSsmPool:
+			_ = cache.ExecuteSingleCall(ctx, singleCallPrefix+"SsmPool",
+				func(ctx context.Context) error {
+					tasks.SsmPool(ctx, epoch, []tasks.SsmInfo{})
 					return nil
 				})
 
