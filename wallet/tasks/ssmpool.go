@@ -3,8 +3,11 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"sort"
+	"sync"
 	"time"
 
+	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 
@@ -19,7 +22,7 @@ import (
 
 const (
 	SsmMaxUnusedAddress = 1000
-	SsmFillBatchSize    = 10
+	SsmFillBatchSize    = 16
 )
 
 type SsmInfo struct {
@@ -71,11 +74,25 @@ func SsmPool(ctx context.Context, epoch time.Time, infos []SsmInfo) {
 		if nextUnusedCount > SsmMaxUnusedAddress {
 			nextUnusedCount = SsmMaxUnusedAddress
 		}
+
+		var lockMap sync.Mutex
+		type addressPath struct {
+			pathSequence int
+			nextPath     string
+			address      common.SsmAddress
+		}
+		var addresses []addressPath
+		var wg sync.WaitGroup
 		for unusedCount < nextUnusedCount {
-			err := func() error {
+			wg.Add(1)
+			go func(addressCount int) {
+				defer wg.Done()
+
+				pathSequence := addressCount + 1
+
 				// create new address for next path
 				// Todo: manage annual rotation for path
-				nextPath := fmt.Sprintf("84h/0h/%d", addressCount+1)
+				nextPath := fmt.Sprintf("84h/0h/%d", pathSequence)
 
 				ssmAddress, err := ssm.NewAddress(ctx, commands.SsmPath{
 					Chain:       info.Chain,
@@ -84,45 +101,61 @@ func SsmPool(ctx context.Context, epoch time.Time, infos []SsmInfo) {
 				})
 				if err != nil {
 					log.WithError(err).Error("NewAddress failed")
-					return err
+					return
 				}
 				if info.Chain != ssmAddress.Address {
 					if err != nil {
 						log.WithError(err).Error("Wrong ssmAddress chain")
-						return err
+						return
 					}
 				}
 
-				// store new address to database
+				lockMap.Lock()
+				defer lockMap.Unlock()
+				addresses = append(addresses, addressPath{pathSequence, nextPath, ssmAddress})
+
+			}(addressCount)
+
+			unusedCount++
+			addressCount++
+		}
+		wg.Wait()
+
+		// sort addresses by pathSequence
+		sort.Slice(addresses, func(i, j int) bool {
+			return addresses[i].pathSequence < addresses[j].pathSequence
+		})
+
+		// store new address to database within a db transaction
+		err = db.Transaction(func(db bank.Database) error {
+
+			for _, addressPath := range addresses {
 				ssmAddressID, err := database.AddSsmAddress(db,
 					model.SsmAddress{
-						PublicAddress: model.SsmPublicAddress(ssmAddress.Address),
-						ScriptPubkey:  model.SsmPubkey(ssmAddress.PubKey),
-						BlindingKey:   model.SsmBlindingKey(ssmAddress.BlindingKey),
+						PublicAddress: model.SsmPublicAddress(addressPath.address.Address),
+						ScriptPubkey:  model.SsmPubkey(addressPath.address.PubKey),
+						BlindingKey:   model.SsmBlindingKey(addressPath.address.BlindingKey),
 					},
 					model.SsmAddressInfo{
 						Chain:       model.SsmChain(info.Chain),
 						Fingerprint: model.SsmFingerprint(info.Fingerprint),
-						HDPath:      model.SsmHDPath(nextPath),
+						HDPath:      model.SsmHDPath(addressPath.nextPath),
 					},
 				)
 				if err != nil {
 					log.WithError(err).Error("AddSsmAddress failed")
 					return err
 				}
-
 				log.
 					WithField("ssmAddressID", ssmAddressID).
 					Debug("New ssm address")
-
-				return nil
-			}()
-			if err != nil {
-				break
 			}
 
-			unusedCount++
-			addressCount++
+			return nil
+		})
+		if err != nil {
+			log.WithError(err).Error("Database Transaction failed")
+			return
 		}
 	}
 }
