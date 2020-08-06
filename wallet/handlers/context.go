@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/wallet/common"
 )
 
@@ -22,6 +23,11 @@ type ChainHandler interface {
 }
 
 func ChainHandlerContext(ctx context.Context, chain ChainHandler) context.Context {
+	err := cache.InitSingleCall(ctx, "txNewCryptoAddress")
+	if err != nil {
+		panic(err)
+	}
+
 	return context.WithValue(ctx, ChainHandlerKey, chain)
 }
 
