@@ -13,6 +13,7 @@ const (
 	CmdGetAddressInfo    = Command("getaddressinfo")
 	CmdImportAddress     = Command("importaddress")
 	CmdImportPubKey      = Command("importpubkey")
+	CmdImportBlindingKey = Command("importblindingkey")
 	CmdSendMany          = Command("sendmany")
 
 	CmdDumpPrivkey                  = Command("dumpprivkey")
