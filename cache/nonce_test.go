@@ -12,7 +12,7 @@ func TestResetNonce(t *testing.T) {
 	ctx := context.Background()
 	ctx = appcontext.WithCache(ctx, NewRedis(ctx, RedisOptions{
 		ServerOptions: bank.ServerOptions{
-			HostName: "cache",
+			HostName: "redis",
 			Port:     6379,
 		},
 	}))
@@ -52,7 +52,7 @@ func TestNonce(t *testing.T) {
 	ctx := context.Background()
 	ctx = appcontext.WithCache(ctx, NewRedis(ctx, RedisOptions{
 		ServerOptions: bank.ServerOptions{
-			HostName: "cache",
+			HostName: "redis",
 			Port:     6379,
 		},
 	}))
