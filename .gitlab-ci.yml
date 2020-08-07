@@ -1,0 +1,19 @@
+stages:
+  - lint
+  - tests
+  
+lint:
+  stage: lint
+  script: make lint
+
+start:
+  stage: .pre    
+  script: make start
+
+tests:
+  stage: tests
+  script: make tests
+
+stop:
+  stage: .post    
+  script: make stop
