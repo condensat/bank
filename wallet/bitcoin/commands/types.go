@@ -119,6 +119,7 @@ type RawTransaction struct {
 type FundRawTransactionOptions struct {
 	ChangeAddress          string `json:"changeAddress"`
 	ChangePosition         int    `json:"changePosition"`
+	IncludeWatching        bool   `json:"includeWatching"`
 	SubtractFeeFromOutputs []int  `json:"subtractFeeFromOutputs"`
 }
 
