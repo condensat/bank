@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-
-	"git.condensat.tech/bank/wallet/rpc"
 )
 
 type EstimateMode string
@@ -72,7 +70,7 @@ func SendManyWithFees(ctx context.Context, rpcClient RpcClient, comment string, 
 	var result TxID
 	err = callCommand(rpcClient, CmdSendMany, &result, dummy, amountMap, SpendMinConf, comment, subtractfeefrom[:], SpendReplaceable, confTarget, estimateMode)
 	if err != nil {
-		return "", rpc.ErrRpcError
+		return "", err
 	}
 
 	return result, nil

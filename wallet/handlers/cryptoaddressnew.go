@@ -70,7 +70,7 @@ func CryptoAddressNewDeposit(ctx context.Context, address common.CryptoAddress) 
 
 	if err == nil {
 		log.WithField("PublicAddress", result.PublicAddress).
-			Debug("Next deposit publicAddress")
+			Debug("New deposit publicAddress")
 	}
 
 	return result, err
@@ -143,6 +143,7 @@ func txNewCryptoAddressFullNode(ctx context.Context, db bank.Database, chainHand
 	publicAddress, err := chainHandler.GetNewAddress(ctx, string(chain), account)
 	if err != nil {
 		log.WithError(err).
+			WithField("Chain", chain).
 			Error("Failed to GetNewAddress")
 		return model.CryptoAddress{}, ErrGenAddress
 	}
@@ -175,7 +176,7 @@ func txNewCryptoAddressSsm(ctx context.Context, db bank.Database, chainHandler C
 
 	ssmChain := convertToSsmChain(chain)
 	if len(ssmChain) == 0 {
-		log.
+		log.WithField("Chain", chain).
 			Error("Invalid ssm chain")
 		return model.CryptoAddress{}, ErrGenAddress
 	}
