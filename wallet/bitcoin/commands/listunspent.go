@@ -2,8 +2,6 @@ package commands
 
 import (
 	"context"
-
-	"git.condensat.tech/bank/wallet/rpc"
 )
 
 const (
@@ -19,7 +17,7 @@ func ListUnspentMinMaxAddresses(ctx context.Context, rpcClient RpcClient, minCon
 	list := make([]TransactionInfo, 0)
 	err := callCommand(rpcClient, CmdListUnspent, &list, minConf, maxConf, filter)
 	if err != nil {
-		return nil, rpc.ErrRpcError
+		return nil, err
 	}
 
 	return list, nil
