@@ -5,10 +5,14 @@ import (
 	"errors"
 	"sort"
 
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/wallet/common"
+	"git.condensat.tech/bank/wallet/ssm/commands"
 
 	"git.condensat.tech/bank/utils"
 
@@ -377,7 +381,7 @@ func SpendFunds(ctx context.Context, chain string, changeAddress string, spendIn
 	}
 
 	// Create, Fund, Sign & Broadcast transaction
-	tx, err := client.SpendFunds(ctx, changeAddress, nil, spendInfos)
+	tx, err := client.SpendFunds(ctx, changeAddress, nil, spendInfos, getAddressInfoFromDatabase)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to SpendFunds")
@@ -385,4 +389,32 @@ func SpendFunds(ctx context.Context, chain string, changeAddress string, spendIn
 	}
 
 	return tx, nil
+}
+
+func getAddressInfoFromDatabase(ctx context.Context, address string) (commands.SsmPath, error) {
+	log := logger.Logger(ctx).WithField("Method", "wallet.chain.getAddressInfoFromDatabase")
+	db := appcontext.Database(ctx)
+
+	if len(address) == 0 {
+		return commands.SsmPath{}, errors.New("Invalid address")
+	}
+
+	ssmAddress, err := database.GetSsmAddressByPublicAddress(db, model.SsmPublicAddress(address))
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to GetSsmAddressByPublicAddress")
+		return commands.SsmPath{}, err
+	}
+	addressInfo, err := database.GetSsmAddressInfo(db, ssmAddress.ID)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to GetSsmAddressInfo")
+		return commands.SsmPath{}, err
+	}
+
+	return commands.SsmPath{
+		Chain:       string(addressInfo.Chain),
+		Fingerprint: string(addressInfo.Fingerprint),
+		Path:        string(addressInfo.HDPath),
+	}, nil
 }
