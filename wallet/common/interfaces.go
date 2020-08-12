@@ -6,6 +6,8 @@ import (
 	"git.condensat.tech/bank/wallet/ssm/commands"
 )
 
+type GetAddressInfo func(ctx context.Context, address string) (commands.SsmPath, error)
+
 // ChainClient interface specification for bitcoin and elements
 type ChainClient interface {
 	GetNewAddress(ctx context.Context, account string) (string, error)
@@ -17,7 +19,7 @@ type ChainClient interface {
 	ListLockUnspent(ctx context.Context) ([]TransactionInfo, error)
 	GetTransaction(ctx context.Context, txID string) (TransactionInfo, error)
 
-	SpendFunds(ctx context.Context, changeAddress string, inputs []UTXOInfo, outputs []SpendInfo) (SpendTx, error)
+	SpendFunds(ctx context.Context, changeAddress string, inputs []UTXOInfo, outputs []SpendInfo, addressInfo GetAddressInfo) (SpendTx, error)
 }
 
 // SsmClient interface specification for crypto-ssm
