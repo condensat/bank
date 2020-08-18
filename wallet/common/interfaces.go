@@ -6,7 +6,7 @@ import (
 	"git.condensat.tech/bank/wallet/ssm/commands"
 )
 
-type GetAddressInfo func(ctx context.Context, address string) (commands.SsmPath, error)
+type GetAddressInfo func(ctx context.Context, address string, isUnConfidential bool) (commands.SsmPath, error)
 
 // ChainClient interface specification for bitcoin and elements
 type ChainClient interface {
