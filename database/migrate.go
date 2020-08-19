@@ -84,3 +84,10 @@ func WithdrawModel() []model.Model {
 		model.Model(new(model.BatchWithdraw)),
 	}...)
 }
+
+func FeeModel() []model.Model {
+	return []model.Model{
+		model.Model(new(model.Fee)),
+		model.Model(new(model.FeeInfo)),
+	}
+}
