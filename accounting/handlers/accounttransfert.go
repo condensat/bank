@@ -28,7 +28,7 @@ func AccountTransfer(ctx context.Context, transfer common.AccountTransfer) (comm
 	})
 
 	// check operation type
-	if model.OperationType(transfer.Destination.OperationType) != model.OperationTypeTransfer {
+	if !isTransfertOperation(model.OperationType(transfer.Destination.OperationType)) {
 		log.
 			Error("OperationType is not transfer")
 		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
@@ -162,4 +162,16 @@ func OnAccountTransfer(ctx context.Context, subject string, message *bank.Messag
 			// return response
 			return &response, nil
 		})
+}
+
+func isTransfertOperation(operationType model.OperationType) bool {
+	switch operationType {
+	case model.OperationTypeTransfer:
+		fallthrough
+	case model.OperationTypeTransferFee:
+		return true
+
+	default:
+		return false
+	}
 }
