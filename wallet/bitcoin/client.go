@@ -285,7 +285,7 @@ func (p *BitcoinClient) GetTransaction(ctx context.Context, txID string) (common
 		return common.TransactionInfo{}, ErrInternalError
 	}
 
-	tx, err := commands.GetTransaction(ctx, client.Client, txID)
+	tx, err := commands.GetTransaction(ctx, client.Client, txID, true)
 	if err != nil {
 		log.WithError(err).
 			Error("GetTransaction failed")
@@ -569,7 +569,7 @@ func getFundedPrivateKeys(ctx context.Context, client *rpc.Client, funded comman
 
 	addressMap := make(map[commands.Address]commands.Address)
 	for _, in := range decoded.Vin {
-		txInfo, err := commands.GetTransaction(ctx, client.Client, in.Txid)
+		txInfo, err := commands.GetTransaction(ctx, client.Client, in.Txid, true)
 		if err != nil {
 			log.WithError(err).
 				Error("GetTransaction failed")
