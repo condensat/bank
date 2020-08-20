@@ -6,6 +6,9 @@ import (
 	"time"
 
 	accounting "git.condensat.tech/bank/accounting/client"
+	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/wallet/chain"
 	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/handlers"
@@ -133,10 +136,41 @@ func processBatchWithdrawChain(ctx context.Context, network string) error {
 
 		// Resquest chain
 		var spendInfo []common.SpendInfo
+		db := appcontext.Database(ctx)
 		for _, withdraw := range batch.Withdraws {
+			account, err := database.GetAccountByID(db, model.AccountID(withdraw.AccountID))
+			if err != nil {
+				log.WithError(err).
+					WithField("AccountID", withdraw.AccountID).
+					Error("GetAccountByID Failed")
+				continue
+			}
+
+			currency, _ := database.GetCurrencyByName(db, account.CurrencyName)
+			if err != nil {
+				log.WithError(err).
+					WithField("CurrencyName", account.CurrencyName).
+					Error("GetCurrencyByName Failed")
+				continue
+			}
+
+			// get asset hash for crypt assets only
+			assetHash := func() string {
+				asset, _ := database.GetAssetByCurrencyName(db, currency.Name)
+				isAsset := currency.IsCrypto() && currency.GetType() == 2 && asset.ID > 0
+				if !isAsset {
+					return ""
+				}
+				if asset.CurrencyName == "LBTC" {
+					return ""
+				}
+				return string(asset.Hash)
+			}()
+
 			spendInfo = append(spendInfo, common.SpendInfo{
 				PublicAddress: withdraw.PublicKey,
 				Amount:        withdraw.Amount,
+				Asset:         string(assetHash),
 			})
 		}
 		spendTx, err := chain.SpendFunds(ctx, network, changeAddress, spendInfo)
