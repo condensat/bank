@@ -325,6 +325,10 @@ func (p *BitcoinClient) SpendFunds(ctx context.Context, changeAddress string, in
 		return common.SpendTx{}, ErrInternalError
 	}
 
+	if inputs == nil {
+		inputs = []common.UTXOInfo{}
+	}
+
 	in := convertUTXOInfo(inputs...)
 	out, assets := convertSpendInfo(outputs...)
 
