@@ -54,6 +54,7 @@ type UTXOInfo struct {
 type SpendInfo struct {
 	PublicAddress string
 	Amount        float64
+	Asset         string
 }
 
 type SpendTx struct {
