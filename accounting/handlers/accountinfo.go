@@ -78,7 +78,8 @@ func txGetAccountInfo(db bank.Database, account model.Account) (common.AccountIn
 
 	isAsset := currency.IsCrypto() && currency.GetType() == 2 && asset.ID > 0
 
-	currencyName := string(currency.Name)
+	databaseName := string(currency.Name)
+	currencyName := databaseName
 	displayName := string(currency.DisplayName)
 	displayPrecision := currency.DisplayPrecision()
 	tickerPrecision := -1 // no ticker precison if not crypto
@@ -111,6 +112,7 @@ func txGetAccountInfo(db bank.Database, account model.Account) (common.AccountIn
 		UserID:    uint64(account.UserID),
 		Currency: common.CurrencyInfo{
 			Name:             currencyName,
+			DatabaseName:     databaseName,
 			DisplayName:      displayName,
 			Crypto:           currency.IsCrypto(),
 			Type:             common.CurrencyType(currency.GetType()),
