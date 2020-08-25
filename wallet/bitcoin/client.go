@@ -332,6 +332,14 @@ func (p *BitcoinClient) SpendFunds(ctx context.Context, changeAddress string, in
 	in := convertUTXOInfo(inputs...)
 	out, assets := convertSpendInfo(outputs...)
 
+	log.WithFields(logrus.Fields{
+		"inputs":  inputs,
+		"outputs": outputs,
+		"in":      in,
+		"out":     out,
+		"assets":  assets,
+	}).Trace("convertSpendInfo")
+
 	// Create transaction with no input
 	hex, err := commands.CreateRawTransaction(ctx, client.Client, in, out, assets)
 	if err != nil {
@@ -374,6 +382,12 @@ func (p *BitcoinClient) SpendFunds(ctx context.Context, changeAddress string, in
 		return common.SpendTx{}, ErrRPCError
 	}
 
+	log.WithError(err).
+		WithFields(logrus.Fields{
+			"Tx": signed.Hex,
+		}).
+		Trace("Transaction Signed")
+
 	// Broadcast transaction to network
 	tx, err := commands.SendRawTransaction(ctx, client.Client, commands.Transaction(signed.Hex))
 	if err != nil {
@@ -408,6 +422,8 @@ func fundRawTransactionWithCryptoMode(ctx context.Context, client *rpc.Client, c
 }
 
 func signRawTransactionWithCryptoMode(ctx context.Context, client jsonrpc.RPCClient, cryptoMode common.CryptoMode, txToSign string, addressInfo common.GetAddressInfo, blindedTransaction bool) (commands.SignedTransaction, error) {
+	log := logger.Logger(ctx).WithField("Method", "bitcoin.signRawTransactionWithCryptoMode")
+
 	switch cryptoMode {
 	case common.CryptoModeCryptoSsm:
 		const device = "crypto-ssm"
@@ -449,6 +465,11 @@ func signRawTransactionWithCryptoMode(ctx context.Context, client jsonrpc.RPCCli
 
 				// append input entry
 				out := tx.Vout[in.Vout]
+				log.WithFields(logrus.Fields{
+					"Txid": in.Txid,
+					"Vout": in.Vout,
+					"data": out,
+				}).Trace("Spend UTXO")
 				amount := out.Value
 				address := out.ScriptPubKey.Addresses[0]
 				info, err := addressInfo(ctx, address, false)
@@ -533,6 +554,9 @@ func signRawTransactionWithCryptoMode(ctx context.Context, client jsonrpc.RPCCli
 		if len(chain) == 0 {
 			return commands.SignedTransaction{}, errors.New("Invalid chain")
 		}
+
+		log.WithField("Inputs", inputs).
+			Trace("Sign Input")
 
 		// Sign Transaction
 		signedTx, err := ssmClient.SignTx(ctx, chain, txToSign, inputs...)

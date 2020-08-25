@@ -8,12 +8,14 @@ import (
 	"sync"
 
 	"git.condensat.tech/bank"
-	"github.com/ybbus/jsonrpc"
 
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/rpc"
 	"git.condensat.tech/bank/wallet/ssm/commands"
+
+	"github.com/sirupsen/logrus"
+	"github.com/ybbus/jsonrpc"
 )
 
 var (
@@ -75,12 +77,12 @@ func (p *SsmClient) NewAddress(ctx context.Context, ssmPath commands.SsmPath) (c
 		return common.SsmAddress{}, ErrRPCError
 	}
 
-	log.
-		WithField("Chain", result.Chain).
-		WithField("Address", result.Address).
-		WithField("PubKey", result.PubKey).
-		WithField("BlindingKey", result.BlindingKey).
-		Debug("SSM RPC")
+	log.WithFields(logrus.Fields{
+		"Chain":       result.Chain,
+		"Address":     result.Address,
+		"PubKey":      result.PubKey,
+		"BlindingKey": result.BlindingKey,
+	}).Trace("SSM NewAddress")
 
 	return common.SsmAddress{
 		Chain:       result.Chain,
@@ -104,10 +106,11 @@ func (p *SsmClient) SignTx(ctx context.Context, chain, inputransaction string, i
 		return "", ErrRPCError
 	}
 
-	log.
-		WithField("Chain", result.Chain).
-		WithField("SignedTx", result.SignedTx).
-		Debug("SSM RPC")
+	log.WithFields(logrus.Fields{
+		"Chain":    result.Chain,
+		"SignedTx": result.SignedTx,
+		"Debug":    result.Debug,
+	}).Trace("SSM SignTx")
 
 	return result.SignedTx, nil
 }
