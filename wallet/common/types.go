@@ -4,12 +4,27 @@ import (
 	"git.condensat.tech/bank"
 )
 
+type CryptoMode string
+
+const (
+	CryptoModeBitcoinCore CryptoMode = "bitcoin-core"
+	CryptoModeCryptoSsm   CryptoMode = "crypto-ssm"
+)
+
 type CryptoAddress struct {
-	CryptoAddressID uint64
-	Chain           string
-	AccountID       uint64
-	PublicAddress   string
-	Unconfidential  string
+	CryptoAddressID  uint64
+	Chain            string
+	AccountID        uint64
+	PublicAddress    string
+	Unconfidential   string
+	IgnoreAccounting bool
+}
+
+type SsmAddress struct {
+	Chain       string
+	Address     string
+	PubKey      string
+	BlindingKey string
 }
 
 type TransactionInfo struct {
@@ -36,9 +51,17 @@ type UTXOInfo struct {
 	Vout int
 }
 
+type SpendAssetInfo struct {
+	Hash          string
+	ChangeAddress string
+	ChangeAmount  float64
+}
+
 type SpendInfo struct {
 	PublicAddress string
 	Amount        float64
+	// Asset optional
+	Asset SpendAssetInfo
 }
 
 type SpendTx struct {
