@@ -55,6 +55,10 @@ func updateChain(ctx context.Context, epoch time.Time, state chain.ChainState) {
 	db := appcontext.Database(ctx)
 
 	list, addresses := fetchActiveAddresses(ctx, state)
+	if len(list) > 0 {
+		log.WithField("Addresses", list).
+			Trace("Active Addresses")
+	}
 
 	// Resquest chain
 	infos, err := chain.FetchChainAddressesInfo(ctx, state, AddressInfoMinConfirmation, AddressInfoMaxConfirmation, list...)
@@ -62,6 +66,10 @@ func updateChain(ctx context.Context, epoch time.Time, state chain.ChainState) {
 		log.WithError(err).
 			Error("Failed to FetchChainAddressesInfo")
 		return
+	}
+	if len(infos) > 0 {
+		log.WithField("Info", infos).
+			Trace("Chain Info")
 	}
 
 	// local map for lookup cryptoAddresses from PublicAddress
@@ -444,6 +452,9 @@ func fetchActiveAddresses(ctx context.Context, state chain.ChainState) ([]string
 	var result []string                 // addresses for rpc call
 	var addresses []model.CryptoAddress // addresses for operations update
 	for _, cryptoAddress := range allAddresses {
+		if cryptoAddress.IgnoreAccounting {
+			continue
+		}
 		address := string(cryptoAddress.PublicAddress)
 		if len(cryptoAddress.Unconfidential) != 0 {
 			// use unconfidential address for listunspent call

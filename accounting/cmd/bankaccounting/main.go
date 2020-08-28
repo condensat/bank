@@ -8,9 +8,14 @@ import (
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 )
+
+type Accounting struct {
+	BankUser string
+}
 
 type Args struct {
 	App appcontext.Options
@@ -18,6 +23,8 @@ type Args struct {
 	Redis    cache.RedisOptions
 	Nats     messaging.NatsOptions
 	Database database.Options
+
+	Accounting Accounting
 }
 
 func parseArgs() Args {
@@ -28,6 +35,8 @@ func parseArgs() Args {
 	cache.OptionArgs(&args.Redis)
 	messaging.OptionArgs(&args.Nats)
 	database.OptionArgs(&args.Database)
+
+	flag.StringVar(&args.Accounting.BankUser, "bankUser", "bank@condensat.tech", "Bank database email [bank@condensat.tech]")
 
 	flag.Parse()
 
@@ -45,9 +54,12 @@ func main() {
 	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
 
 	migrateDatabase(ctx)
+	createDefaultFeeInfo(ctx)
+
+	bankUser := createBankAccounts(ctx, args.Accounting)
 
 	var service accounting.Accounting
-	service.Run(ctx)
+	service.Run(ctx, bankUser)
 }
 
 func migrateDatabase(ctx context.Context) {
@@ -59,4 +71,72 @@ func migrateDatabase(ctx context.Context) {
 			WithField("Method", "main.migrateDatabase").
 			Panic("Failed to migrate accounting models")
 	}
+}
+
+func createDefaultFeeInfo(ctx context.Context) {
+	db := appcontext.Database(ctx)
+
+	defaultFeeInfo := []model.FeeInfo{
+		// Fiat
+		{Currency: "CHF", Minimum: 0.5, Rate: model.DefaultFeeRate},
+		{Currency: "EUR", Minimum: 0.5, Rate: model.DefaultFeeRate},
+
+		// Crypto
+		{Currency: "BTC", Minimum: 0.00001000, Rate: model.DefaultFeeRate},
+		{Currency: "LBTC", Minimum: 0.00001000, Rate: model.DefaultFeeRate},
+		{Currency: "TBTC", Minimum: 0.00001000, Rate: model.DefaultFeeRate},
+
+		// Liquid Asset with quote
+		{Currency: "USDt", Minimum: 0.5, Rate: model.DefaultFeeRate},
+		{Currency: "LCAD", Minimum: 0.5, Rate: model.DefaultFeeRate},
+	}
+
+	for _, feeInfo := range defaultFeeInfo {
+		// Check FeeInfo validity
+		if !feeInfo.IsValid() {
+			logger.Logger(ctx).
+				WithField("Method", "main.createDefaultFeeInfo").
+				WithField("FeeInfo", feeInfo).
+				Panic("Invalid default feeInfo")
+			continue
+		}
+		// Do not update feeInfo since it could have been updated since creation
+		if database.FeeInfoExists(db, feeInfo.Currency) {
+			continue
+		}
+		// create default FeeInfo
+		_, err := database.AddOrUpdateFeeInfo(db, feeInfo)
+		if err != nil {
+			logger.Logger(ctx).WithError(err).
+				WithField("Method", "main.createDefaultFeeInfo").
+				WithField("FeeInfo", "feeInfo").
+				Error("AddOrUpdateFeeInfo failed")
+			continue
+		}
+	}
+}
+
+func createBankAccounts(ctx context.Context, accounting Accounting) model.User {
+	db := appcontext.Database(ctx)
+
+	ret := model.User{
+		Name:  "Condensat Bank",
+		Email: model.UserEmail(accounting.BankUser),
+	}
+	ret, err := database.FindOrCreateUser(db, ret)
+	if err != nil {
+		logger.Logger(ctx).
+			WithError(err).
+			WithField("UserID", ret.ID).
+			WithField("Name", ret.Name).
+			WithField("Email", ret.Email).
+			Panic("Unable to FindOrCreateUser BankUser")
+	}
+
+	logger.Logger(ctx).
+		WithError(err).
+		WithField("UserID", ret.ID).
+		WithField("Email", ret.Email).
+		Info("BankUser")
+	return ret
 }
