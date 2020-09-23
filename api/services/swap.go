@@ -98,7 +98,7 @@ func (p *SwapService) Propose(r *http.Request, request *SwapProposeRequest, repl
 	}
 
 	// Get userID from session
-	request.SessionID = getSessionCookie(r)
+	request.SessionID = GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -275,7 +275,7 @@ func (p *SwapService) Info(r *http.Request, request *SwapRequest, reply *SwapRes
 	}
 
 	// Get userID from session
-	request.SessionID = getSessionCookie(r)
+	request.SessionID = GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -375,7 +375,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 	}
 
 	// Get userID from session
-	request.SessionID = getSessionCookie(r)
+	request.SessionID = GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -517,7 +517,7 @@ func (p *SwapService) Accept(r *http.Request, request *SwapRequest, reply *SwapR
 	}
 
 	// Get userID from session
-	request.SessionID = getSessionCookie(r)
+	request.SessionID = GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
