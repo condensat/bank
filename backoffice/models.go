@@ -5,5 +5,7 @@ import (
 )
 
 func Models() []model.Model {
-	return []model.Model{}
+	return []model.Model{
+		new(model.User),
+	}
 }
