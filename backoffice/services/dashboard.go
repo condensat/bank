@@ -47,11 +47,17 @@ type BatchStatus struct {
 	Processing int `json:"processing"`
 }
 
+type WithdrawStatus struct {
+	Count      int `json:"count"`
+	Processing int `json:"processing"`
+}
+
 // StatusResponse holds args for string requests
 type StatusResponse struct {
 	Users      UsersStatus      `json:"users"`
 	Accounting AccountingStatus `json:"accounting"`
 	Batch      BatchStatus      `json:"batch"`
+	Withdraw   WithdrawStatus   `json:"withdraw"`
 }
 
 func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply *StatusResponse) error {
@@ -124,6 +130,13 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 		return apiservice.ErrServiceInternalError
 	}
 
+	witdthdraws, err := database.WithdrawsInfos(db)
+	if err != nil {
+		log.WithError(err).
+			Error("WithdrawsInfos failed")
+		return apiservice.ErrServiceInternalError
+	}
+
 	*reply = StatusResponse{
 		Users: UsersStatus{
 			Count:     userCount,
@@ -137,6 +150,10 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 		Batch: BatchStatus{
 			Count:      batchs.Count,
 			Processing: batchs.Active,
+		},
+		Withdraw: WithdrawStatus{
+			Count:      witdthdraws.Count,
+			Processing: witdthdraws.Active,
 		},
 	}
 
