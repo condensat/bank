@@ -77,20 +77,26 @@ func RawTransaction(ctx context.Context) {
 		}
 	}
 
-	signed, err := commands.SignRawTransactionWithWallet(ctx, rpcClient, commands.Transaction(funded.Hex))
+	blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(funded.Hex))
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("Blinded transaction OK")
+
+	signed, err := commands.SignRawTransactionWithWallet(ctx, rpcClient, commands.Transaction(blinded))
 	if err != nil {
 		panic(err)
 	}
 	if !signed.Complete {
 		panic("SignRawTransactionWithWallet failed")
 	}
-	log.Printf("SignRawTransactionWithWallet: %+v\n", signed.Hex)
 
-	txId, err := commands.SendRawTransaction(ctx, rpcClient, commands.Transaction(signed.Hex))
+	accepted, err := commands.TestMempoolAccept(ctx, rpcClient, signed.Hex)
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("SendRawTransaction: %+v\n", txId)
+	log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
 }
 
 func bitcoinRpcClient(hostname string, port int) commands.RpcClient {
