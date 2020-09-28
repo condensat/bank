@@ -47,8 +47,10 @@ type AddressInfo struct {
 }
 
 type UTXOInfo struct {
-	TxID string
-	Vout int
+	TxID   string
+	Vout   int
+	Amount float64
+	Locked bool
 }
 
 type SpendAssetInfo struct {
@@ -68,6 +70,15 @@ type SpendTx struct {
 	TxID string
 }
 
+type WalletInfo struct {
+	Chain string
+	UTXOs []UTXOInfo
+}
+
+type WalletStatus struct {
+	Wallets []WalletInfo
+}
+
 func (p *CryptoAddress) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
@@ -81,5 +92,21 @@ func (p *AddressInfo) Encode() ([]byte, error) {
 }
 
 func (p *AddressInfo) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *WalletInfo) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *WalletInfo) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *WalletStatus) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *WalletStatus) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
