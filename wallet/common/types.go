@@ -11,6 +11,10 @@ const (
 	CryptoModeCryptoSsm   CryptoMode = "crypto-ssm"
 )
 
+const (
+	ElementsRegtestHash string = "b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23"
+)
+
 type CryptoAddress struct {
 	CryptoAddressID  uint64
 	Chain            string
