@@ -70,6 +70,11 @@ type WithdrawStatus struct {
 	Processing int `json:"processing"`
 }
 
+type SwapStatus struct {
+	Count      int `json:"count"`
+	Processing int `json:"processing"`
+}
+
 type WalletInfo struct {
 	UTXOs  int     `json:"utxos"`
 	Amount float64 `json:"amount"`
@@ -94,6 +99,7 @@ type StatusResponse struct {
 	Deposit    DepositStatus    `json:"deposit"`
 	Batch      BatchStatus      `json:"batch"`
 	Withdraw   WithdrawStatus   `json:"withdraw"`
+	Swap       SwapStatus       `json:"swap"`
 	Reserve    ReserveStatus    `json:"reserve"`
 }
 
@@ -188,6 +194,13 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 		return apiservice.ErrServiceInternalError
 	}
 
+	swaps, err := database.SwapssInfos(db)
+	if err != nil {
+		log.WithError(err).
+			Error("SwapssInfos failed")
+		return apiservice.ErrServiceInternalError
+	}
+
 	walletStatus, err := wallet.WalletStatus(ctx)
 	if err != nil {
 		log.WithError(err).
@@ -261,6 +274,10 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 		Withdraw: WithdrawStatus{
 			Count:      witdthdraws.Count,
 			Processing: witdthdraws.Active,
+		},
+		Swap: SwapStatus{
+			Count:      swaps.Count,
+			Processing: swaps.Active,
 		},
 		Reserve: ReserveStatus{
 			Wallets: wallets,
