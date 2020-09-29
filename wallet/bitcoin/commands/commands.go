@@ -21,6 +21,7 @@ const (
 	CmdCreateRawTransaction         = Command("createrawtransaction")
 	CmdDecodeRawTransaction         = Command("decoderawtransaction")
 	CmdFundRawTransaction           = Command("fundrawtransaction")
+	CmdRawIssueAsset                = Command("rawissueasset")
 	CmdSignRawTransactionWithKey    = Command("signrawtransactionwithkey")
 	CmdSignRawTransactionWithWallet = Command("signrawtransactionwithwallet")
 	CmdSendRawTransaction           = Command("sendrawtransaction")
