@@ -36,7 +36,9 @@ const (
 	AddressInfoMaxConfirmation = 9999
 )
 
-type Wallet int
+type Wallet struct {
+	chains []string
+}
 
 func (p *Wallet) Run(ctx context.Context, options WalletOptions) {
 	log := logger.Logger(ctx).WithField("Method", "Wallet.Run")
@@ -54,6 +56,9 @@ func (p *Wallet) Run(ctx context.Context, options WalletOptions) {
 	for _, chainOption := range chainsOptions.Chains {
 		log.WithField("Chain", chainOption.Chain).
 			Info("Adding rpc client")
+
+		p.chains = append(p.chains, chainOption.Chain)
+
 		ctx = common.ChainClientContext(ctx, chainOption.Chain, bitcoin.New(ctx, bitcoin.BitcoinOptions{
 			ServerOptions: bank.ServerOptions{
 				Protocol: "http",
@@ -218,6 +223,10 @@ func mainScheduler(ctx context.Context, chains []string, ssmOptions SsmOptions) 
 }
 
 // common.Chain interface
+func (p *Wallet) ListChains(ctx context.Context) []string {
+	return p.chains
+}
+
 func (p *Wallet) GetNewAddress(ctx context.Context, chainName, account string) (string, error) {
 	return chain.GetNewAddress(ctx, chainName, account)
 }
