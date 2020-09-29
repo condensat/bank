@@ -7,13 +7,9 @@ import (
 
 	apiservice "git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
-	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 
 	"git.condensat.tech/bank/logger"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -38,33 +34,17 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.Status")
 	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "Status")
 
-	db := appcontext.Database(ctx)
-	session, err := sessions.ContextSession(ctx)
-	if err != nil {
-		return apiservice.ErrServiceInternalError
-	}
-
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
-	userID := session.UserSession(ctx, sessionID)
-	if !sessions.IsUserValid(userID) {
-		log.Error("Invalid userSession")
-		return sessions.ErrInvalidSessionID
-	}
-	log = log.WithFields(logrus.Fields{
-		"SessionID": sessionID,
-		"UserID":    userID,
-	})
 
-	isAdmin, err := database.UserHasRole(db, model.UserID(userID), model.RoleNameAdmin)
+	isAdmin, log, err := isUserAdmin(ctx, log, sessionID)
 	if err != nil {
 		log.WithError(err).
 			WithField("RoleName", model.RoleNameAdmin).
 			Error("UserHasRole failed")
 		return ErrPermissionDenied
 	}
-
 	if !isAdmin {
 		log.WithError(err).
 			Error("User is not Admin")
