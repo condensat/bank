@@ -2,10 +2,9 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
 
+	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database"
@@ -59,10 +58,17 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 		return ErrPermissionDenied
 	}
 
-	var startID int
+	sID := appcontext.SecureID(ctx)
+
+	var startID secureid.Value
 	if len(request.Start) > 0 {
-		// Todo: SecureID
-		startID, _ = strconv.Atoi(request.Start)
+		startID, err = sID.FromSecureID("user", sID.Parse(request.Start))
+		if err != nil {
+			log.WithError(err).
+				WithField("Start", request.Start).
+				Error("startID FromSecureID failed")
+			return ErrPermissionDenied
+		}
 	}
 	var pagesCount int
 	var ids []model.UserID
@@ -90,15 +96,22 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 	var next string
 	if len(ids) > 0 {
 		nextID := int(ids[len(ids)-1]) + 1
-		// Todo: SecureID
-		next = fmt.Sprintf("%d", nextID)
+		secureID, err := sID.ToSecureID("user", secureid.Value(uint64(nextID)))
+		if err != nil {
+			return err
+		}
+		next = sID.ToString(secureID)
 	}
 
 	var users []UserInfo
 	for _, id := range ids {
+		secureID, err := sID.ToSecureID("user", secureid.Value(uint64(id)))
+		if err != nil {
+			return err
+		}
+
 		users = append(users, UserInfo{
-			// Todo: SecureID
-			UserID: fmt.Sprintf("%d", id),
+			UserID: sID.ToString(secureID),
 		})
 	}
 
