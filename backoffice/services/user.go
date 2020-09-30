@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
@@ -13,6 +14,10 @@ import (
 
 	apiservice "git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
+)
+
+const (
+	DefaultUserCountByPage = 10
 )
 
 // UserListRequest holds args for userlist requests
@@ -54,9 +59,13 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 		return ErrPermissionDenied
 	}
 
+	var startID int
+	if len(request.Start) > 0 {
+		// Todo: SecureID
+		startID, _ = strconv.Atoi(request.Start)
+	}
 	var pagesCount int
 	var ids []model.UserID
-	const DefaultUserCountByPage = 100
 	err = db.Transaction(func(db bank.Database) error {
 		var err error
 		pagesCount, err = database.UserPagingCount(db, DefaultUserCountByPage)
@@ -65,12 +74,11 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 			return err
 		}
 
-		ids, err = database.UserPage(db, request.Page, DefaultUserCountByPage)
+		ids, err = database.UserPage(db, model.UserID(startID), DefaultUserCountByPage)
 		if err != nil {
 			ids = nil
 			return err
 		}
-
 		return nil
 	})
 	if err != nil {
@@ -79,16 +87,30 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 		return apiservice.ErrServiceInternalError
 	}
 
+	var next string
+	if len(ids) > 0 {
+		nextID := int(ids[len(ids)-1]) + 1
+		// Todo: SecureID
+		next = fmt.Sprintf("%d", nextID)
+	}
+
 	var users []UserInfo
 	for _, id := range ids {
 		users = append(users, UserInfo{
+			// Todo: SecureID
 			UserID: fmt.Sprintf("%d", id),
 		})
 	}
 
 	*reply = UserListResponse{
-		RequestPaging: RequestPaging{Page: request.Page, PageCount: pagesCount},
-		Users:         users[:],
+		RequestPaging: RequestPaging{
+			Page:         request.Page,
+			PageCount:    pagesCount,
+			CountPerPage: DefaultUserCountByPage,
+			Start:        request.Start,
+			Next:         next,
+		},
+		Users: users[:],
 	}
 
 	return nil
