@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 )
 
 // RawIssueAssetWithAsset This is the minimal number of arguments you need to pass to issue an asset
@@ -24,8 +23,16 @@ func RawIssueAssetWithToken(ctx context.Context, rpcClient RpcClient, hex Transa
 	})
 }
 
-// RawIssueAssetWithContract and with token, maybe we could have another case with contractHash and without Token?
-func RawIssueAssetWithContract(ctx context.Context, rpcClient RpcClient, hex Transaction, assetAmount, tokenAmount float64, assetAddress, tokenAddress, contractHash string) (IssuedTransaction, error) {
+func RawIssueAssetWithContract(ctx context.Context, rpcClient RpcClient, hex Transaction, assetAmount float64, assetAddress, contractHash string) (IssuedTransaction, error) {
+	return rawIssueAssetWithOptions(ctx, rpcClient, hex, RawIssueAssetOptions{
+		AssetAmount:  assetAmount,
+		AssetAddress: assetAddress,
+		ContractHash: contractHash, //this is 64B long
+		Blind:        true,
+	})
+}
+
+func RawIssueAssetWithTokenWithContract(ctx context.Context, rpcClient RpcClient, hex Transaction, assetAmount, tokenAmount float64, assetAddress, tokenAddress, contractHash string) (IssuedTransaction, error) {
 	return rawIssueAssetWithOptions(ctx, rpcClient, hex, RawIssueAssetOptions{
 		AssetAmount:  assetAmount,
 		AssetAddress: assetAddress,
@@ -40,7 +47,6 @@ func rawIssueAssetWithOptions(ctx context.Context, rpcClient RpcClient, hex Tran
 	var result []IssuedTransaction
 	var data []interface{}
 	data = append(data, options)
-	fmt.Printf("Options to rawissueasset are %+v\n", data)
 	err := callCommand(rpcClient, CmdRawIssueAsset, &result, hex, &data)
 	if err != nil {
 		return IssuedTransaction{}, err
