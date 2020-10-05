@@ -164,22 +164,23 @@ func RawTransactionElements(ctx context.Context) {
 	switch {
 	case isAssetIssuance == true:
 
-		issued, err := commands.RawIssueAssetWithAsset(
+		tx := funded.Hex
+		issuedWithAsset, err := commands.RawIssueAssetWithAsset(
 			ctx,
 			rpcClient,
-			commands.Transaction(funded.Hex),
+			commands.Transaction(tx),
 			1000.00000001,
 			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
 		)
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("RawIssueAssetWithAsset OK, issued asset is %s\n", issued.Asset)
+		log.Printf("RawIssueAssetWithAsset OK, issued asset is %s\n", issuedWithAsset.Asset)
 
-		issued, err = commands.RawIssueAssetWithToken(
+		issuedWithToken, err := commands.RawIssueAssetWithToken(
 			ctx,
 			rpcClient,
-			commands.Transaction(funded.Hex),
+			commands.Transaction(tx),
 			1000.00000001,
 			0.00000001,
 			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
@@ -188,12 +189,12 @@ func RawTransactionElements(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("RawIssueAssetWithToken OK, issued asset is %s\n", issued.Asset)
+		log.Printf("RawIssueAssetWithToken OK, issued asset is %s\n", issuedWithToken.Asset)
 
-		issued, err = commands.RawIssueAssetWithContract(
+		issuedWithContract, err := commands.RawIssueAssetWithContract(
 			ctx,
 			rpcClient,
-			commands.Transaction(funded.Hex),
+			commands.Transaction(tx),
 			1000.00000001,
 			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
 			"7F6475E61926B63C190CEBAB3470531EAB53B5481CBF960C3EE3164CA71E816B",
@@ -201,12 +202,12 @@ func RawTransactionElements(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("RawIssueAssetWithContract OK, issued asset is %s\n", issued.Asset)
+		log.Printf("RawIssueAssetWithContract OK, issued asset is %s\n", issuedWithContract.Asset)
 
-		issued, err = commands.RawIssueAssetWithTokenWithContract(
+		issuedWithTokenWithContract, err := commands.RawIssueAssetWithTokenWithContract(
 			ctx,
 			rpcClient,
-			commands.Transaction(funded.Hex),
+			commands.Transaction(tx),
 			1000.00000001,
 			0.00000001,
 			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
@@ -217,16 +218,16 @@ func RawTransactionElements(ctx context.Context) {
 			panic(err)
 		}
 
-		log.Printf("RawIssueAssetWithTokenWithContract OK, issued asset is %s\n", issued.Asset)
-		log.Printf("Issued asset %s\n", issued.Asset)
-		log.Printf("Issued token %s\n", issued.Token)
+		log.Printf("RawIssueAssetWithTokenWithContract OK, issued asset is %s\n", issuedWithTokenWithContract.Asset)
 
-		blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(issued.Hex))
+		toSign := issuedWithTokenWithContract.Hex
+		blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(toSign))
 		if err != nil {
 			panic(err)
 		}
 
 		log.Printf("Blinded transaction OK\n")
+		log.Printf("issuedWithTokenWithContract to sign:\n%+v", blinded)
 
 		signed, err := commands.SignRawTransactionWithWallet(ctx, rpcClient, commands.Transaction(blinded))
 		if err != nil {
@@ -235,6 +236,7 @@ func RawTransactionElements(ctx context.Context) {
 		if !signed.Complete {
 			panic("SignRawTransactionWithWallet failed")
 		}
+		log.Printf("issuedWithTokenWithContract signed:\n%+v", signed.Hex)
 
 		accepted, err := commands.TestMempoolAccept(ctx, rpcClient, signed.Hex)
 		if err != nil {
@@ -243,7 +245,8 @@ func RawTransactionElements(ctx context.Context) {
 		log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
 
 	default:
-		blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(funded.Hex))
+		tx := funded.Hex
+		blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(tx))
 		if err != nil {
 			panic(err)
 		}
