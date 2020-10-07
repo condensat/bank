@@ -74,7 +74,7 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 		}
 	}
 	var pagesCount int
-	var ids []model.UserID
+	var userPage []model.User
 	err = db.Transaction(func(db bank.Database) error {
 		var err error
 		pagesCount, err = database.UserPagingCount(db, DefaultUserCountByPage)
@@ -83,9 +83,9 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 			return err
 		}
 
-		ids, err = database.UserPage(db, model.UserID(startID), DefaultUserCountByPage)
+		userPage, err = database.UserPage(db, model.UserID(startID), DefaultUserCountByPage)
 		if err != nil {
-			ids = nil
+			userPage = nil
 			return err
 		}
 		return nil
@@ -97,8 +97,8 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 	}
 
 	var next string
-	if len(ids) > 0 {
-		nextID := int(ids[len(ids)-1]) + 1
+	if len(userPage) > 0 {
+		nextID := int(userPage[len(userPage)-1].ID) + 1
 		secureID, err := sID.ToSecureID("user", secureid.Value(uint64(nextID)))
 		if err != nil {
 			return err
@@ -107,14 +107,15 @@ func (p *DashboardService) UserList(r *http.Request, request *UserListRequest, r
 	}
 
 	var users []UserInfo
-	for _, id := range ids {
-		secureID, err := sID.ToSecureID("user", secureid.Value(uint64(id)))
+	for _, user := range userPage {
+		secureID, err := sID.ToSecureID("user", secureid.Value(uint64(user.ID)))
 		if err != nil {
 			return err
 		}
 
 		users = append(users, UserInfo{
 			UserID: sID.ToString(secureID),
+			Email:  string(user.Email),
 		})
 	}
 
