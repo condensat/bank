@@ -4,16 +4,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strconv"
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/backoffice"
 
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/logger"
-	"git.condensat.tech/bank/logger/model"
+	logmodel "git.condensat.tech/bank/logger/model"
 
 	"github.com/jinzhu/gorm"
 )
@@ -48,6 +50,7 @@ func main() {
 	migrateDatabase(ctx)
 
 	AccountsInfo(ctx)
+	UsersInfo(ctx)
 }
 
 func migrateDatabase(ctx context.Context) {
@@ -65,7 +68,7 @@ func AccountsInfo(ctx context.Context) {
 	db := appcontext.Database(ctx)
 
 	gdb := db.DB().(*gorm.DB)
-	logsInfo, err := model.LogsInfo(gdb)
+	logsInfo, err := logmodel.LogsInfo(gdb)
 	if err != nil {
 		panic(err)
 	}
@@ -98,4 +101,29 @@ func AccountsInfo(ctx context.Context) {
 		panic(err)
 	}
 	fmt.Printf("Withdraws: %+v\n", withdrawsInfo)
+}
+
+func UsersInfo(ctx context.Context) {
+	db := appcontext.Database(ctx)
+
+	pages, err := database.UserPagingCount(db, 5)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("User Pages: %d\n", pages)
+
+	var start string
+	for page := 0; page < pages; page++ {
+		startID, _ := strconv.Atoi(start)
+		userPage, err := database.UserPage(db, model.UserID(startID), 5)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Page %d: Users %+v\n", page, userPage)
+		if len(userPage) == 0 {
+			break
+		}
+		start = fmt.Sprintf("%d", int(userPage[len(userPage)-1].ID)+1)
+	}
 }
