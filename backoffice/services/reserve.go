@@ -24,8 +24,9 @@ type WalletUTXO struct {
 }
 
 type WalletDetail struct {
-	Chain string       `json:"chain"`
-	UTXOs []WalletUTXO `json:"utxos"`
+	Chain  string       `json:"chain"`
+	Height int          `json:"height"`
+	UTXOs  []WalletUTXO `json:"utxos"`
 }
 
 type WalletStatus struct {
@@ -119,8 +120,9 @@ func FetchWalletDetail(ctx context.Context, chain string) ([]WalletDetail, error
 			})
 		}
 		result = append(result, WalletDetail{
-			Chain: wallet.Chain,
-			UTXOs: utxos,
+			Chain:  wallet.Chain,
+			Height: wallet.Height,
+			UTXOs:  utxos,
 		})
 	}
 
