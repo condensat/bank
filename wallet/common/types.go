@@ -72,8 +72,9 @@ type SpendTx struct {
 }
 
 type WalletInfo struct {
-	Chain string
-	UTXOs []UTXOInfo
+	Chain  string
+	Height int
+	UTXOs  []UTXOInfo
 }
 
 type WalletStatus struct {
