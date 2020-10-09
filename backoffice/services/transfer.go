@@ -385,7 +385,11 @@ type WithdrawListRequest struct {
 }
 
 type WithdrawInfo struct {
-	WithdrawID string `json:"withdrawId"`
+	WithdrawID string  `json:"withdrawId"`
+	Timestamp  int64   `json:"timestamp"`
+	Amount     float64 `json:"amount"`
+	Currency   string  `json:"currency"`
+	Status     string  `json:"status"`
 }
 
 // BatchListResponse holds response for withdrawlist request
@@ -431,6 +435,7 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 	}
 	var pagesCount int
 	var ids []model.WithdrawID
+	infos := make(map[model.WithdrawID]WithdrawInfo)
 	err = db.Transaction(func(db bank.Database) error {
 		var err error
 		pagesCount, err = database.WithdrawPagingCount(db, DefaulWithdrawCountByPage)
@@ -443,6 +448,34 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 		if err != nil {
 			ids = nil
 			return err
+		}
+
+		for _, id := range ids {
+			var info WithdrawInfo
+
+			withdraw, err := database.GetWithdraw(db, id)
+			if err != nil {
+				ids = nil
+				return err
+			}
+			status, err := database.GetLastWithdrawInfo(db, id)
+			if err != nil {
+				ids = nil
+				return err
+			}
+
+			account, err := database.GetAccountByID(db, withdraw.From)
+			if err != nil {
+				ids = nil
+				return err
+			}
+
+			info.Timestamp = makeTimestampMillis(withdraw.Timestamp)
+			info.Amount = float64(*withdraw.Amount)
+			info.Currency = string(account.CurrencyName)
+			info.Status = string(status.Status)
+
+			infos[id] = info
 		}
 		return nil
 	})
@@ -469,9 +502,13 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 			return err
 		}
 
-		withdraws = append(withdraws, WithdrawInfo{
-			WithdrawID: sID.ToString(secureID),
-		})
+		var withdrawInfo WithdrawInfo
+		if info, ok := infos[id]; ok {
+			withdrawInfo = info
+		}
+		withdrawInfo.WithdrawID = sID.ToString(secureID)
+
+		withdraws = append(withdraws, withdrawInfo)
 	}
 
 	*reply = WithdrawListResponse{
