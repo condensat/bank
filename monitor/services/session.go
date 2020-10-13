@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking/sessions"
@@ -22,10 +21,10 @@ func verifySessionId(ctx context.Context, sessionID sessions.SessionID) (bool, e
 		return false, ErrServiceInternalError
 	}
 
-	response, err := nats.Request(ctx, services.VerifySessionSubject, message)
+	response, err := nats.Request(ctx, ApiVerifySessionSubject, message)
 	if err != nil {
 		log.WithError(err).
-			WithField("Subject", services.VerifySessionSubject).
+			WithField("Subject", ApiVerifySessionSubject).
 			Error("nats.Request Failed")
 		return false, ErrServiceInternalError
 	}
