@@ -13,7 +13,7 @@ import (
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/monitor/processus"
+	"git.condensat.tech/bank/monitor"
 
 	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/accounting/common"
@@ -217,7 +217,7 @@ func main() {
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
+	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	// CreateAccounts(ctx)
 	AccountTransferWithdraw(ctx)

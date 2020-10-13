@@ -11,7 +11,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/monitor/processus"
+	"git.condensat.tech/bank/monitor"
 )
 
 type Args struct {
@@ -45,7 +45,7 @@ func main() {
 	ctx = appcontext.WithOptions(ctx, args.App)
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
+	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	if args.WithDatabase {
 		ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))

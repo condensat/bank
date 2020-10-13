@@ -1,4 +1,4 @@
-package messaging
+package monitor
 
 const (
 	chanPrefix = "Condensat.Monitor."

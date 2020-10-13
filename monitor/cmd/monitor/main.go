@@ -8,13 +8,13 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
+	bankdb "git.condensat.tech/bank/database"
+
 	"git.condensat.tech/bank/monitor"
-	"git.condensat.tech/bank/monitor/grabber"
-	"git.condensat.tech/bank/monitor/processus"
+	"git.condensat.tech/bank/monitor/database"
 )
 
 type Args struct {
@@ -22,7 +22,7 @@ type Args struct {
 
 	Redis    cache.RedisOptions
 	Nats     messaging.NatsOptions
-	Database database.Options
+	Database bankdb.Options
 }
 
 func parseArgs() Args {
@@ -32,7 +32,7 @@ func parseArgs() Args {
 
 	cache.OptionArgs(&args.Redis)
 	messaging.OptionArgs(&args.Nats)
-	database.OptionArgs(&args.Database)
+	bankdb.OptionArgs(&args.Database)
 
 	flag.Parse()
 
@@ -47,19 +47,19 @@ func main() {
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
-	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
+	ctx = appcontext.WithDatabase(ctx, bankdb.NewDatabase(args.Database))
+	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	migrateDatabase(ctx)
 
-	var grabber grabber.Grabber
+	var grabber monitor.Grabber
 	grabber.Run(ctx)
 }
 
 func migrateDatabase(ctx context.Context) {
 	db := appcontext.Database(ctx)
 
-	err := db.Migrate(monitor.Models())
+	err := db.Migrate(database.Models())
 	if err != nil {
 		logger.Logger(ctx).WithError(err).
 			WithField("Method", "main.migrateDatabase").
