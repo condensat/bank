@@ -1,10 +1,15 @@
-package services
+package networking
 
 import (
 	"net"
 	"net/http"
 
 	"github.com/thoas/stats"
+)
+
+// Version
+const (
+	Version string = "0.1"
 )
 
 type StatsArgs struct {
