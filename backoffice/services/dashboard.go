@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	apiservice "git.condensat.tech/bank/api/services"
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"git.condensat.tech/bank/logger"
 )

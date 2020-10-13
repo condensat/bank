@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"code.condensat.tech/bank/secureid"
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/sessions"
 
 	accounting "git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/wallet/client"

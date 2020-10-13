@@ -5,7 +5,7 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"

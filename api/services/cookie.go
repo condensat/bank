@@ -9,7 +9,7 @@ import (
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking"
 
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/gorilla/rpc/v2"
 	"github.com/gorilla/rpc/v2/json"

@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/sirupsen/logrus"
 )

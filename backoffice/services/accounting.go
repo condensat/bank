@@ -9,7 +9,7 @@ import (
 	"git.condensat.tech/bank/networking"
 
 	apiservice "git.condensat.tech/bank/api/services"
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"code.condensat.tech/bank/secureid"
 

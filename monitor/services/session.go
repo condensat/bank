@@ -5,9 +5,9 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/api/services"
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking/sessions"
 )
 
 func verifySessionId(ctx context.Context, sessionID sessions.SessionID) (bool, error) {

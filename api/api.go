@@ -14,7 +14,7 @@ import (
 
 	"git.condensat.tech/bank/api/oauth"
 	"git.condensat.tech/bank/api/services"
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"

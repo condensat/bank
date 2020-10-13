@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/v2"

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/backoffice/services"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"

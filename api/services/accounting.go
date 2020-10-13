@@ -14,7 +14,7 @@ import (
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/accounting/client"
-	"git.condensat.tech/bank/api/sessions"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/sirupsen/logrus"
 )
