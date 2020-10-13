@@ -7,6 +7,8 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
@@ -45,7 +47,14 @@ func NewSessionHandler(ctx context.Context) http.Handler {
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
-	err := server.RegisterService(new(SessionService), "session")
+	err := server.RegisterService(
+		NewSessionService(
+			func(ctx context.Context, login, password string) (uint64, bool, error) {
+				db := appcontext.Database(ctx)
+				userID, allowed, err := database.CheckCredential(ctx, db, model.Base58(login), model.Base58(password))
+				return uint64(userID), allowed, err
+			},
+		), "session")
 	if err != nil {
 		panic(err)
 	}
