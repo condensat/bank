@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.condensat.tech/bank/api"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/utils"
 
 	"github.com/gorilla/mux"
@@ -39,7 +39,7 @@ func (p *Web) Run(ctx context.Context, port int, webDirectory string, singlePage
 
 	// setup global handler with midlewate
 	handler := negroni.New(handlers...)
-	handler.UseFunc(api.MiddlewarePeerRateLimiter)
+	handler.UseFunc(networking.MiddlewarePeerRateLimiter)
 	handler.UseFunc(AddWorkerHeader)
 	handler.UseFunc(AddWorkerVersion)
 	handler.UseHandler(muxer)

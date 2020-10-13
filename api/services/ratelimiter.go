@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"git.condensat.tech/bank/api/ratelimiter"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking/ratelimiter"
 )
 
 func OpenSessionAllowed(ctx context.Context, userID uint64) bool {

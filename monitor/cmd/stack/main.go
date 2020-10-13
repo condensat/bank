@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"git.condensat.tech/bank/api"
-	"git.condensat.tech/bank/api/ratelimiter"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/ratelimiter"
 
 	"git.condensat.tech/bank/monitor"
 	"git.condensat.tech/bank/monitor/processus"
@@ -45,7 +45,7 @@ func parseArgs() Args {
 
 	flag.IntVar(&args.StackMonitor.Port, "port", 4000, "Stack monitor port (default 4000)")
 
-	args.StackMonitor.PeerRequestPerSecond = api.DefaultPeerRequestPerSecond
+	args.StackMonitor.PeerRequestPerSecond = networking.DefaultPeerRequestPerSecond
 	flag.IntVar(&args.StackMonitor.PeerRequestPerSecond.Rate, "peerRateLimit", 500, "Rate limit rate, per second, per peer connection (default 500)")
 
 	flag.StringVar(&args.StackMonitor.CorsAllowedDomain, "corsAllowedDomain", "condensat.space", "Cors Allowed Domain (default condensat.space)")
@@ -65,7 +65,7 @@ func main() {
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
-	ctx = api.RegisterRateLimiter(ctx, args.StackMonitor.PeerRequestPerSecond)
+	ctx = networking.RegisterRateLimiter(ctx, args.StackMonitor.PeerRequestPerSecond)
 
 	var stackMonitor monitor.StackMonitor
 	stackMonitor.Run(ctx, args.StackMonitor.Port, corsAllowedOrigins(args.StackMonitor.CorsAllowedDomain))
