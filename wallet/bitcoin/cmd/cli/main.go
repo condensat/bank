@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	KeyIssueAsset = "Key.IssueAsset"
+	KeyIssueAsset   = "Key.IssueAsset"
+	KeyReissueAsset = "Key.ReissueAsset"
 )
 
 func init() {
@@ -25,6 +26,7 @@ func init() {
 func main() {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, KeyIssueAsset, true)
+	ctx = context.WithValue(ctx, KeyReissueAsset, true)
 	RawTransaction(ctx)
 	RawTransactionElements(ctx)
 }
