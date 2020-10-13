@@ -41,7 +41,7 @@ func NewRedisLogger(ctx context.Context) *RedisLogger {
 // Write implements io.Writer interface
 func (r *RedisLogger) Write(entry []byte) (int, error) {
 	rdb := cache.ToRedis(r.cache)
-	_, err := rdb.RPush(cstRedisQueueName, entry).Result()
+	_, err := rdb.RPush(context.Background(), cstRedisQueueName, entry).Result()
 	if err != nil {
 		// print missed entry and exit
 		print(string(entry))
@@ -67,7 +67,7 @@ func (r *RedisLogger) pullRedisEntries(ctx context.Context, entryChan chan<- [][
 	rdb := cache.ToRedis(r.cache)
 	for {
 		// check for entries
-		count, err := rdb.LLen(cstRedisQueueName).Result()
+		count, err := rdb.LLen(ctx, cstRedisQueueName).Result()
 		if err != nil {
 			panic(err)
 		}
@@ -78,7 +78,7 @@ func (r *RedisLogger) pullRedisEntries(ctx context.Context, entryChan chan<- [][
 		}
 
 		// fetch bulk entries
-		entries, err := rdb.LRange(cstRedisQueueName, 0, bulkSize-1).Result()
+		entries, err := rdb.LRange(ctx, cstRedisQueueName, 0, bulkSize-1).Result()
 		if err != nil {
 			panic(err)
 		}
@@ -96,7 +96,7 @@ func (r *RedisLogger) pullRedisEntries(ctx context.Context, entryChan chan<- [][
 
 		for range entries {
 			// entry processed, remove it from redis
-			_, err = rdb.LPop(cstRedisQueueName).Result()
+			_, err = rdb.LPop(ctx, cstRedisQueueName).Result()
 			if err != nil {
 				panic(err)
 			}

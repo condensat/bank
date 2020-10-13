@@ -6,7 +6,7 @@ import (
 
 	"git.condensat.tech/bank"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 type Redis struct {

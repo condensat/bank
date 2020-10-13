@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -23,7 +23,7 @@ func ResetNonce(ctx context.Context, name string) error {
 	}
 	rdb := ToRedis(appcontext.Cache(ctx))
 
-	_, err := rdb.Del(name).Result()
+	_, err := rdb.Del(ctx, name).Result()
 
 	return err
 }
@@ -36,13 +36,13 @@ func Nonce(ctx context.Context, name string, nonce uint64) (uint64, error) {
 	if len(name) == 0 {
 		return 0, ErrInvaliNonceName
 	}
-	prev, err := rdb.Get(name).Uint64()
+	prev, err := rdb.Get(ctx, name).Uint64()
 	if err != nil && err.Error() != redis.Nil.Error() {
 		return 0, err
 	}
 
 	if nonce > prev {
-		_, err = rdb.Set(name, nonce, time.Hour).Result()
+		_, err = rdb.Set(ctx, name, nonce, time.Hour).Result()
 		if err != nil {
 			return 0, err
 		}

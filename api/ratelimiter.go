@@ -10,7 +10,7 @@ import (
 	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/logger"
 
-	"github.com/go-redis/redis_rate/v8"
+	"github.com/go-redis/redis_rate/v9"
 )
 
 var (

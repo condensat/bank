@@ -7,7 +7,7 @@ import (
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 
-	"github.com/go-redis/redis_rate/v8"
+	"github.com/go-redis/redis_rate/v9"
 )
 
 const (
@@ -37,10 +37,10 @@ func New(ctx context.Context, rateLimit RateLimitInfo) *RateLimiter {
 
 func (p *RateLimiter) Allowed(ctx context.Context, name string) bool {
 	key := fmt.Sprintf("%s:%s", p.keyPrefix, name)
-	res, err := p.limiter.Allow(key, &p.limit)
+	res, err := p.limiter.Allow(ctx, key, p.limit)
 	if err != nil {
 		return false
 	}
 
-	return res.Allowed
+	return res.Allowed > 0
 }
