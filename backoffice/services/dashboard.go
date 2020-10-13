@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	apiservice "git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/database/model"
+
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
@@ -21,7 +21,7 @@ type DashboardService int
 
 // StatusRequest holds args for status requests
 type StatusRequest struct {
-	apiservice.SessionArgs
+	sessions.SessionArgs
 }
 
 // StatusResponse holds args for string requests
@@ -36,7 +36,7 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 	log = networking.GetServiceRequestLog(log, r, "Dashboard", "Status")
 
 	// Get userID from session
-	request.SessionID = apiservice.GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 
 	isAdmin, log, err := isUserAdmin(ctx, log, sessionID)
@@ -54,7 +54,7 @@ func (p *DashboardService) Status(r *http.Request, request *StatusRequest, reply
 
 	bankStatus, logStatus, err := FetchDashboardStatus(ctx)
 	if err != nil {
-		return apiservice.ErrServiceInternalError
+		return sessions.ErrInternalError
 	}
 	*reply = StatusResponse{
 		Bank: bankStatus,

@@ -11,6 +11,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
@@ -48,7 +49,7 @@ type ProposalInfo struct {
 
 // SwapProposeRequest holds args for swap requests
 type SwapRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 	AccountID string `json:"accountId"`
 	SwapID    string `json:"swapId"`
 	Payload   string `json:"payload,omitempty"`
@@ -99,7 +100,7 @@ func (p *SwapService) Propose(r *http.Request, request *SwapProposeRequest, repl
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -276,7 +277,7 @@ func (p *SwapService) Info(r *http.Request, request *SwapRequest, reply *SwapRes
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -376,7 +377,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -518,7 +519,7 @@ func (p *SwapService) Accept(r *http.Request, request *SwapRequest, reply *SwapR
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {

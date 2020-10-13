@@ -10,7 +10,6 @@ import (
 	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/appcontext"
 
-	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/networking/sessions"
 
 	"git.condensat.tech/bank/database"
@@ -115,7 +114,7 @@ func UpdateUserSession(ctx context.Context, req *http.Request, w http.ResponseWr
 	}
 
 	// create session & cookie
-	err = services.CreateSessionWithCookie(ctx, req, w, userID)
+	err = sessions.CreateSessionWithCookie(ctx, req, w, userID)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
@@ -18,7 +19,7 @@ type UserService int
 
 // UserInfoRequest holds args for start requests
 type UserInfoRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 }
 
 // UserInfoResponse holds args for start requests
@@ -42,7 +43,7 @@ func (p *UserService) Info(r *http.Request, request *UserInfoRequest, reply *Use
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {

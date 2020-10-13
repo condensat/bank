@@ -11,9 +11,8 @@ import (
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/monitor/common"
 	"git.condensat.tech/bank/monitor/messaging"
-	"git.condensat.tech/bank/networking"
 
-	coreService "git.condensat.tech/bank/api/services"
+	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/sirupsen/logrus"
@@ -24,7 +23,7 @@ type StackService int
 
 // StackInfoRequest holds args for info requests
 type StackInfoRequest struct {
-	coreService.SessionArgs
+	sessions.SessionArgs
 }
 
 // ServiceInfo holds service status
@@ -44,7 +43,7 @@ type StackInfoResponse struct {
 
 // StackHistoryRequest holds args for history requests
 type StackHistoryRequest struct {
-	coreService.SessionArgs
+	sessions.SessionArgs
 	AppName string `json:"appName"`
 	From    int64  `json:"from"`
 	To      int64  `json:"to"`

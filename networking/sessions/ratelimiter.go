@@ -1,4 +1,4 @@
-package services
+package sessions
 
 import (
 	"context"
@@ -15,7 +15,7 @@ func OpenSessionAllowed(ctx context.Context, userID uint64) bool {
 		return limiter.Allowed(ctx, fmt.Sprintf("UserID:%d", userID))
 
 	default:
-		logger.Logger(ctx).WithField("Method", "services.OpenSessionAllowed").
+		logger.Logger(ctx).WithField("Method", "OpenSessionAllowed").
 			Error("Failed to get OpenSession Limiter")
 		return false
 	}

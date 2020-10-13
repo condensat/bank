@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,18 +16,6 @@ import (
 
 const (
 	KeySessions = "Api.Sessions"
-)
-
-var (
-	ErrInvalidDuration   = errors.New("Invalid Duration")
-	ErrInvalidUserID     = errors.New("Invalid UserID")
-	ErrInvalidRemoteAddr = errors.New("Invalid RemoteAddr")
-	ErrRemoteAddrChanged = errors.New("RemoteAddr Changed")
-	ErrInvalidSessionID  = errors.New("Invalid SessionID")
-	ErrSessionExpired    = errors.New("Session Expired")
-	ErrEncode            = errors.New("Encode Error")
-	ErrDecode            = errors.New("Decode Error")
-	ErrCache             = errors.New("Cache Error")
 )
 
 type Session struct {

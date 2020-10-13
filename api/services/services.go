@@ -10,6 +10,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
@@ -43,7 +44,7 @@ func RegisterServices(ctx context.Context, mux *mux.Router, corsAllowedOrigins [
 func NewSessionHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
@@ -65,7 +66,7 @@ func NewSessionHandler(ctx context.Context) http.Handler {
 func NewUserHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
@@ -80,7 +81,7 @@ func NewUserHandler(ctx context.Context) http.Handler {
 func NewAccountingHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
@@ -95,7 +96,7 @@ func NewAccountingHandler(ctx context.Context) http.Handler {
 func NewWalletHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
@@ -110,7 +111,7 @@ func NewWalletHandler(ctx context.Context) http.Handler {
 func NewSwapHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 

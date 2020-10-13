@@ -10,9 +10,8 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
-	"git.condensat.tech/bank/networking"
 
-	apiservice "git.condensat.tech/bank/api/services"
+	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 )
 
@@ -79,7 +78,7 @@ func FetchTransferStatus(ctx context.Context) (TransferStatus, error) {
 
 // DepositListRequest holds args for depositlist requests
 type DepositListRequest struct {
-	apiservice.SessionArgs
+	sessions.SessionArgs
 	RequestPaging
 }
 
@@ -104,7 +103,7 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 	log = networking.GetServiceRequestLog(log, r, "Dashboard", "DepositList")
 
 	// Get userID from session
-	request.SessionID = apiservice.GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 
 	isAdmin, log, err := isUserAdmin(ctx, log, sessionID)
@@ -190,7 +189,7 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 	if err != nil {
 		log.WithError(err).
 			Error("DepositPage failed")
-		return apiservice.ErrServiceInternalError
+		return sessions.ErrInternalError
 	}
 
 	var next string
@@ -235,7 +234,7 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 
 // BatchListRequest holds args for batchlist requests
 type BatchListRequest struct {
-	apiservice.SessionArgs
+	sessions.SessionArgs
 	RequestPaging
 }
 
@@ -260,7 +259,7 @@ func (p *DashboardService) BatchList(r *http.Request, request *BatchListRequest,
 	log = networking.GetServiceRequestLog(log, r, "Dashboard", "BatchList")
 
 	// Get userID from session
-	request.SessionID = apiservice.GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 
 	isAdmin, log, err := isUserAdmin(ctx, log, sessionID)
@@ -336,7 +335,7 @@ func (p *DashboardService) BatchList(r *http.Request, request *BatchListRequest,
 	if err != nil {
 		log.WithError(err).
 			Error("BatchPage failed")
-		return apiservice.ErrServiceInternalError
+		return sessions.ErrInternalError
 	}
 
 	var next string
@@ -381,7 +380,7 @@ func (p *DashboardService) BatchList(r *http.Request, request *BatchListRequest,
 
 // WithdrawListRequest holds args for withdrawlist requests
 type WithdrawListRequest struct {
-	apiservice.SessionArgs
+	sessions.SessionArgs
 	RequestPaging
 }
 
@@ -406,7 +405,7 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 	log = networking.GetServiceRequestLog(log, r, "Dashboard", "WithdrawList")
 
 	// Get userID from session
-	request.SessionID = apiservice.GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 
 	isAdmin, log, err := isUserAdmin(ctx, log, sessionID)
@@ -483,7 +482,7 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 	if err != nil {
 		log.WithError(err).
 			Error("WithdrawPage failed")
-		return apiservice.ErrServiceInternalError
+		return sessions.ErrInternalError
 	}
 
 	var next string

@@ -8,6 +8,7 @@ import (
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
@@ -27,7 +28,7 @@ type WalletService int
 
 // WalletNextDepositRequest holds args for accounting requests
 type WalletNextDepositRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 	AccountID string `json:"accountId"`
 }
 
@@ -54,7 +55,7 @@ func (p *WalletService) NextDeposit(r *http.Request, request *WalletNextDepositR
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -149,7 +150,7 @@ func getChainFromCurrencyName(isCrypto bool, currencyName string) (string, error
 
 // WalletSendFundsRequest holds args for wallet requests
 type WalletSendFundsRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 	AccountID     string  `json:"accountId"`
 	PublicAddress string  `json:"publicAddress"`
 	Amount        float64 `json:"amount"`
@@ -174,7 +175,7 @@ func (p *WalletService) SendFunds(r *http.Request, request *WalletSendFundsReque
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -266,7 +267,7 @@ func (p *WalletService) SendFunds(r *http.Request, request *WalletSendFundsReque
 
 // WalletCancelWithdrawRequest holds args for wallet requests
 type WalletCancelWithdrawRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 	WithdrawID string `json:"withdrawId"`
 }
 
@@ -290,7 +291,7 @@ func (p *WalletService) CancelWithdraw(r *http.Request, request *WalletCancelWit
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {
@@ -329,7 +330,7 @@ func (p *WalletService) CancelWithdraw(r *http.Request, request *WalletCancelWit
 
 // WalletSendHistoryRequest holds args for wallet requests
 type WalletSendHistoryRequest struct {
-	SessionArgs
+	sessions.SessionArgs
 }
 
 type WithdrawInfo struct {
@@ -361,7 +362,7 @@ func (p *WalletService) SendHistory(r *http.Request, request *WalletSendHistoryR
 	}
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
+	request.SessionID = sessions.GetSessionCookie(r)
 	sessionID := sessions.SessionID(request.SessionID)
 	userID := session.UserSession(ctx, sessionID)
 	if !sessions.IsUserValid(userID) {

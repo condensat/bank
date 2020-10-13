@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/networking"
+	"git.condensat.tech/bank/networking/sessions"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/v2"
@@ -20,7 +20,7 @@ func RegisterServices(ctx context.Context, mux *mux.Router, corsAllowedOrigins [
 func NewDashboardHandler(ctx context.Context) http.Handler {
 	server := rpc.NewServer()
 
-	jsonCodec := services.NewCookieCodec(ctx)
+	jsonCodec := sessions.NewCookieCodec(ctx)
 	server.RegisterCodec(jsonCodec, "application/json")
 	server.RegisterCodec(jsonCodec, "application/json; charset=UTF-8") // For firefox 11 and other browsers which append the charset=UTF-8
 
