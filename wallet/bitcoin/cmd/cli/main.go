@@ -29,6 +29,7 @@ func main() {
 	ctx = context.WithValue(ctx, KeyReissueAsset, true)
 	RawTransaction(ctx)
 	RawTransactionElements(ctx)
+	RawReissuanceElements(ctx)
 }
 
 func RawTransaction(ctx context.Context) {
@@ -41,7 +42,7 @@ func RawTransaction(ctx context.Context) {
 	}, nil)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return //abort the test if there's no bitcoind running
 	}
 	log.Printf("CreateRawTransaction: %s\n", hex)
 
@@ -109,13 +110,19 @@ func RawTransactionElements(ctx context.Context) {
 	case bool:
 		isAssetIssuance = ctxValue
 	}
-	rpcClient := elementsRpcClient("elements-testnet", 18432)
+	rpcClient := elementsRpcClient("elements-testnet", 28433) // this may change
 	if rpcClient == nil {
 		panic("Invalid rpcClient")
 	}
 
+	// Below are some values that work with the wallet I use for testing, but obviously it would fail with any other
+	destinationAddress := "el1qqgtvpnmmxdpp9ramzde76496m4hsvu7vtxqnhps4qp37k90r7vnvcvyajp5fef556em57lku9qju832r9ddtv8s0u2q8srlu0"
+	changeAddress := "el1qq2tt6t2r5z5p99fj4z6zevs8wahdnvxgs3fn0nu2fy4ngkkdqhfpm9sgxxx76t0cphgu95s6rhjxjzvka3fxxdv4vqx9x86hz"
+	assetAddress := "el1qq2l5kfqg2l9qy0nptnpz7w6rpjx4xq2njuepejgffl4jt2vd74njl5zh3rdgs3tra2z94aj69ws77aj9ar7xkuusj4pnjru7a"
+	tokenAddress := "el1qq054gxp5n06fu992pavzalzmuy3xrev2299yvz68u3szf40whyy2sruncl23d5j6cswmeqt7xdetmryhztl05wl36h8pw5yxg"
+
 	hex, err := commands.CreateRawTransaction(ctx, rpcClient, nil, []commands.SpendInfo{
-		{Address: "AzpjyAMVQzUvJjpE3TbEZ1ATvTScw5poMndTvGjnnku8LtAjnh5q693iZWCvQjYKcFYJwKqY2njnvBM5", Amount: 0.003},
+		{Address: string(destinationAddress), Amount: 0.001},
 	}, nil)
 	if err != nil {
 		panic(err)
@@ -126,19 +133,27 @@ func RawTransactionElements(ctx context.Context) {
 	if err != nil {
 		panic(err)
 	}
-	decoded, err := commands.ConvertToRawTransactionBitcoin(rawTx)
+	decoded, err := commands.ConvertToRawTransactionLiquid(rawTx)
 	if err != nil {
 		panic(err)
 	}
 	log.Printf("DecodeRawTransaction: %+v\n", decoded)
 
-	funded, err := commands.FundRawTransaction(ctx, rpcClient, hex)
+	funded, err := commands.FundRawTransactionWithOptions(ctx,
+		rpcClient,
+		hex,
+		commands.FundRawTransactionOptions{
+			ChangeAddress:   string(changeAddress),
+			IncludeWatching: true,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
 	log.Printf("FundRawTransaction: %+v\n", funded)
 
-	rawTx, err = commands.DecodeRawTransaction(ctx, rpcClient, commands.Transaction(funded.Hex))
+	// I don't have usage for that here, but it might be useful so let's comment it out for now
+	/*rawTx, err = commands.DecodeRawTransaction(ctx, rpcClient, commands.Transaction(funded.Hex))
 	if err != nil {
 		panic(err)
 	}
@@ -161,18 +176,23 @@ func RawTransactionElements(ctx context.Context) {
 			address := commands.Address(d.Address)
 			addressMap[address] = address
 		}
-	}
+	}*/
 
 	switch {
 	case isAssetIssuance == true:
 
 		tx := funded.Hex
+		// Those values don't matter and should work anywhere
+		assetAmount := 1000.00000001
+		tokenAmount := 0.00000001
+		contractHash := "7F6475E61926B63C190CEBAB3470531EAB53B5481CBF960C3EE3164CA71E816B"
+
 		issuedWithAsset, err := commands.RawIssueAssetWithAsset(
 			ctx,
 			rpcClient,
 			commands.Transaction(tx),
-			1000.00000001,
-			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
+			assetAmount,
+			assetAddress,
 		)
 		if err != nil {
 			panic(err)
@@ -183,10 +203,10 @@ func RawTransactionElements(ctx context.Context) {
 			ctx,
 			rpcClient,
 			commands.Transaction(tx),
-			1000.00000001,
-			0.00000001,
-			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
-			"el1qq0kw2e8g4yknjc0uggucchpucpcut47cl2xeymmqylt5vw6pt9dgl5pf9je6yxjcx7tw6ewmfv5hj54009d2yzgyqyyuulxlf",
+			assetAmount,
+			tokenAmount,
+			assetAddress,
+			tokenAddress,
 		)
 		if err != nil {
 			panic(err)
@@ -197,9 +217,9 @@ func RawTransactionElements(ctx context.Context) {
 			ctx,
 			rpcClient,
 			commands.Transaction(tx),
-			1000.00000001,
-			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
-			"7F6475E61926B63C190CEBAB3470531EAB53B5481CBF960C3EE3164CA71E816B",
+			assetAmount,
+			assetAddress,
+			contractHash,
 		)
 		if err != nil {
 			panic(err)
@@ -210,11 +230,11 @@ func RawTransactionElements(ctx context.Context) {
 			ctx,
 			rpcClient,
 			commands.Transaction(tx),
-			1000.00000001,
-			0.00000001,
-			"AzpuKUXvtnbf5uGQrpvDCYrnPJPCaYbRCLk39o73zJxq4od1u9jbcokao9fvFJQp4D9iSMUpLiuknSmR",
-			"el1qq0kw2e8g4yknjc0uggucchpucpcut47cl2xeymmqylt5vw6pt9dgl5pf9je6yxjcx7tw6ewmfv5hj54009d2yzgyqyyuulxlf",
-			"7F6475E61926B63C190CEBAB3470531EAB53B5481CBF960C3EE3164CA71E816B",
+			assetAmount,
+			tokenAmount,
+			assetAddress,
+			tokenAddress,
+			contractHash,
 		)
 		if err != nil {
 			panic(err)
@@ -222,6 +242,7 @@ func RawTransactionElements(ctx context.Context) {
 
 		log.Printf("RawIssueAssetWithTokenWithContract OK, issued asset is %s\n", issuedWithTokenWithContract.Asset)
 
+		// We can choose to sign another transaction if needed
 		toSign := issuedWithTokenWithContract.Hex
 		blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(toSign))
 		if err != nil {
@@ -229,14 +250,15 @@ func RawTransactionElements(ctx context.Context) {
 		}
 
 		log.Printf("Blinded transaction OK\n")
-		log.Printf("issuedWithTokenWithContract to sign:\n%+v", blinded)
+		log.Printf("issuedWithTokenWithContract to sign:\n%+v", blinded) // this is ready for signing
 
 		signed, err := commands.SignRawTransactionWithWallet(ctx, rpcClient, commands.Transaction(blinded))
 		if err != nil {
 			panic(err)
 		}
 		if !signed.Complete {
-			panic("SignRawTransactionWithWallet failed")
+			log.Printf("SignRawTransactionWithWallet failed\n") //this is expected if using a watch-only wallet
+			return                                              // Just continue the test for now
 		}
 		log.Printf("issuedWithTokenWithContract signed:\n%+v", signed.Hex)
 
@@ -244,7 +266,14 @@ func RawTransactionElements(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
+
+		switch {
+		case accepted.Allowed == true:
+			log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
+		case accepted.Allowed == false:
+			log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
+			log.Printf("Reject-reason: %+v\n", accepted.Reason)
+		}
 
 	default:
 		tx := funded.Hex
@@ -273,7 +302,7 @@ func RawTransactionElements(ctx context.Context) {
 
 }
 
-func RawReissuanceElements(ctx context.Context, rpcClient commands.RpcClient, entropy, tokenID, txID string, tokenAmount float64) {
+func RawReissuanceElements(ctx context.Context) {
 	var isAssetReissuance bool
 	switch ctxValue := ctx.Value(KeyReissueAsset).(type) {
 	case bool:
@@ -283,48 +312,46 @@ func RawReissuanceElements(ctx context.Context, rpcClient commands.RpcClient, en
 	switch {
 	case isAssetReissuance == true:
 
-		/*entropy := "fd34841f00d9a1feb2c900c40ffd85ae0f9ba8ba9f5f9e3ab53ef8bd1902a6c1"
-		assetBlinding := "4b526d202e5863bf228c24ac47409907f00ec326fc807a42bf4787d9ded113cc"
-		tokenID := "e1512d6001df36641dfa1db18315dc6fd399405963a0fedae4a042281df35e49"
-		txID := "4d094df0af5305b896a5c183bbd718926884aa093a46d2ac0ad945d58a74e5b2"
+		// Those values are highly dependent on the wallet, and will fail with any other wallet
+		// next step would be to get thos values from the node and not hard-coded so that it can be portable
+		entropy := "fd300cee9557a6b1fb3b20d2349f68f911e4b8941ba85a098694058b68a7e0e4"
+		tokenID := "91da6e2b69f5cb7a69a1c8599fd112b39be3775a9c7c5c15c7c455ec20b520da"
+		txID := "41b396cf4c6d19ac17e42f18fd6f09572804e230198fc70f87da3e76ea316307"
+		vout := 1
+		assetBlinding := "c85be42b4b8d6afc4ffceabf8826b9e733f843d3f761daf0f15b3c6c6aa7ac89"
+		// except those 2 which don't matter
+		tokenAmount := 0.00000001
+		assetAmount := 1000.00000002
 
-		rpcClient := elementsRpcClient("elements-testnet", 28432)
+		rpcClient := elementsRpcClient("elements-testnet", 28433)
 		if rpcClient == nil {
 			panic("Invalid rpcClient")
-		}*/
-		tokenUtxo, err := commands.ListUnspentWithAsset(ctx, rpcClient, nil, tokenID)
+		}
+
+		// I should be able to get the assetblinder like this:
+		// call listunspent for the token and look at the asset_blinder field
+		/*tokenUtxo, err := commands.ListUnspentWithAsset(ctx, rpcClient, nil, tokenID)
 		if err != nil {
 			panic(err)
 		}
-		assetBlinding := tokenUtxo[0].AssetBlinder
+		assetBlinding := tokenUtxo[0].AssetBlinder*/
 
-		//address := "AzpjyAMVQzUvJjpE3TbEZ1ATvTScw5poMndTvGjnnku8LtAjnh5q693iZWCvQjYKcFYJwKqY2njnvBM5"
-		changeAddress := "el1qq2nwuqgmsqaef7fvaqwfaesvpu3mfrnsagpsqxycsly5qulakdwl44fjvjjguqnv46zxsecrfh03ps7ghrfcwtl9fjxukqeh7"
-		tokenChangeAddress := "el1qq0sdn8lhwp2qsk6efgfy890tk94jdpnrtjec97kpq37d3tywggz94m0nctz4rd3wc4y45e9k34r237c57rkw5f2adtha2z4m5"
+		// Those don't matter much, better to use our address though
+		changeAddress := "el1qqfrxvlt6hmqjnewjtnjn3d6t0w3xgqd4h09g0r6ng4lskdrgafmzdfccykjuftdu5hcw8m56gv3g978nrcdek8nasqquddhuf"
+		tokenAddress := "el1qqgxj54w6f0amzuctkptu3tgt5pxacjfjvas70tyq7m58lz7sp0tccp9cr2vxrx7v83y0r63f24lh25vxupfyc4nw4df8d6g8c"
+		assetAddress := "el1qqdjjeqzweh26nx9jvztmmzzkhx3u44j4n9dfhtf89dwn79xzd2dh87m40kkr7ucfr34n544t4q39r6glh2rxzfgqnfv6jscec"
 
 		hex, err := commands.CreateRawTransaction(ctx, rpcClient, []commands.UTXOInfo{
-			{TxID: txID, Vout: 2},
+			{TxID: txID, Vout: vout}, // this is the previous token output
 		}, []commands.SpendInfo{
-			//{Address: address, Amount: 0.003},
-			{Address: tokenChangeAddress, Amount: tokenAmount},
+			{Address: tokenAddress, Amount: tokenAmount},
 		}, []commands.AssetInfo{
-			//{Address: address, Asset: "b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23"},
-			{Address: tokenChangeAddress, Asset: tokenID},
+			{Address: tokenAddress, Asset: tokenID},
 		})
 		if err != nil {
 			panic(err)
 		}
 		log.Printf("CreateRawTransaction: %s\n", hex)
-
-		rawTx, err := commands.DecodeRawTransaction(ctx, rpcClient, hex)
-		if err != nil {
-			panic(err)
-		}
-		decoded, err := commands.ConvertToRawTransactionBitcoin(rawTx)
-		if err != nil {
-			panic(err)
-		}
-		log.Printf("DecodeRawTransaction: %+v\n", decoded)
 
 		funded, err := commands.FundRawTransactionWithOptions(ctx,
 			rpcClient,
@@ -339,39 +366,15 @@ func RawReissuanceElements(ctx context.Context, rpcClient commands.RpcClient, en
 		}
 		log.Printf("FundRawTransaction: %+v\n", funded)
 
-		rawTx, err = commands.DecodeRawTransaction(ctx, rpcClient, commands.Transaction(funded.Hex))
-		if err != nil {
-			panic(err)
-		}
-		decoded, err = commands.ConvertToRawTransactionBitcoin(rawTx)
-		if err != nil {
-			panic(err)
-		}
-		log.Printf("FundRawTransaction Hex: %+v\n", decoded)
-
-		addressMap := make(map[commands.Address]commands.Address)
-		for _, in := range decoded.Vin {
-
-			txInfo, err := commands.GetTransaction(ctx, rpcClient, in.Txid, true)
-			if err != nil {
-				panic(err)
-			}
-
-			addressMap[txInfo.Address] = txInfo.Address
-			for _, d := range txInfo.Details {
-				address := commands.Address(d.Address)
-				addressMap[address] = address
-			}
-		}
 		reissued, err := commands.RawReissueAsset(
 			ctx,
 			rpcClient,
 			commands.Transaction(funded.Hex),
-			1000,
-			"el1qqtg9yfl7v9954zz8m6cz2dhlpjsmhkqw7dejfxa5jxju7jkxylusjq6nyqxe0k6mdzkhzkuhk3l8mp480m4lvfvc88tap8k6v",
+			assetAmount,
+			assetAddress,
 			entropy,
 			assetBlinding,
-			0,
+			0, // we put the token input at index 0 with createrawtransaction
 		)
 		if err != nil {
 			panic(err)
@@ -391,7 +394,8 @@ func RawReissuanceElements(ctx context.Context, rpcClient commands.RpcClient, en
 			panic(err)
 		}
 		if !signed.Complete {
-			panic("SignRawTransactionWithWallet failed") //this is expected if using a watch-only wallet
+			log.Printf("SignRawTransactionWithWallet failed\n") //this is expected if using a watch-only wallet
+			return
 		}
 		log.Printf("Reissuance TX signed:\n%+v", signed.Hex)
 
