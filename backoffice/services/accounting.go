@@ -6,6 +6,7 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 
 	apiservice "git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
@@ -82,7 +83,7 @@ func (p *DashboardService) AccountList(r *http.Request, request *AccountListRequ
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.AccountList")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "AccountList")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "AccountList")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)
@@ -222,7 +223,7 @@ func (p *DashboardService) UserAccountList(r *http.Request, request *UserAccount
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.UserAccountListRequest")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "UserAccountListRequest")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "UserAccountListRequest")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)
@@ -331,7 +332,7 @@ func (p *DashboardService) AccountDetail(r *http.Request, request *AccountDetail
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.UserAccountListRequest")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "UserAccountListRequest")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "UserAccountListRequest")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)

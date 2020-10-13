@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"git.condensat.tech/bank/api/services"
+	"git.condensat.tech/bank/networking"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/v2"
 )
 
 func RegisterServices(ctx context.Context, mux *mux.Router, corsAllowedOrigins []string) {
-	corsHandler := services.CreateCorsOptions(corsAllowedOrigins)
+	corsHandler := networking.CreateCorsOptions(corsAllowedOrigins)
 
 	mux.Handle("/api/v1/dashboard", corsHandler.Handler(NewDashboardHandler(ctx)))
 }

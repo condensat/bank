@@ -10,6 +10,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/accounting/client"
@@ -66,7 +67,7 @@ type AccountResponse struct {
 func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply *AccountResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "AccountingService.List")
-	log = GetServiceRequestLog(log, r, "Accounting", "List")
+	log = networking.GetServiceRequestLog(log, r, "Accounting", "List")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)
@@ -258,7 +259,7 @@ type AccountHistoryResponse struct {
 func (p *AccountingService) History(r *http.Request, request *AccountHistoryRequest, reply *AccountHistoryResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "AccountingService.History")
-	log = GetServiceRequestLog(log, r, "Accounting", "History")
+	log = networking.GetServiceRequestLog(log, r, "Accounting", "History")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)

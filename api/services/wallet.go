@@ -9,6 +9,7 @@ import (
 	"git.condensat.tech/bank/api/sessions"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 
 	accounting "git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/wallet/client"
@@ -42,7 +43,7 @@ type WalletNextDepositResponse struct {
 func (p *WalletService) NextDeposit(r *http.Request, request *WalletNextDepositRequest, reply *WalletNextDepositResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "WalletService.NextDeposit")
-	log = GetServiceRequestLog(log, r, "Wallet", "NextDeposit")
+	log = networking.GetServiceRequestLog(log, r, "Wallet", "NextDeposit")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)
@@ -162,7 +163,7 @@ type WalletSendFundsResponse struct {
 func (p *WalletService) SendFunds(r *http.Request, request *WalletSendFundsRequest, reply *WalletSendFundsResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "WalletService.SendFunds")
-	log = GetServiceRequestLog(log, r, "Wallet", "SendFunds")
+	log = networking.GetServiceRequestLog(log, r, "Wallet", "SendFunds")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)
@@ -278,7 +279,7 @@ type WalletCancelWithdrawResponse struct {
 func (p *WalletService) CancelWithdraw(r *http.Request, request *WalletCancelWithdrawRequest, reply *WalletCancelWithdrawResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "WalletService.CancelWithdraw")
-	log = GetServiceRequestLog(log, r, "Wallet", "CancelWithdraw")
+	log = networking.GetServiceRequestLog(log, r, "Wallet", "CancelWithdraw")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)
@@ -349,7 +350,7 @@ type WalletSendHistoryResponse struct {
 func (p *WalletService) SendHistory(r *http.Request, request *WalletSendHistoryRequest, reply *WalletSendHistoryResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "WalletService.SendHistory")
-	log = GetServiceRequestLog(log, r, "Wallet", "SendHistory")
+	log = networking.GetServiceRequestLog(log, r, "Wallet", "SendHistory")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)

@@ -11,6 +11,7 @@ import (
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/monitor/common"
 	"git.condensat.tech/bank/monitor/messaging"
+	"git.condensat.tech/bank/networking"
 
 	coreService "git.condensat.tech/bank/api/services"
 	"git.condensat.tech/bank/api/sessions"
@@ -71,7 +72,7 @@ type StackServiceHistoryResponse struct {
 func (p *StackService) ServiceList(r *http.Request, request *StackInfoRequest, reply *StackInfoResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "services.StackService.ServiceList")
-	log = coreService.GetServiceRequestLog(log, r, "Stack", "ServiceList")
+	log = networking.GetServiceRequestLog(log, r, "Stack", "ServiceList")
 
 	verified, err := verifySessionId(ctx, sessions.SessionID(request.SessionID))
 	if err != nil {
@@ -154,7 +155,7 @@ func StackListServiceRequest(ctx context.Context) (common.StackListService, erro
 func (p *StackService) ServiceHistory(r *http.Request, request *StackHistoryRequest, reply *StackServiceHistoryResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "services.StackService.ServiceHistory")
-	log = coreService.GetServiceRequestLog(log, r, "Stack", "ServiceHistory")
+	log = networking.GetServiceRequestLog(log, r, "Stack", "ServiceHistory")
 
 	verified, err := verifySessionId(ctx, sessions.SessionID(request.SessionID))
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 
 	"git.condensat.tech/bank/api/sessions"
 
@@ -31,7 +32,7 @@ type WalletListResponse struct {
 func (p *DashboardService) WalletList(r *http.Request, request *WalletListRequest, reply *WalletListResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.WalletList")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "WalletList")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "WalletList")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)
@@ -104,7 +105,7 @@ type WalletDetailResponse struct {
 func (p *DashboardService) WalletDetail(r *http.Request, request *WalletDetailRequest, reply *WalletDetailResponse) error {
 	ctx := r.Context()
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.WalletDetail")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "WalletDetail")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "WalletDetail")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)

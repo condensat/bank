@@ -12,6 +12,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 )
 
 const (
@@ -59,7 +60,7 @@ func (p *DashboardService) SwapList(r *http.Request, request *SwapListRequest, r
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.SwapList")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "SwapList")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "SwapList")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)
@@ -193,7 +194,7 @@ func (p *DashboardService) SwapDetail(r *http.Request, request *SwapDetailReques
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.DashboardService.SwapDetail")
-	log = apiservice.GetServiceRequestLog(log, r, "Dashboard", "SwapList")
+	log = networking.GetServiceRequestLog(log, r, "Dashboard", "SwapList")
 
 	// Get userID from session
 	request.SessionID = apiservice.GetSessionCookie(r)

@@ -8,6 +8,7 @@ import (
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 
 	"github.com/sirupsen/logrus"
 )
@@ -30,7 +31,7 @@ func (p *UserService) Info(r *http.Request, request *UserInfoRequest, reply *Use
 	ctx := r.Context()
 	db := appcontext.Database(ctx)
 	log := logger.Logger(ctx).WithField("Method", "services.UserService.Info")
-	log = GetServiceRequestLog(log, r, "User", "Info")
+	log = networking.GetServiceRequestLog(log, r, "User", "Info")
 
 	// Retrieve context values
 	_, session, err := ContextValues(ctx)

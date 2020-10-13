@@ -7,6 +7,7 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/networking"
 
 	"git.condensat.tech/bank/api/sessions"
 
@@ -84,7 +85,7 @@ func openUserSession(ctx context.Context, session *sessions.Session, r *http.Req
 		return SessionReply{}, ErrTooManyOpenSession
 	}
 
-	remoteAddr := RequesterIP(r)
+	remoteAddr := networking.RequesterIP(r)
 	sessionID, err := session.CreateSession(ctx, userID, remoteAddr, SessionDuration)
 	if err != nil {
 		return SessionReply{}, err
