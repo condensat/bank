@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.condensat.tech/bank/api/secureid"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/security/secureid"
 
 	"git.condensat.tech/bank/backoffice"
 
