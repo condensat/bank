@@ -5,14 +5,14 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -26,7 +26,7 @@ func BatchWithdrawList(ctx context.Context, status, network string) (common.Batc
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	batches, err := database.GetLastBatchInfoByStatusAndNetwork(db, model.BatchStatus(status), model.BatchNetwork(network))
+	batches, err := query.GetLastBatchInfoByStatusAndNetwork(db, model.BatchStatus(status), model.BatchNetwork(network))
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to GetLastBatchInfoByStatusAndNetwork")
@@ -60,7 +60,7 @@ func BatchWithdrawList(ctx context.Context, status, network string) (common.Batc
 			continue
 		}
 
-		withdraws, err := database.GetBatchWithdraws(db, batch.BatchID)
+		withdraws, err := query.GetBatchWithdraws(db, batch.BatchID)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to GetBatchWithdraws")
@@ -76,7 +76,7 @@ func BatchWithdrawList(ctx context.Context, status, network string) (common.Batc
 		}
 
 		for _, wID := range withdraws {
-			w, err := database.GetWithdraw(db, wID)
+			w, err := query.GetWithdraw(db, wID)
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to GetWithdraw")
@@ -88,7 +88,7 @@ func BatchWithdrawList(ctx context.Context, status, network string) (common.Batc
 					Error("Invalid withdraw amount")
 				continue
 			}
-			wt, err := database.GetWithdrawTargetByWithdrawID(db, wID)
+			wt, err := query.GetWithdrawTargetByWithdrawID(db, wID)
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to GetWithdrawTargetByWithdrawID")

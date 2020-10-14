@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
 )
 
@@ -47,12 +47,12 @@ func processAssetInfo(ctx context.Context) {
 		assetHash := model.AssetHash(assetInfo.AssetID)
 
 		// check if Asset exists
-		if database.AssetHashExists(db, assetHash) {
+		if query.AssetHashExists(db, assetHash) {
 			continue
 		}
 
 		// create Asset - use Ticker as CurrencyName
-		asset, err := database.AddAsset(db, assetHash, model.CurrencyName(assetInfo.Ticker))
+		asset, err := query.AddAsset(db, assetHash, model.CurrencyName(assetInfo.Ticker))
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to AddOrUpdateAssetInfo")
@@ -60,7 +60,7 @@ func processAssetInfo(ctx context.Context) {
 		}
 
 		// add AssetInfo
-		_, err = database.AddOrUpdateAssetInfo(db, model.AssetInfo{
+		_, err = query.AddOrUpdateAssetInfo(db, model.AssetInfo{
 			AssetID:   asset.ID,
 			Domain:    assetInfo.Entity.Domain,
 			Name:      assetInfo.Name,
@@ -103,13 +103,13 @@ func processAssetIcon(ctx context.Context) {
 	for _, assetIcon := range assetIcons {
 		assetHash := model.AssetHash(assetIcon.AssetID)
 
-		if !database.AssetHashExists(db, assetHash) {
+		if !query.AssetHashExists(db, assetHash) {
 			if assetHash != PolicyAssetLiquid {
 				log.Error("Asset not found")
 				continue
 			}
 
-			_, err = database.AddAsset(db, assetHash, model.CurrencyName(TickerAssetLiquid))
+			_, err = query.AddAsset(db, assetHash, model.CurrencyName(TickerAssetLiquid))
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to AddAsset")
@@ -117,14 +117,14 @@ func processAssetIcon(ctx context.Context) {
 			}
 		}
 
-		asset, err := database.GetAssetByHash(db, assetHash)
+		asset, err := query.GetAssetByHash(db, assetHash)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to GetAssetByHash")
 			continue
 		}
 
-		_, err = database.AddOrUpdateAssetIcon(db, model.AssetIcon{
+		_, err = query.AddOrUpdateAssetIcon(db, model.AssetIcon{
 			AssetID: asset.ID,
 			Data:    assetIcon.Data,
 		})

@@ -5,14 +5,15 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -34,9 +35,9 @@ func AccountCreate(ctx context.Context, userID uint64, info common.AccountInfo) 
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 
-		account, err := database.CreateAccount(db, model.Account{
+		account, err := query.CreateAccount(db, model.Account{
 			UserID:       model.UserID(userID),
 			CurrencyName: model.CurrencyName(info.Currency.Name),
 			Name:         model.AccountName(info.Name),
@@ -45,7 +46,7 @@ func AccountCreate(ctx context.Context, userID uint64, info common.AccountInfo) 
 			return err
 		}
 
-		status, err := database.AddOrUpdateAccountState(db, model.AccountState{
+		status, err := query.AddOrUpdateAccountState(db, model.AccountState{
 			AccountID: account.ID,
 			State:     model.AccountStatusCreated,
 		})

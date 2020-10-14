@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
@@ -12,6 +11,7 @@ import (
 
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -25,13 +25,13 @@ var (
 func FetchCreatedWithdraws(ctx context.Context) ([]model.WithdrawTarget, error) {
 	db := appcontext.Database(ctx)
 
-	return database.GetLastWithdrawTargetByStatus(db, model.WithdrawStatusCreated)
+	return query.GetLastWithdrawTargetByStatus(db, model.WithdrawStatusCreated)
 }
 
 func FetchCancelingOperations(ctx context.Context) ([]model.AccountOperation, error) {
 	db := appcontext.Database(ctx)
 
-	return database.ListCancelingWithdrawsAccountOperations(db)
+	return query.ListCancelingWithdrawsAccountOperations(db)
 }
 
 func ProcessWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) error {
@@ -82,14 +82,14 @@ func processWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) err
 			}
 
 			// get withdraw
-			w, err := database.GetWithdraw(db, withdraw.WithdrawID)
+			w, err := query.GetWithdraw(db, withdraw.WithdrawID)
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to GetWithdraw")
 				return err
 			}
 			// Get withdraw info history
-			history, err := database.GetWithdrawHistory(db, withdraw.WithdrawID)
+			history, err := query.GetWithdrawHistory(db, withdraw.WithdrawID)
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to GetWithdrawHistory")
@@ -187,7 +187,7 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 	var canceled []model.WithdrawID
 
 	// within a db transaction
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 
 		var IDs []model.WithdrawID
 		withdrawPubkeyMap := make(map[model.WithdrawID]string)
@@ -210,7 +210,7 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 			}
 
 			// change to status processing
-			_, err := database.AddWithdrawInfo(db, data.Withdraw.ID, model.WithdrawStatusProcessing, "{}")
+			_, err := query.AddWithdrawInfo(db, data.Withdraw.ID, model.WithdrawStatusProcessing, "{}")
 			if err != nil {
 				log.WithError(err).
 					Error("Failed to AddWithdrawInfo")
@@ -248,7 +248,7 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 
 			addressMap := make(map[string]model.WithdrawID)
 			for _, withdrawID := range withdrawIDs {
-				wt, err := database.GetWithdrawTargetByWithdrawID(db, withdrawID)
+				wt, err := query.GetWithdrawTargetByWithdrawID(db, withdrawID)
 				if err != nil {
 					log.WithError(err).
 						Error("GetWithdrawTargetByWithdrawID Failed")
@@ -292,7 +292,7 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 			// Add witdraws to batch
 			if len(batchIDs) > 0 {
 				// append batchIds to current batch
-				err = database.AddWithdrawToBatch(db, batchInfo.BatchID, batchIDs...)
+				err = query.AddWithdrawToBatch(db, batchInfo.BatchID, batchIDs...)
 				if err != nil {
 					canceled = append(canceled, batchIDs...)
 					log.WithError(err).
@@ -311,7 +311,7 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 
 	// update all canceled withdraws
 	for _, ID := range canceled {
-		_, err := database.AddWithdrawInfo(db, ID, model.WithdrawStatusCanceled, "{}")
+		_, err := query.AddWithdrawInfo(db, ID, model.WithdrawStatusCanceled, "{}")
 		if err != nil {
 			log.WithError(err).Error("failed to cancelWithdraw")
 			continue
@@ -325,9 +325,9 @@ func processWithdrawOnChainByNetwork(ctx context.Context, chain string, datas []
 	return nil
 }
 
-func findOrCreateBatchInfo(db bank.Database, chain string, batchOffset int) (model.BatchInfo, error) {
+func findOrCreateBatchInfo(db database.Context, chain string, batchOffset int) (model.BatchInfo, error) {
 	network := model.BatchNetwork(chain)
-	batchCreated, err := database.GetLastBatchInfoByStatusAndNetwork(db, model.BatchStatusCreated, network)
+	batchCreated, err := query.GetLastBatchInfoByStatusAndNetwork(db, model.BatchStatusCreated, network)
 	if err != nil {
 		return model.BatchInfo{}, err
 	}
@@ -337,7 +337,7 @@ func findOrCreateBatchInfo(db bank.Database, chain string, batchOffset int) (mod
 	}
 
 	// create BatchInfo if not exists
-	batch, err := database.AddBatch(db, network, model.BatchData(""))
+	batch, err := query.AddBatch(db, network, model.BatchData(""))
 	if err != nil {
 		return model.BatchInfo{}, err
 	}
@@ -345,7 +345,7 @@ func findOrCreateBatchInfo(db bank.Database, chain string, batchOffset int) (mod
 	if err != nil {
 		return model.BatchInfo{}, err
 	}
-	batchInfo, err := database.AddBatchInfo(db, batch.ID, model.BatchStatusCreated, model.BatchInfoCrypto, "{}")
+	batchInfo, err := query.AddBatchInfo(db, batch.ID, model.BatchStatusCreated, model.BatchInfoCrypto, "{}")
 	if err != nil {
 		return model.BatchInfo{}, err
 	}
@@ -353,12 +353,12 @@ func findOrCreateBatchInfo(db bank.Database, chain string, batchOffset int) (mod
 	return batchInfo, nil
 }
 
-func batchWithdrawCount(db bank.Database, batchID model.BatchID) (int, int, []model.WithdrawID, error) {
-	batch, err := database.GetBatch(db, batchID)
+func batchWithdrawCount(db database.Context, batchID model.BatchID) (int, int, []model.WithdrawID, error) {
+	batch, err := query.GetBatch(db, batchID)
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	withdraws, err := database.GetBatchWithdraws(db, batch.ID)
+	withdraws, err := query.GetBatchWithdraws(db, batch.ID)
 	if err != nil {
 		return 0, 0, nil, err
 	}
@@ -366,7 +366,7 @@ func batchWithdrawCount(db bank.Database, batchID model.BatchID) (int, int, []mo
 	return len(withdraws), int(batch.Capacity), withdraws, nil
 }
 
-func accountRefund(ctx context.Context, db bank.Database, transfer common.AccountTransfer) (common.AccountTransfer, error) {
+func accountRefund(ctx context.Context, db database.Context, transfer common.AccountTransfer) (common.AccountTransfer, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.accountRefund")
 
 	log = log.WithFields(logrus.Fields{
@@ -380,30 +380,30 @@ func accountRefund(ctx context.Context, db bank.Database, transfer common.Accoun
 	if model.OperationType(transfer.Destination.OperationType) != model.OperationTypeRefund {
 		log.
 			Error("OperationType is not refund")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+		return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 	}
 	// check for accounts
 	if transfer.Source.AccountID == transfer.Destination.AccountID {
 		log.
 			Error("Can not transfer within same account")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+		return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 	}
 
 	// check for currencies match
 	{
 		// fetch source account from DB
-		srcAccount, err := database.GetAccountByID(db, model.AccountID(transfer.Source.AccountID))
+		srcAccount, err := query.GetAccountByID(db, model.AccountID(transfer.Source.AccountID))
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to get srcAccount")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+			return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 		}
 		// fetch destination account from DB
-		dstAccount, err := database.GetAccountByID(db, model.AccountID(transfer.Destination.AccountID))
+		dstAccount, err := query.GetAccountByID(db, model.AccountID(transfer.Destination.AccountID))
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to get dstAccount")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+			return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 		}
 		// currency must match
 		if srcAccount.CurrencyName != dstAccount.CurrencyName {
@@ -411,7 +411,7 @@ func accountRefund(ctx context.Context, db bank.Database, transfer common.Accoun
 				"SrcCurrency": srcAccount.CurrencyName,
 				"DstCurrency": dstAccount.CurrencyName,
 			}).Error("Can not transfer currencies")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+			return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 		}
 	}
 
@@ -445,14 +445,14 @@ func accountRefund(ctx context.Context, db bank.Database, transfer common.Accoun
 
 	// Store operations
 	var operations []model.AccountOperation
-	opSrc, err := database.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Source))
+	opSrc, err := query.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Source))
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to AppendAccountOperationSlice")
 		return common.AccountTransfer{}, err
 	}
 	operations = append(operations, opSrc)
-	opDst, err := database.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Destination))
+	opDst, err := query.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Destination))
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to AppendAccountOperationSlice")
@@ -464,7 +464,7 @@ func accountRefund(ctx context.Context, db bank.Database, transfer common.Accoun
 	if len(operations) != 2 {
 		log.
 			Error("Invalid operations count")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
+		return common.AccountTransfer{}, query.ErrInvalidAccountOperation
 	}
 
 	source := operations[0]

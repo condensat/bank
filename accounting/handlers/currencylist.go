@@ -5,13 +5,14 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -22,10 +23,10 @@ func CurrencyList(ctx context.Context) (common.CurrencyList, error) {
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	err := db.Transaction(func(db bank.Database) error {
+	err := db.Transaction(func(db database.Context) error {
 
 		// list currencies
-		list, err := database.ListAllCurrency(db)
+		list, err := query.ListAllCurrency(db)
 		if err != nil {
 			log.WithError(err).Error("Failed to ListAllCurrency")
 			return err

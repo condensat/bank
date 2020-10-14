@@ -5,14 +5,15 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -34,8 +35,8 @@ func AccountList(ctx context.Context, userID uint64) ([]common.AccountInfo, erro
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	err = db.Transaction(func(db bank.Database) error {
-		accounts, err := database.GetAccountsByUserAndCurrencyAndName(db, model.UserID(userID), "*", "*")
+	err = db.Transaction(func(db database.Context) error {
+		accounts, err := query.GetAccountsByUserAndCurrencyAndName(db, model.UserID(userID), "*", "*")
 		if err != nil {
 			return err
 		}

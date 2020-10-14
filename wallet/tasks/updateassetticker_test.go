@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/messaging"
+
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/query"
 )
 
 var testContext = context.Background()
@@ -19,7 +21,7 @@ func init() {
 
 	ctx := testContext
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, natsArg))
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(dbArg))
+	ctx = appcontext.WithDatabase(ctx, database.New(dbArg))
 
 	migrateDatabase(ctx)
 
@@ -85,7 +87,7 @@ func Test_processAssetIcon(t *testing.T) {
 
 func migrateDatabase(ctx context.Context) {
 	db := appcontext.Database(ctx)
-	_ = db.Migrate(database.AssetModel())
+	_ = db.Migrate(query.AssetModel())
 }
 
 const mockAsstInfo = `{

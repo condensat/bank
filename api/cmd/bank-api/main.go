@@ -8,6 +8,7 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/monitor"
@@ -17,8 +18,6 @@ import (
 	"git.condensat.tech/bank/api/oauth"
 	"git.condensat.tech/bank/networking/ratelimiter"
 	"git.condensat.tech/bank/security/secureid"
-
-	"git.condensat.tech/bank/database"
 )
 
 type Api struct {
@@ -82,7 +81,7 @@ func main() {
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	ctx = appcontext.WithDatabase(ctx, database.New(args.Database))
 	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 	ctx = appcontext.WithSecureID(ctx, secureid.FromFile(args.Api.SecureID))
 

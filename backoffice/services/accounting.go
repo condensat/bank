@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/networking"
@@ -13,8 +12,10 @@ import (
 	"code.condensat.tech/bank/secureid"
 
 	"git.condensat.tech/bank/appcontext"
+
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 )
 
 const (
@@ -36,7 +37,7 @@ type AccountingStatus struct {
 func FetchAccountingStatus(ctx context.Context) (AccountingStatus, error) {
 	db := appcontext.Database(ctx)
 
-	accountsInfo, err := database.AccountsInfos(db)
+	accountsInfo, err := query.AccountsInfos(db)
 	if err != nil {
 		return AccountingStatus{}, err
 	}
@@ -116,15 +117,15 @@ func (p *DashboardService) AccountList(r *http.Request, request *AccountListRequ
 	var pagesCount int
 	var accountPage []model.Account
 	infos := make(map[model.AccountID]AccountInfo)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
-		pagesCount, err = database.AccountPagingCount(db, DefaultAccountCountByPage)
+		pagesCount, err = query.AccountPagingCount(db, DefaultAccountCountByPage)
 		if err != nil {
 			pagesCount = 0
 			return err
 		}
 
-		accountPage, err = database.AccountPage(db, model.AccountID(startID), DefaultUserCountByPage)
+		accountPage, err = query.AccountPage(db, model.AccountID(startID), DefaultUserCountByPage)
 		if err != nil {
 			accountPage = nil
 			return err
@@ -132,12 +133,12 @@ func (p *DashboardService) AccountList(r *http.Request, request *AccountListRequ
 		for _, account := range accountPage {
 			var info AccountInfo
 
-			status, err := database.GetAccountStatusByAccountID(db, account.ID)
+			status, err := query.GetAccountStatusByAccountID(db, account.ID)
 			if err != nil {
 				accountPage = nil
 				return err
 			}
-			last, err := database.GetLastAccountOperation(db, account.ID)
+			last, err := query.GetLastAccountOperation(db, account.ID)
 			if err != nil {
 				accountPage = nil
 				return err
@@ -254,15 +255,15 @@ func (p *DashboardService) UserAccountList(r *http.Request, request *UserAccount
 	var user model.User
 	var accounts []string
 	var accounting AccountingStatus
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
 
-		user, err = database.FindUserById(db, model.UserID(userID))
+		user, err = query.FindUserById(db, model.UserID(userID))
 		if err != nil {
 			return err
 		}
 
-		accountsInfo, err := database.AccountsInfosByUser(db, model.UserID(userID))
+		accountsInfo, err := query.AccountsInfosByUser(db, model.UserID(userID))
 		if err != nil {
 			return err
 		}
@@ -282,7 +283,7 @@ func (p *DashboardService) UserAccountList(r *http.Request, request *UserAccount
 			Balances: balances,
 		}
 
-		accountIDs, err := database.GetUserAccounts(db, user.ID)
+		accountIDs, err := query.GetUserAccounts(db, user.ID)
 		if err != nil {
 			return err
 		}
@@ -363,19 +364,19 @@ func (p *DashboardService) AccountDetail(r *http.Request, request *AccountDetail
 	var account model.Account
 	var accountState model.AccountState
 	var last model.AccountOperation
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
 
-		account, err = database.GetAccountByID(db, model.AccountID(accountID))
+		account, err = query.GetAccountByID(db, model.AccountID(accountID))
 		if err != nil {
 			return err
 		}
-		accountState, err = database.GetAccountStatusByAccountID(db, model.AccountID(accountID))
+		accountState, err = query.GetAccountStatusByAccountID(db, model.AccountID(accountID))
 		if err != nil {
 			return err
 		}
 
-		last, err = database.GetLastAccountOperation(db, model.AccountID(accountID))
+		last, err = query.GetLastAccountOperation(db, model.AccountID(accountID))
 		if err != nil {
 			return err
 		}

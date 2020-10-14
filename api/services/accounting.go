@@ -7,8 +7,8 @@ import (
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/currency/rate"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -190,7 +190,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 
 		var assetHash string
 		if info.Asset {
-			if asset, err := database.GetAssetByCurrencyName(appcontext.Database(ctx), model.CurrencyName(account.Currency.Name)); err == nil {
+			if asset, err := query.GetAssetByCurrencyName(appcontext.Database(ctx), model.CurrencyName(account.Currency.Name)); err == nil {
 				assetHash = string(asset.Hash)
 			}
 		}

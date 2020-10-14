@@ -1,8 +1,12 @@
 package model
 
+import (
+	"git.condensat.tech/bank/database/encoding"
+)
+
 type WithdrawTargetID ID
-type WithdrawTargetType DataType
-type WithdrawTargetData Data
+type WithdrawTargetType encoding.DataType
+type WithdrawTargetData encoding.Data
 
 const (
 	// Fiat
@@ -45,7 +49,7 @@ func FromSepaData(withdrawID WithdrawID, sepa WithdrawTargetSepaData) WithdrawTa
 	if withdrawID > 0 {
 		sepa.WithdrawTargetFiatData.Network = "sepa"
 	}
-	data, _ := EncodeData(&sepa)
+	data, _ := encoding.EncodeData(&sepa)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetSepa,
@@ -58,7 +62,7 @@ func (p *WithdrawTarget) SepaData() (WithdrawTargetSepaData, error) {
 
 	case WithdrawTargetSepa:
 		var data WithdrawTargetSepaData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:
@@ -78,7 +82,7 @@ func FromSwiftData(withdrawID WithdrawID, swift WithdrawTargetSwiftData) Withdra
 	if withdrawID > 0 {
 		swift.WithdrawTargetFiatData.Network = "swift"
 	}
-	data, _ := EncodeData(&swift)
+	data, _ := encoding.EncodeData(&swift)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetSwift,
@@ -91,7 +95,7 @@ func (p *WithdrawTarget) SwiftData() (WithdrawTargetSwiftData, error) {
 
 	case WithdrawTargetSwift:
 		var data WithdrawTargetSwiftData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:
@@ -109,7 +113,7 @@ func FromCardData(withdrawID WithdrawID, card WithdrawTargetCardData) WithdrawTa
 	if withdrawID > 0 {
 		card.WithdrawTargetFiatData.Network = "card"
 	}
-	data, _ := EncodeData(&card)
+	data, _ := encoding.EncodeData(&card)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetCard,
@@ -122,7 +126,7 @@ func (p *WithdrawTarget) CardData() (WithdrawTargetCardData, error) {
 
 	case WithdrawTargetCard:
 		var data WithdrawTargetCardData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:
@@ -139,7 +143,7 @@ func FromOnChainData(withdrawID WithdrawID, chain string, onChain WithdrawTarget
 	if withdrawID > 0 {
 		onChain.WithdrawTargetCryptoData.Chain = chain
 	}
-	data, _ := EncodeData(&onChain)
+	data, _ := encoding.EncodeData(&onChain)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetOnChain,
@@ -152,7 +156,7 @@ func (p *WithdrawTarget) OnChainData() (WithdrawTargetOnChainData, error) {
 
 	case WithdrawTargetOnChain:
 		var data WithdrawTargetOnChainData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:
@@ -169,7 +173,7 @@ func FromLiquidData(withdrawID WithdrawID, liquid WithdrawTargetLiquidData) With
 	if withdrawID > 0 {
 		liquid.WithdrawTargetCryptoData.Chain = "liquid"
 	}
-	data, _ := EncodeData(&liquid)
+	data, _ := encoding.EncodeData(&liquid)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetLiquid,
@@ -182,7 +186,7 @@ func (p *WithdrawTarget) LiquidData() (WithdrawTargetLiquidData, error) {
 
 	case WithdrawTargetLiquid:
 		var data WithdrawTargetLiquidData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:
@@ -200,7 +204,7 @@ func FromLightningData(withdrawID WithdrawID, lightning WithdrawTargetLightningD
 	if withdrawID > 0 {
 		lightning.WithdrawTargetCryptoData.Chain = "lightning"
 	}
-	data, _ := EncodeData(&lightning)
+	data, _ := encoding.EncodeData(&lightning)
 	return WithdrawTarget{
 		WithdrawID: withdrawID,
 		Type:       WithdrawTargetLightning,
@@ -213,7 +217,7 @@ func (p *WithdrawTarget) LightningData() (WithdrawTargetLightningData, error) {
 
 	case WithdrawTargetLightning:
 		var data WithdrawTargetLightningData
-		err := DecodeData(&data, Data(p.Data))
+		err := encoding.DecodeData(&data, encoding.Data(p.Data))
 		return data, err
 
 	default:

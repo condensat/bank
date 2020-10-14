@@ -7,14 +7,15 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/wallet/common"
 
-	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/shengdoushi/base58"
 	"github.com/sirupsen/logrus"
@@ -59,12 +60,12 @@ func CryptoAddressNextDeposit(ctx context.Context, address common.CryptoAddress)
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	err := db.Transaction(func(db bank.Database) error {
+	err := db.Transaction(func(db database.Context) error {
 
 		chain := model.String(address.Chain)
 		accountID := model.AccountID(address.AccountID)
 
-		addresses, err := database.AllUnusedAccountCryptoAddresses(db, accountID)
+		addresses, err := query.AllUnusedAccountCryptoAddresses(db, accountID)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to AllUnusedAccountCryptoAddresses")

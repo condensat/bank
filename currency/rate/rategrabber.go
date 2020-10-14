@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
 
@@ -24,12 +24,14 @@ func (p *RateGrabber) Run(ctx context.Context, appID string, interval time.Durat
 	log := logger.Logger(ctx).WithField("Method", "RateGrabber.Run")
 	appID = appcontext.SecretOrPassword(appID)
 
+	db := appcontext.Database(ctx)
+
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),
 	}).Info("RateGrabber started")
 
 	// get currency from database and store to redis
-	currencyRates, err := database.GetLastCurencyRates(ctx)
+	currencyRates, err := query.GetLastCurencyRates(db)
 	if err != nil {
 		log.WithError(err).
 			Warning("No currencies found in database")
@@ -55,6 +57,7 @@ func checkParams(interval time.Duration, delay time.Duration) (time.Duration, ti
 
 func (p *RateGrabber) scheduledGrabber(ctx context.Context, appID string, interval time.Duration, delay time.Duration) {
 	log := logger.Logger(ctx).WithField("Method", "RateGrabber.scheduledGrabber")
+	db := appcontext.Database(ctx)
 
 	interval, delay = checkParams(interval, delay)
 
@@ -79,7 +82,7 @@ func (p *RateGrabber) scheduledGrabber(ctx context.Context, appID string, interv
 			continue
 		}
 
-		err = database.AppendCurencyRates(ctx, currencyRates)
+		err = query.AppendCurencyRates(db, currencyRates)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to addCurencyRates")

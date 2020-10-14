@@ -12,8 +12,8 @@ import (
 	"git.condensat.tech/bank/accounting/common"
 
 	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
@@ -30,11 +30,11 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	account, err := database.GetAccountByID(db, model.AccountID(accountID))
+	account, err := query.GetAccountByID(db, model.AccountID(accountID))
 	if err != nil {
 		return "", "", nil, err
 	}
-	currency, err := database.GetCurrencyByName(db, account.CurrencyName)
+	currency, err := query.GetCurrencyByName(db, account.CurrencyName)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -45,7 +45,7 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 		tickerPrecision = 0
 	}
 
-	operations, err := database.GeAccountHistoryRange(db, account.ID, from, to)
+	operations, err := query.GeAccountHistoryRange(db, account.ID, from, to)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -53,7 +53,7 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 	var result []common.AccountEntry
 	for _, op := range operations {
 		if !op.IsValid() {
-			log.WithError(database.ErrInvalidAccountOperation).
+			log.WithError(query.ErrInvalidAccountOperation).
 				Warn("Invalid operation in history")
 			continue
 		}

@@ -7,8 +7,8 @@ import (
 
 	"git.condensat.tech/bank/networking/sessions"
 
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -33,7 +33,7 @@ func isUserAdmin(ctx context.Context, log *logrus.Entry, sessionID sessions.Sess
 		"UserID":    userID,
 	})
 
-	isAdmin, err := database.UserHasRole(db, model.UserID(userID), model.RoleNameAdmin)
+	isAdmin, err := query.UserHasRole(db, model.UserID(userID), model.RoleNameAdmin)
 	if err != nil {
 		log.WithError(err).
 			WithField("RoleName", model.RoleNameAdmin).

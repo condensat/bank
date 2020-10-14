@@ -1,11 +1,12 @@
 package backoffice
 
 import (
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 )
 
-func Models() []model.Model {
-	return []model.Model{
+func Models() []database.Model {
+	return []database.Model{
 		new(model.User),
 		new(model.UserRole),
 

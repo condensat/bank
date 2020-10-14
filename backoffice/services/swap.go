@@ -5,11 +5,12 @@ import (
 	"net/http"
 
 	"code.condensat.tech/bank/secureid"
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/database/query"
 
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
@@ -27,7 +28,7 @@ type SwapStatus struct {
 func FetchSwapStatus(ctx context.Context) (SwapStatus, error) {
 	db := appcontext.Database(ctx)
 
-	swaps, err := database.SwapssInfos(db)
+	swaps, err := query.SwapssInfos(db)
 	if err != nil {
 		return SwapStatus{}, err
 	}
@@ -94,15 +95,15 @@ func (p *DashboardService) SwapList(r *http.Request, request *SwapListRequest, r
 	var pagesCount int
 	var ids []model.SwapID
 	infos := make(map[model.SwapID]SwapInfo)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
-		pagesCount, err = database.SwapPagingCount(db, DefaulSwapCountByPage)
+		pagesCount, err = query.SwapPagingCount(db, DefaulSwapCountByPage)
 		if err != nil {
 			pagesCount = 0
 			return err
 		}
 
-		ids, err = database.SwapPage(db, model.SwapID(startID), DefaulSwapCountByPage)
+		ids, err = query.SwapPage(db, model.SwapID(startID), DefaulSwapCountByPage)
 		if err != nil {
 			ids = nil
 			return err
@@ -110,13 +111,13 @@ func (p *DashboardService) SwapList(r *http.Request, request *SwapListRequest, r
 		for _, id := range ids {
 			var info SwapInfo
 
-			swap, err := database.GetSwap(db, id)
+			swap, err := query.GetSwap(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
 
-			swapInfo, err := database.GetSwapInfoBySwapID(db, id)
+			swapInfo, err := query.GetSwapInfoBySwapID(db, id)
 			if err != nil {
 				ids = nil
 				return err
@@ -225,15 +226,15 @@ func (p *DashboardService) SwapDetail(r *http.Request, request *SwapDetailReques
 
 	var swap model.Swap
 	var swapStatus model.SwapStatus
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
 
-		swap, err = database.GetSwap(db, model.SwapID(swapID))
+		swap, err = query.GetSwap(db, model.SwapID(swapID))
 		if err != nil {
 			return err
 		}
 
-		swapInfo, err := database.GetSwapInfoBySwapID(db, swap.ID)
+		swapInfo, err := query.GetSwapInfoBySwapID(db, swap.ID)
 		if err != nil {
 			return err
 		}

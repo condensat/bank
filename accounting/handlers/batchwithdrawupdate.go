@@ -6,14 +6,15 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/encoding"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -24,7 +25,7 @@ func BatchWithdrawUpdate(ctx context.Context, batchID uint64, status, txID strin
 	// Database Query
 	db := appcontext.Database(ctx)
 
-	batchInfo, err := database.GetLastBatchInfo(db, model.BatchID(batchID))
+	batchInfo, err := query.GetLastBatchInfo(db, model.BatchID(batchID))
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to GetLastBatchInfo")
@@ -43,7 +44,7 @@ func BatchWithdrawUpdate(ctx context.Context, batchID uint64, status, txID strin
 	}
 
 	// change status to processing, with TxID
-	data, err := model.EncodeData(&model.BatchInfoCryptoData{
+	data, err := encoding.EncodeData(&model.BatchInfoCryptoData{
 		TxID:   model.String(txID),
 		Height: model.Int(height),
 	})
@@ -53,7 +54,7 @@ func BatchWithdrawUpdate(ctx context.Context, batchID uint64, status, txID strin
 		return common.BatchStatus{}, err
 	}
 
-	batchInfo, err = database.AddBatchInfo(db, batchInfo.BatchID, model.BatchStatus(status), model.BatchInfoCrypto, model.BatchInfoData(data))
+	batchInfo, err = query.AddBatchInfo(db, batchInfo.BatchID, model.BatchStatus(status), model.BatchInfoCrypto, model.BatchInfoData(data))
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to AddBatchInfos")

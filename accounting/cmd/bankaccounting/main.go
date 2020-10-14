@@ -9,6 +9,7 @@ import (
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 )
@@ -51,7 +52,7 @@ func main() {
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	ctx = appcontext.WithDatabase(ctx, database.New(args.Database))
 
 	migrateDatabase(ctx)
 	createDefaultFeeInfo(ctx)
@@ -101,11 +102,11 @@ func createDefaultFeeInfo(ctx context.Context) {
 			continue
 		}
 		// Do not update feeInfo since it could have been updated since creation
-		if database.FeeInfoExists(db, feeInfo.Currency) {
+		if query.FeeInfoExists(db, feeInfo.Currency) {
 			continue
 		}
 		// create default FeeInfo
-		_, err := database.AddOrUpdateFeeInfo(db, feeInfo)
+		_, err := query.AddOrUpdateFeeInfo(db, feeInfo)
 		if err != nil {
 			logger.Logger(ctx).WithError(err).
 				WithField("Method", "main.createDefaultFeeInfo").
@@ -123,7 +124,7 @@ func createBankAccounts(ctx context.Context, accounting Accounting) model.User {
 		Name:  "Condensat Bank",
 		Email: model.UserEmail(accounting.BankUser),
 	}
-	ret, err := database.FindOrCreateUser(db, ret)
+	ret, err := query.FindOrCreateUser(db, ret)
 	if err != nil {
 		logger.Logger(ctx).
 			WithError(err).

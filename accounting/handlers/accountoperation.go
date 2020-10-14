@@ -5,14 +5,14 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -56,7 +56,7 @@ func AccountOperation(ctx context.Context, entry common.AccountEntry) (common.Ac
 		balance = lockAmount
 	}
 
-	op, err := database.AppendAccountOperation(db, model.AccountOperation{
+	op, err := query.AppendAccountOperation(db, model.AccountOperation{
 		AccountID:        accountID,
 		SynchroneousType: model.ParseSynchroneousType(entry.SynchroneousType),
 		OperationType:    model.ParseOperationType(entry.OperationType),

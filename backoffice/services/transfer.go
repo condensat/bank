@@ -5,11 +5,12 @@ import (
 	"net/http"
 
 	"code.condensat.tech/bank/secureid"
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/database/query"
 
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
@@ -45,17 +46,17 @@ type TransferStatus struct {
 func FetchTransferStatus(ctx context.Context) (TransferStatus, error) {
 	db := appcontext.Database(ctx)
 
-	batchs, err := database.BatchsInfos(db)
+	batchs, err := query.BatchsInfos(db)
 	if err != nil {
 		return TransferStatus{}, err
 	}
 
-	deposits, err := database.DepositsInfos(db)
+	deposits, err := query.DepositsInfos(db)
 	if err != nil {
 		return TransferStatus{}, err
 	}
 
-	witdthdraws, err := database.WithdrawsInfos(db)
+	witdthdraws, err := query.WithdrawsInfos(db)
 	if err != nil {
 		return TransferStatus{}, err
 	}
@@ -134,15 +135,15 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 	var pagesCount int
 	var ids []model.OperationInfoID
 	infos := make(map[model.OperationInfoID]DepositInfo)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
-		pagesCount, err = database.DepositPagingCount(db, DefaulDepositCountByPage)
+		pagesCount, err = query.DepositPagingCount(db, DefaulDepositCountByPage)
 		if err != nil {
 			pagesCount = 0
 			return err
 		}
 
-		ids, err = database.DepositPage(db, model.OperationInfoID(startID), DefaulDepositCountByPage)
+		ids, err = query.DepositPage(db, model.OperationInfoID(startID), DefaulDepositCountByPage)
 		if err != nil {
 			ids = nil
 			return err
@@ -150,12 +151,12 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 
 		for _, id := range ids {
 			var info DepositInfo
-			op, err := database.GetOperationInfo(db, id)
+			op, err := query.GetOperationInfo(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
-			status, err := database.GetOperationStatus(db, id)
+			status, err := query.GetOperationStatus(db, id)
 			if err != nil {
 				ids = nil
 				return err
@@ -167,14 +168,14 @@ func (p *DashboardService) DepositList(r *http.Request, request *DepositListRequ
 			info.Currency = func() string {
 
 				if op.AssetID == 0 {
-					addr, err := database.GetCryptoAddress(db, op.CryptoAddressID)
+					addr, err := query.GetCryptoAddress(db, op.CryptoAddressID)
 					if err != nil {
 						return ""
 					}
 					return getChainMainCurrency(ctx, string(addr.Chain))
 
 				} else {
-					asset, err := database.GetAsset(db, op.AssetID)
+					asset, err := query.GetAsset(db, op.AssetID)
 					if err != nil {
 						return ""
 					}
@@ -290,15 +291,15 @@ func (p *DashboardService) BatchList(r *http.Request, request *BatchListRequest,
 	var pagesCount int
 	var ids []model.BatchID
 	infos := make(map[model.BatchID]BatchInfo)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
-		pagesCount, err = database.BatchPagingCount(db, DefaulBatchCountByPage)
+		pagesCount, err = query.BatchPagingCount(db, DefaulBatchCountByPage)
 		if err != nil {
 			pagesCount = 0
 			return err
 		}
 
-		ids, err = database.BatchPage(db, model.BatchID(startID), DefaulBatchCountByPage)
+		ids, err = query.BatchPage(db, model.BatchID(startID), DefaulBatchCountByPage)
 		if err != nil {
 			ids = nil
 			return err
@@ -306,18 +307,18 @@ func (p *DashboardService) BatchList(r *http.Request, request *BatchListRequest,
 		for _, id := range ids {
 			var info BatchInfo
 
-			batch, err := database.GetBatch(db, id)
+			batch, err := query.GetBatch(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
-			status, err := database.GetLastBatchInfo(db, id)
+			status, err := query.GetLastBatchInfo(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
 
-			wids, err := database.GetBatchWithdraws(db, id)
+			wids, err := query.GetBatchWithdraws(db, id)
 			if err != nil {
 				ids = nil
 				return err
@@ -436,15 +437,15 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 	var pagesCount int
 	var ids []model.WithdrawID
 	infos := make(map[model.WithdrawID]WithdrawInfo)
-	err = db.Transaction(func(db bank.Database) error {
+	err = db.Transaction(func(db database.Context) error {
 		var err error
-		pagesCount, err = database.WithdrawPagingCount(db, DefaulWithdrawCountByPage)
+		pagesCount, err = query.WithdrawPagingCount(db, DefaulWithdrawCountByPage)
 		if err != nil {
 			pagesCount = 0
 			return err
 		}
 
-		ids, err = database.WithdrawPage(db, model.WithdrawID(startID), DefaulWithdrawCountByPage)
+		ids, err = query.WithdrawPage(db, model.WithdrawID(startID), DefaulWithdrawCountByPage)
 		if err != nil {
 			ids = nil
 			return err
@@ -453,18 +454,18 @@ func (p *DashboardService) WithdrawList(r *http.Request, request *WithdrawListRe
 		for _, id := range ids {
 			var info WithdrawInfo
 
-			withdraw, err := database.GetWithdraw(db, id)
+			withdraw, err := query.GetWithdraw(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
-			status, err := database.GetLastWithdrawInfo(db, id)
+			status, err := query.GetLastWithdrawInfo(db, id)
 			if err != nil {
 				ids = nil
 				return err
 			}
 
-			account, err := database.GetAccountByID(db, withdraw.From)
+			account, err := query.GetAccountByID(db, withdraw.From)
 			if err != nil {
 				ids = nil
 				return err

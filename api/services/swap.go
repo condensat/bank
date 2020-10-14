@@ -8,8 +8,8 @@ import (
 
 	"code.condensat.tech/bank/secureid"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/networking"
@@ -136,7 +136,7 @@ func (p *SwapService) Propose(r *http.Request, request *SwapProposeRequest, repl
 		return sessions.ErrInternalError
 	}
 
-	assetAccount, err := database.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
+	assetAccount, err := query.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
 	if err != nil {
 		log.WithField("CurrencyName", account.Currency.Name).
 			Error("GetAssetByCurrencyName failed")
@@ -181,21 +181,21 @@ func (p *SwapService) Propose(r *http.Request, request *SwapProposeRequest, repl
 	}
 
 	amountDebit := model.Float(proposal.ProposerAmount)
-	assetDebit, err := database.GetAssetByHash(db, model.AssetHash(proposal.ProposerAssetID))
+	assetDebit, err := query.GetAssetByHash(db, model.AssetHash(proposal.ProposerAssetID))
 	if err != nil {
 		log.WithError(err).
 			Error("GetAssetByHash Failed for Proposer")
 		return ErrInvalidProposerAsset
 	}
 	amountCredit := model.Float(proposal.ReceiverAmount)
-	assetCredit, err := database.GetAssetByHash(db, model.AssetHash(proposal.ReceiverAssetID))
+	assetCredit, err := query.GetAssetByHash(db, model.AssetHash(proposal.ReceiverAssetID))
 	if err != nil {
 		log.WithError(err).
 			Error("GetAssetByHash Failed for Receiver")
 		return ErrInvalidProposerAsset
 	}
 
-	swap, err := database.AddSwap(db, model.SwapTypeAsk,
+	swap, err := query.AddSwap(db, model.SwapTypeAsk,
 		model.CryptoAddressID(addr.CryptoAddressID),
 		assetDebit.ID, amountDebit,
 		assetCredit.ID, amountCredit,
@@ -238,7 +238,7 @@ func (p *SwapService) Propose(r *http.Request, request *SwapProposeRequest, repl
 		return sessions.ErrInternalError
 	}
 
-	swapInfo, err := database.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusProposed, model.Payload(swapProposal.Payload))
+	swapInfo, err := query.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusProposed, model.Payload(swapProposal.Payload))
 	if err != nil {
 		log.WithError(err).
 			Error("AddSwapInfo failed")
@@ -309,7 +309,7 @@ func (p *SwapService) Info(r *http.Request, request *SwapRequest, reply *SwapRes
 	var swapID string
 	// try to get swapID from Unconfidential address
 	if len(swapData.ProposerUnconfidentialAddress) != 0 {
-		addr, err := database.GetCryptoAddressWithUnconfidential(db, model.String(swapData.ProposerUnconfidentialAddress))
+		addr, err := query.GetCryptoAddressWithUnconfidential(db, model.String(swapData.ProposerUnconfidentialAddress))
 		if err != nil && err != gorm.ErrRecordNotFound {
 			log.WithError(err).
 				Error("GetCryptoAddressWithUnconfidential failed")
@@ -317,7 +317,7 @@ func (p *SwapService) Info(r *http.Request, request *SwapRequest, reply *SwapRes
 		}
 
 		if addr.ID > 0 {
-			swap, err := database.GetSwapByCryptoAddressID(db, addr.ID)
+			swap, err := query.GetSwapByCryptoAddressID(db, addr.ID)
 			if err != nil {
 				log.WithError(err).
 					Error("GetSwapByCryptoAddressID failed")
@@ -420,7 +420,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 
 	db := appcontext.Database(ctx)
 
-	swap, err := database.GetSwap(db, model.SwapID(swapID))
+	swap, err := query.GetSwap(db, model.SwapID(swapID))
 	if err != nil {
 		log.WithError(err).
 			WithField("AccountID", request.AccountID).
@@ -429,7 +429,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 	}
 
 	// check if userID & accountID match swap CryptoAddressID
-	addr, err := database.GetCryptoAddress(db, swap.CryptoAddressID)
+	addr, err := query.GetCryptoAddress(db, swap.CryptoAddressID)
 	if err != nil {
 		log.WithError(err).
 			WithField("CryptoAddressID", swap.CryptoAddressID).
@@ -452,7 +452,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 		return ErrInvalidSwapID
 	}
 
-	accountAsset, err := database.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
+	accountAsset, err := query.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
 	if err != nil {
 		log.WithField("CurrencyName", account.Currency.Name).
 			Error("GetAssetByCurrencyName failed")
@@ -480,7 +480,7 @@ func (p *SwapService) Finalize(r *http.Request, request *SwapRequest, reply *Swa
 		return sessions.ErrInternalError
 	}
 
-	sInfo, err := database.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusFinalized, model.Payload(finalized.Payload))
+	sInfo, err := query.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusFinalized, model.Payload(finalized.Payload))
 	if err != nil {
 		log.WithError(err).
 			Error("AddSwapInfo failed")
@@ -576,21 +576,21 @@ func (p *SwapService) Accept(r *http.Request, request *SwapRequest, reply *SwapR
 	}
 
 	legCredit := decodedInfo.CreditLeg()
-	assetCredit, err := database.GetAssetByHash(db, model.AssetHash(legCredit.Asset))
+	assetCredit, err := query.GetAssetByHash(db, model.AssetHash(legCredit.Asset))
 	if err != nil {
 		log.WithError(err).
 			Error("GetAssetByHash Failed for asset credit")
 		return ErrInvalidProposerAsset
 	}
 	legDebit := decodedInfo.DebitLeg()
-	assetDebit, err := database.GetAssetByHash(db, model.AssetHash(legDebit.Asset))
+	assetDebit, err := query.GetAssetByHash(db, model.AssetHash(legDebit.Asset))
 	if err != nil {
 		log.WithError(err).
 			Error("GetAssetByHash Failed for asset debit")
 		return ErrInvalidProposerAsset
 	}
 
-	accountAsset, err := database.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
+	accountAsset, err := query.GetAssetByCurrencyName(db, model.CurrencyName(account.Currency.Name))
 	if err != nil {
 		log.WithField("CurrencyName", account.Currency.Name).
 			Error("GetAssetByCurrencyName failed")
@@ -636,7 +636,7 @@ func (p *SwapService) Accept(r *http.Request, request *SwapRequest, reply *SwapR
 		return ErrServiceInternalError
 	}
 
-	swap, err := database.AddSwap(db, model.SwapTypeBid,
+	swap, err := query.AddSwap(db, model.SwapTypeBid,
 		model.CryptoAddressID(addr.CryptoAddressID),
 		assetDebit.ID, model.Float(legDebit.Amount),
 		assetCredit.ID, model.Float(legCredit.Amount),
@@ -674,7 +674,7 @@ func (p *SwapService) Accept(r *http.Request, request *SwapRequest, reply *SwapR
 		return sessions.ErrInternalError
 	}
 
-	sInfo, err := database.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusAccepted, model.Payload(accepted.Payload))
+	sInfo, err := query.AddSwapInfo(db, model.SwapID(swapID), model.SwapStatusAccepted, model.Payload(accepted.Payload))
 	if err != nil {
 		log.WithError(err).
 			Error("AddSwapInfo failed")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"git.condensat.tech/bank/database/model"
 	logModel "git.condensat.tech/bank/logger/model"
 
 	"code.condensat.tech/bank/secureid"
@@ -41,16 +40,6 @@ type Messaging interface {
 
 	Request(ctx context.Context, subject string, message *Message) (*Message, error)
 	RequestWithTimeout(ctx context.Context, subject string, message *Message, timeout time.Duration) (*Message, error)
-}
-
-// Database (GORM)
-type DB interface{}
-
-type Database interface {
-	DB() DB
-
-	Migrate(models []model.Model) error
-	Transaction(txFunc func(tx Database) error) error
 }
 
 // Cache (Redis)

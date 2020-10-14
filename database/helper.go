@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strings"
 
 	driver "github.com/go-sql-driver/mysql"
 
@@ -31,4 +33,15 @@ func connectMyql(host string, port int, user, pass, dbname string) *gorm.DB {
 	db.SingularTable(true)
 
 	return db
+}
+
+func secretOrPassword(secret string) string {
+	content, err := ioutil.ReadFile(secret)
+	if err != nil {
+		return secret
+	}
+
+	return strings.TrimRightFunc(string(content), func(c rune) bool {
+		return c == '\r' || c == '\n'
+	})
 }

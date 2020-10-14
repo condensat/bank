@@ -7,8 +7,8 @@ import (
 
 	accounting "git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/wallet/chain"
 	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/handlers"
@@ -139,7 +139,7 @@ func processBatchWithdrawChain(ctx context.Context, network string) error {
 		assetMap := make(map[string]bool)
 		db := appcontext.Database(ctx)
 		for _, withdraw := range batch.Withdraws {
-			account, err := database.GetAccountByID(db, model.AccountID(withdraw.AccountID))
+			account, err := query.GetAccountByID(db, model.AccountID(withdraw.AccountID))
 			if err != nil {
 				log.WithError(err).
 					WithField("AccountID", withdraw.AccountID).
@@ -147,7 +147,7 @@ func processBatchWithdrawChain(ctx context.Context, network string) error {
 				continue
 			}
 
-			currency, _ := database.GetCurrencyByName(db, account.CurrencyName)
+			currency, _ := query.GetCurrencyByName(db, account.CurrencyName)
 			if err != nil {
 				log.WithError(err).
 					WithField("CurrencyName", account.CurrencyName).
@@ -157,7 +157,7 @@ func processBatchWithdrawChain(ctx context.Context, network string) error {
 
 			// get asset hash for crypt assets only
 			assetHash := func() string {
-				asset, _ := database.GetAssetByCurrencyName(db, currency.Name)
+				asset, _ := query.GetAssetByCurrencyName(db, currency.Name)
 				isAsset := currency.IsCrypto() && currency.GetType() == 2 && asset.ID > 0
 				if !isAsset {
 					return ""

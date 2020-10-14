@@ -5,14 +5,15 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/accounting/common"
 
-	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -25,17 +26,17 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 
 	// Database Query
 	db := appcontext.Database(ctx)
-	err := db.Transaction(func(db bank.Database) error {
+	err := db.Transaction(func(db database.Context) error {
 
 		// check if currency exists
-		currency, err := database.GetCurrencyByName(db, model.CurrencyName(currencyName))
+		currency, err := query.GetCurrencyByName(db, model.CurrencyName(currencyName))
 		if err != nil {
 			log.WithError(err).Error("Failed to GetCurrencyByName")
 			return err
 		}
 
 		if string(currency.Name) != currencyName {
-			return database.ErrCurrencyNotFound
+			return query.ErrCurrencyNotFound
 		}
 
 		if currency.IsAvailable() == available {
@@ -64,7 +65,7 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 		}
 
 		// update currency available
-		currency, err = database.AddOrUpdateCurrency(db,
+		currency, err = query.AddOrUpdateCurrency(db,
 			model.NewCurrency(
 				model.CurrencyName(currencyName),
 				model.CurrencyName(currency.DisplayName),

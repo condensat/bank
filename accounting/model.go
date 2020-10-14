@@ -2,9 +2,9 @@ package accounting
 
 import (
 	"git.condensat.tech/bank/database"
-	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/database/query"
 )
 
-func Models() []model.Model {
-	return database.WithdrawModel()
+func Models() []database.Model {
+	return query.WithdrawModel()
 }

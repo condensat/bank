@@ -7,13 +7,12 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/monitor"
-
-	"git.condensat.tech/bank/wallet"
-
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/monitor"
+
+	"git.condensat.tech/bank/wallet"
 )
 
 type Args struct {
@@ -51,7 +50,7 @@ func main() {
 	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	ctx = appcontext.WithDatabase(ctx, database.New(args.Database))
 	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	migrateDatabase(ctx)

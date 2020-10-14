@@ -9,11 +9,12 @@ import (
 	"os"
 	"strings"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
+	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/database/query"
 
 	"github.com/sirupsen/logrus"
 )
@@ -113,7 +114,7 @@ func ImportUsers(ctx context.Context, userInfos ...UserInfo) error {
 		return errors.New("Invalid Database")
 	}
 
-	return db.Transaction(func(tx bank.Database) error {
+	return db.Transaction(func(tx database.Context) error {
 
 		batchSize := 32
 		batches := make([][]UserInfo, 0, (len(userInfos)+batchSize-1)/batchSize)
@@ -124,7 +125,7 @@ func ImportUsers(ctx context.Context, userInfos ...UserInfo) error {
 
 		for _, userInfos := range batches {
 			for _, userInfo := range userInfos {
-				user, err := database.FindOrCreateUser(tx, model.User{
+				user, err := query.FindOrCreateUser(tx, model.User{
 					Name:  model.UserName(userInfo.Login),
 					Email: model.UserEmail(userInfo.Email),
 				})
@@ -134,7 +135,7 @@ func ImportUsers(ctx context.Context, userInfos ...UserInfo) error {
 					continue
 				}
 
-				credential, err := database.CreateOrUpdatedCredential(ctx, tx,
+				credential, err := query.CreateOrUpdatedCredential(ctx, tx,
 					model.Credential{
 						UserID:       user.ID,
 						LoginHash:    model.Base58(userInfo.Login),
@@ -148,9 +149,9 @@ func ImportUsers(ctx context.Context, userInfos ...UserInfo) error {
 					continue
 				}
 
-				userID, verified, err := database.CheckCredential(ctx, tx,
-					database.HashEntry(model.Base58(userInfo.Login)),
-					database.HashEntry(model.Base58(userInfo.Password)),
+				userID, verified, err := query.CheckCredential(ctx, tx,
+					query.HashEntry(model.Base58(userInfo.Login)),
+					query.HashEntry(model.Base58(userInfo.Password)),
 				)
 				if err != nil {
 					log.WithError(err).
