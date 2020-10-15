@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/accounting/common"
@@ -73,7 +74,7 @@ func accountDepositRequest(ctx context.Context, entry common.AccountEntry) (comm
 	log = log.WithField("AccountID", entry.AccountID)
 
 	var result common.AccountEntry
-	err := messaging.RequestMessage(ctx, common.AccountOperationSubject, &entry, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountOperationSubject, &entry, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")
@@ -119,7 +120,7 @@ func AccountWithdraw(ctx context.Context, accountID, referenceID uint64, amount 
 	}
 
 	var result common.AccountEntry
-	err := messaging.RequestMessage(ctx, common.AccountOperationSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountOperationSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")
@@ -187,7 +188,7 @@ func AccountTransfer(ctx context.Context, srcAccountID, dstAccountID, referenceI
 	}
 
 	var result common.AccountTransfer
-	err := messaging.RequestMessage(ctx, common.AccountTransferSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountTransferSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

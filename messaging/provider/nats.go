@@ -1,4 +1,4 @@
-package messaging
+package provider
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	nats "github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
@@ -33,7 +33,7 @@ type Nats struct {
 // NewNats returns Nats messaging.
 // panic on connection error
 func NewNats(ctx context.Context, options NatsOptions) *Nats {
-	log := logger.Logger(ctx).WithField("Method", "messaging.NewNats")
+	log := logger.Logger(ctx).WithField("Method", "provider.NewNats")
 	url := fmt.Sprintf("nats://%s:%d", options.HostName, options.Port)
 
 	nc, err := nats.Connect(url)
@@ -47,18 +47,18 @@ func NewNats(ctx context.Context, options NatsOptions) *Nats {
 	}
 }
 
-func (n *Nats) NC() bank.NC {
+func (n *Nats) NC() messaging.NC {
 	return n.nc
 }
 
-func natsMessageHandler(ctx context.Context, log *logrus.Entry, msg *nats.Msg, handle bank.MessageHandler) {
+func natsMessageHandler(ctx context.Context, log *logrus.Entry, msg *nats.Msg, handle messaging.MessageHandler) {
 	log.
 		WithField("Subject", msg.Subject).
 		WithField("DataLength", len(msg.Data)).
 		Trace("Handling nats message")
 
 		// retrieve request
-	req := new(bank.Message)
+	req := new(messaging.Message)
 	err := req.Decode(msg.Data)
 	if err != nil {
 		log.
@@ -83,7 +83,7 @@ func natsMessageHandler(ctx context.Context, log *logrus.Entry, msg *nats.Msg, h
 	// prepare response
 	// response can be nil if handler return and error
 	if resp == nil {
-		resp = bank.NewMessage()
+		resp = messaging.NewMessage()
 		resp.Error = fmt.Sprintf("%s", err)
 	}
 	data, err := resp.Encode()
@@ -115,7 +115,7 @@ func clamp(count, min, max int) int {
 }
 
 // SubscribeWorkers
-func (n *Nats) SubscribeWorkers(ctx context.Context, subject string, workerCount int, handle bank.MessageHandler) {
+func (n *Nats) SubscribeWorkers(ctx context.Context, subject string, workerCount int, handle messaging.MessageHandler) {
 	workerCount = clamp(workerCount, 1, 1024)
 	for w := 0; w < workerCount; w++ {
 		n.Subscribe(ctx, subject, handle)
@@ -123,7 +123,7 @@ func (n *Nats) SubscribeWorkers(ctx context.Context, subject string, workerCount
 }
 
 // Subscribe
-func (n *Nats) Subscribe(ctx context.Context, subject string, handle bank.MessageHandler) {
+func (n *Nats) Subscribe(ctx context.Context, subject string, handle messaging.MessageHandler) {
 	log := logger.Logger(ctx).WithField("Method", "messaging.Nats.Subscribe")
 
 	if len(subject) == 0 {
@@ -151,7 +151,7 @@ func (n *Nats) Subscribe(ctx context.Context, subject string, handle bank.Messag
 
 // Publish perform nats Publish with subject and message.
 // panic if subject or message are invalid
-func (n *Nats) Publish(ctx context.Context, subject string, message *bank.Message) error {
+func (n *Nats) Publish(ctx context.Context, subject string, message *messaging.Message) error {
 	log := logger.Logger(ctx).WithField("Method", "messaging.Nats.Publish")
 
 	if len(subject) == 0 {
@@ -159,7 +159,7 @@ func (n *Nats) Publish(ctx context.Context, subject string, message *bank.Messag
 			Panic("Invalid subject")
 	}
 	if message == nil {
-		log.WithError(bank.ErrInvalidMessage).
+		log.WithError(messaging.ErrInvalidMessage).
 			Panic("Invalid message")
 	}
 
@@ -184,13 +184,13 @@ func (n *Nats) Publish(ctx context.Context, subject string, message *bank.Messag
 // Request perform nats Request with subject and message.
 // use default timout
 // panic if subject or message are invalid
-func (n *Nats) Request(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+func (n *Nats) Request(ctx context.Context, subject string, message *messaging.Message) (*messaging.Message, error) {
 	return n.RequestWithTimeout(ctx, subject, message, cstDefaultTimeout)
 }
 
 // RequestWithTimeout perform nats Request with subject and message.
 // panic if subject or message are invalid
-func (n *Nats) RequestWithTimeout(ctx context.Context, subject string, message *bank.Message, timeout time.Duration) (*bank.Message, error) {
+func (n *Nats) RequestWithTimeout(ctx context.Context, subject string, message *messaging.Message, timeout time.Duration) (*messaging.Message, error) {
 	log := logger.Logger(ctx).WithField("Method", "messaging.Nats.RequestWithTimeout")
 
 	if len(subject) == 0 {
@@ -198,7 +198,7 @@ func (n *Nats) RequestWithTimeout(ctx context.Context, subject string, message *
 			Panic("Invalid subject")
 	}
 	if message == nil {
-		log.WithError(bank.ErrInvalidMessage).
+		log.WithError(messaging.ErrInvalidMessage).
 			Panic("Invalid message")
 	}
 
@@ -219,7 +219,7 @@ func (n *Nats) RequestWithTimeout(ctx context.Context, subject string, message *
 	}
 
 	// retrieve response
-	resp := new(bank.Message)
+	resp := new(messaging.Message)
 	err = resp.Decode(msg.Data)
 	if err != nil {
 		log.WithError(err).

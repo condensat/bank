@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -19,7 +20,7 @@ func AccountSetStatus(ctx context.Context, accountID uint64, state string) (comm
 	}
 
 	var result common.AccountInfo
-	err := messaging.RequestMessage(ctx, common.AccountSetStatusSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountSetStatusSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

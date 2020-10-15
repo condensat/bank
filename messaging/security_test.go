@@ -1,11 +1,10 @@
-package security
+package messaging
 
 import (
 	"context"
 	"testing"
 
-	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/compression"
+	"git.condensat.tech/bank/security"
 	"git.condensat.tech/bank/security/utils"
 )
 
@@ -13,36 +12,36 @@ func TestSignMessage(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, KeyPrivateKeySalt, utils.GenerateRandN(32))
-	key := NewKey(ctx)
+	ctx = context.WithValue(ctx, security.KeyPrivateKeySalt, utils.GenerateRandN(32))
+	key := security.NewKey(ctx)
 
 	var zero [0]byte
 	var data [32]byte
 
-	message := bank.Message{
+	message := Message{
 		Data: data[:],
 	}
-	messageZero := bank.Message{
+	messageZero := Message{
 		Data: zero[:],
 	}
-	sign := bank.Message{
+	sign := Message{
 		Data: data[:],
 	}
 	_ = SignMessage(ctx, key, &sign)
 
-	compress := bank.Message{
+	compress := Message{
 		Data: data[:],
 	}
-	_ = compression.CompressMessage(&compress, 5)
+	_ = CompressMessage(&compress, 5)
 
-	encrypted := bank.Message{
+	encrypted := Message{
 		Data: data[:],
 	}
 	_ = EncryptMessageFor(ctx, key, key.Public(ctx), &encrypted)
 
 	type args struct {
-		key     *Key
-		message *bank.Message
+		key     *security.Key
+		message *Message
 	}
 	tests := []struct {
 		name    string
@@ -52,7 +51,7 @@ func TestSignMessage(t *testing.T) {
 	}{
 		{"nilmessage", args{key, nil}, true, false},
 
-		{"keyzero", args{key, new(bank.Message)}, true, false},
+		{"keyzero", args{key, new(Message)}, true, false},
 		{"messagezero", args{key, &messageZero}, true, false},
 		{"compressed", args{key, &compress}, true, false},
 		{"encrypted", args{key, &encrypted}, true, false},
@@ -82,31 +81,31 @@ func TestVerifyMessageSignature(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, KeyPrivateKeySalt, utils.GenerateRandN(32))
-	key := NewKey(ctx)
+	ctx = context.WithValue(ctx, security.KeyPrivateKeySalt, utils.GenerateRandN(32))
+	key := security.NewKey(ctx)
 
 	var data [32]byte
-	message := bank.Message{
+	message := Message{
 		Data: data[:],
 	}
-	sign := bank.Message{
+	sign := Message{
 		Data: data[:],
 	}
 	_ = SignMessage(ctx, key, &sign)
 
-	compress := bank.Message{
+	compress := Message{
 		Data: data[:],
 	}
-	_ = compression.CompressMessage(&compress, 5)
+	_ = CompressMessage(&compress, 5)
 
-	encrypted := bank.Message{
+	encrypted := Message{
 		Data: data[:],
 	}
 	_ = EncryptMessageFor(ctx, key, key.Public(ctx), &encrypted)
 
 	type args struct {
-		key     *Key
-		message *bank.Message
+		key     *security.Key
+		message *Message
 	}
 	tests := []struct {
 		name    string
@@ -116,7 +115,7 @@ func TestVerifyMessageSignature(t *testing.T) {
 	}{
 		{"nilmessage", args{key, nil}, false, true},
 
-		{"zero", args{key, new(bank.Message)}, false, true},
+		{"zero", args{key, new(Message)}, false, true},
 		{"compressed", args{key, &compress}, false, true},
 		{"encrypted", args{key, &encrypted}, false, true},
 		{"notsigned", args{key, &message}, false, true},
@@ -142,23 +141,23 @@ func TestEncryptMessageFor(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, KeyPrivateKeySalt, utils.GenerateRandN(32))
-	key := NewKey(ctx)
+	ctx = context.WithValue(ctx, security.KeyPrivateKeySalt, utils.GenerateRandN(32))
+	key := security.NewKey(ctx)
 
 	var data [32]byte
 
-	message := bank.Message{
+	message := Message{
 		Data: data[:],
 	}
 
-	encrypted := bank.Message{
+	encrypted := Message{
 		Data: data[:],
 	}
 	_ = EncryptMessageFor(ctx, key, key.Public(ctx), &encrypted)
 
 	type args struct {
-		from    *Key
-		message *bank.Message
+		from    *security.Key
+		message *Message
 	}
 	tests := []struct {
 		name        string
@@ -167,7 +166,7 @@ func TestEncryptMessageFor(t *testing.T) {
 		wantEncrypt bool
 	}{
 		{"nilmessage", args{key, nil}, true, false},
-		{"encryptnodata", args{key, new(bank.Message)}, true, false},
+		{"encryptnodata", args{key, new(Message)}, true, false},
 
 		{"encrypt", args{key, &message}, false, true},
 		{"encrypted", args{key, &encrypted}, false, true},
@@ -194,28 +193,28 @@ func TestDecryptMessageFrom(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, KeyPrivateKeySalt, utils.GenerateRandN(32))
-	key := NewKey(ctx)
+	ctx = context.WithValue(ctx, security.KeyPrivateKeySalt, utils.GenerateRandN(32))
+	key := security.NewKey(ctx)
 
 	var data [32]byte
 
-	message := bank.Message{
+	message := Message{
 		Data: data[:],
 	}
 
-	encrypted := bank.Message{
+	encrypted := Message{
 		Data: data[:],
 	}
 	_ = EncryptMessageFor(ctx, key, key.Public(ctx), &encrypted)
-	encryptedNoData := bank.Message{
+	encryptedNoData := Message{
 		Data: data[:],
 	}
 	_ = EncryptMessageFor(ctx, key, key.Public(ctx), &encryptedNoData)
 	encryptedNoData.Data = nil
 
 	type args struct {
-		to      *Key
-		message *bank.Message
+		to      *security.Key
+		message *Message
 	}
 	tests := []struct {
 		name        string
@@ -224,7 +223,7 @@ func TestDecryptMessageFrom(t *testing.T) {
 		wantEncrypt bool
 	}{
 		{"nilmessage", args{key, nil}, true, false},
-		{"messagenodata", args{key, new(bank.Message)}, true, false},
+		{"messagenodata", args{key, new(Message)}, true, false},
 		{"encryptednodata", args{key, &encryptedNoData}, true, true},
 
 		{"notencrypted", args{key, &message}, false, false},

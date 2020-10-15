@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 
 	"github.com/go-redis/redis_rate/v9"
@@ -27,7 +26,7 @@ type RateLimiter struct {
 }
 
 func New(ctx context.Context, rateLimit RateLimitInfo) *RateLimiter {
-	rdb := cache.ToRedis(appcontext.Cache(ctx))
+	rdb := cache.ToRedis(cache.FromContext(ctx))
 	return &RateLimiter{
 		limit:     rateLimit.Limit,
 		limiter:   redis_rate.NewLimiter(rdb),

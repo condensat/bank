@@ -1,12 +1,10 @@
 package cache
 
 import (
-	"git.condensat.tech/bank"
-
 	"github.com/go-redis/redis/v8"
 )
 
-func ToRedis(cache bank.Cache) *redis.Client {
+func ToRedis(cache Cache) *redis.Client {
 	if cache == nil {
 		return nil
 	}

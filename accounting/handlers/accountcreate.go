@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
@@ -76,15 +75,15 @@ func AccountCreate(ctx context.Context, userID uint64, info common.AccountInfo) 
 	return result, err
 }
 
-func OnAccountCreate(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+func OnAccountCreate(ctx context.Context, subject string, message *messaging.Message) (*messaging.Message, error) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.OnAccountCreate")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})
 
 	var request common.AccountCreation
-	return messaging.HandleRequest(ctx, message, &request,
-		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+	return messaging.HandleRequest(ctx, appcontext.AppName(ctx), message, &request,
+		func(ctx context.Context, _ messaging.BankObject) (messaging.BankObject, error) {
 			log = log.WithFields(logrus.Fields{
 				"UserID":   request.UserID,
 				"Currency": request.Info.Currency,

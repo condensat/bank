@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 
 	"git.condensat.tech/bank/wallet/bitcoin"
 	"git.condensat.tech/bank/wallet/chain"
@@ -119,7 +119,7 @@ func (p *Wallet) Run(ctx context.Context, options WalletOptions) {
 func (p *Wallet) registerHandlers(ctx context.Context) context.Context {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.RegisterHandlers")
 
-	nats := appcontext.Messaging(ctx)
+	nats := messaging.FromContext(ctx)
 
 	ctx = handlers.ChainHandlerContext(ctx, p)
 

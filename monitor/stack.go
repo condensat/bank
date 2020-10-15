@@ -3,8 +3,7 @@ package monitor
 import (
 	"time"
 
-	"git.condensat.tech/bank"
-
+	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/monitor/database/model"
 )
 
@@ -15,11 +14,11 @@ type StackListService struct {
 }
 
 func (p *StackListService) Encode() ([]byte, error) {
-	return bank.EncodeObject(p)
+	return messaging.EncodeObject(p)
 }
 
 func (p *StackListService) Decode(data []byte) error {
-	return bank.DecodeObject(data, bank.BankObject(p))
+	return messaging.DecodeObject(data, messaging.BankObject(p))
 }
 
 type StackServiceHistory struct {
@@ -32,9 +31,9 @@ type StackServiceHistory struct {
 }
 
 func (p *StackServiceHistory) Encode() ([]byte, error) {
-	return bank.EncodeObject(p)
+	return messaging.EncodeObject(p)
 }
 
 func (p *StackServiceHistory) Decode(data []byte) error {
-	return bank.DecodeObject(data, bank.BankObject(p))
+	return messaging.DecodeObject(data, messaging.BankObject(p))
 }

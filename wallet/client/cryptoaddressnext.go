@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/wallet/common"
@@ -19,7 +20,7 @@ func CryptoAddressNextDeposit(ctx context.Context, chain string, accountID uint6
 	}
 
 	var result common.CryptoAddress
-	err := messaging.RequestMessage(ctx, common.CryptoAddressNextDepositSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.CryptoAddressNextDepositSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

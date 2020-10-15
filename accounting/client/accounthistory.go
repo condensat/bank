@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -21,7 +22,7 @@ func AccountHistory(ctx context.Context, accountID uint64, from, to time.Time) (
 	}
 
 	var result common.AccountHistory
-	err := messaging.RequestMessage(ctx, common.AccountHistorySubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountHistorySubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

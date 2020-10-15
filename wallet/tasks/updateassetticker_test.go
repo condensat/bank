@@ -6,6 +6,7 @@ import (
 
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/messaging/provider"
 
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/query"
@@ -16,11 +17,11 @@ var testContext = context.Background()
 func init() {
 	dbArg := database.DefaultOptions()
 	dbArg.HostName = "mariadb"
-	natsArg := messaging.DefaultOptions()
+	natsArg := provider.DefaultOptions()
 	natsArg.HostName = "nats"
 
 	ctx := testContext
-	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, natsArg))
+	ctx = messaging.WithMessaging(ctx, provider.NewNats(ctx, natsArg))
 	ctx = appcontext.WithDatabase(ctx, database.New(dbArg))
 
 	migrateDatabase(ctx)

@@ -1,27 +1,26 @@
-package security
+package messaging
 
 import (
 	"context"
 	"errors"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/security"
 )
 
 var (
-	ErrEncrypt              = errors.New("Failed to Encrypt")
-	ErrOperationNotPermited = errors.New("Operation Not Permited")
-	ErrSignature            = errors.New("Failed to Sign message")
-	ErrNotSigned            = errors.New("Message Not Signed")
-	ErrVerifyFailed         = errors.New("Fail to verify signature")
+	ErrEncrypt      = errors.New("Failed to Encrypt")
+	ErrSignature    = errors.New("Failed to Sign message")
+	ErrNotSigned    = errors.New("Message Not Signed")
+	ErrVerifyFailed = errors.New("Fail to verify signature")
 )
 
-func SignMessage(ctx context.Context, key *Key, message *bank.Message) error {
+func SignMessage(ctx context.Context, key *security.Key, message *Message) error {
 	if key == nil {
-		return ErrInvalidKey
+		return security.ErrInvalidKey
 	}
 
 	if message == nil {
-		return bank.ErrInvalidMessage
+		return ErrInvalidMessage
 	}
 
 	if message.IsSigned() {
@@ -44,12 +43,12 @@ func SignMessage(ctx context.Context, key *Key, message *bank.Message) error {
 	return nil
 }
 
-func VerifyMessageSignature(key SignaturePublicKey, message *bank.Message) (bool, error) {
+func VerifyMessageSignature(key security.SignaturePublicKey, message *Message) (bool, error) {
 	if message == nil {
-		return false, bank.ErrInvalidMessage
+		return false, ErrInvalidMessage
 	}
 	if len(message.Data) == 0 {
-		return false, bank.ErrNoData
+		return false, ErrNoData
 	}
 
 	if message.IsCompressed() || message.IsEncrypted() {
@@ -60,7 +59,7 @@ func VerifyMessageSignature(key SignaturePublicKey, message *bank.Message) (bool
 		return false, ErrNotSigned
 	}
 
-	valid, err := VerifySignature(key, message.Data)
+	valid, err := security.VerifySignature(key, message.Data)
 	if err != nil {
 		return false, ErrVerifyFailed
 	}
@@ -68,12 +67,12 @@ func VerifyMessageSignature(key SignaturePublicKey, message *bank.Message) (bool
 	return valid, nil
 }
 
-func EncryptMessageFor(ctx context.Context, from *Key, to EncryptionPublicKey, message *bank.Message) error {
+func EncryptMessageFor(ctx context.Context, from *security.Key, to security.EncryptionPublicKey, message *Message) error {
 	if message == nil {
-		return bank.ErrInvalidMessage
+		return ErrInvalidMessage
 	}
 	if len(message.Data) == 0 {
-		return bank.ErrNoData
+		return ErrNoData
 	}
 	if message.IsEncrypted() {
 		// NOOP
@@ -90,12 +89,12 @@ func EncryptMessageFor(ctx context.Context, from *Key, to EncryptionPublicKey, m
 	return nil
 }
 
-func DecryptMessageFrom(ctx context.Context, to *Key, from EncryptionPublicKey, message *bank.Message) error {
+func DecryptMessageFrom(ctx context.Context, to *security.Key, from security.EncryptionPublicKey, message *Message) error {
 	if message == nil {
-		return bank.ErrInvalidMessage
+		return ErrInvalidMessage
 	}
 	if len(message.Data) == 0 {
-		return bank.ErrNoData
+		return ErrNoData
 	}
 	if !message.IsEncrypted() {
 		// NOOP

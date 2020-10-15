@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
@@ -20,7 +21,7 @@ func UserWithdrawsCrypto(ctx context.Context, userID uint64) (common.UserWithdra
 	}
 
 	var result common.UserWithdraws
-	err := messaging.RequestMessage(ctx, common.UserWithdrawListSubject, &common.UserWithdraws{UserID: userID}, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.UserWithdrawListSubject, &common.UserWithdraws{UserID: userID}, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

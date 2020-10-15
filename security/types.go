@@ -31,6 +31,7 @@ var (
 	ErrSignMessage     = errors.New("Message Sign Failed")
 	ErrVerifySignature = errors.New("Signature verification failed")
 	ErrNoSignature     = errors.New("No Signature found")
+	ErrNoData          = errors.New("No Data")
 )
 
 type SecretKey [SignatureSecretKeySize]byte

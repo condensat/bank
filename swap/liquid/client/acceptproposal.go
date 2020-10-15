@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -26,7 +27,7 @@ func AcceptSwapProposal(ctx context.Context, swapID uint64, address common.Confi
 	}
 
 	var result common.SwapProposal
-	err := messaging.RequestMessage(ctx, common.SwapAcceptProposalSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.SwapAcceptProposalSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

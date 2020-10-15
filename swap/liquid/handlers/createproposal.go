@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/swap/liquid/common"
@@ -70,15 +70,15 @@ func CreateSwapProposal(ctx context.Context, swapID uint64, address common.Confi
 	return result, nil
 }
 
-func OnCreateSwapProposal(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+func OnCreateSwapProposal(ctx context.Context, subject string, message *messaging.Message) (*messaging.Message, error) {
 	log := logger.Logger(ctx).WithField("Method", "Liquid.handler.OnCreateSwapProposal")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})
 
 	var request common.SwapProposal
-	return messaging.HandleRequest(ctx, message, &request,
-		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+	return messaging.HandleRequest(ctx, appcontext.AppName(ctx), message, &request,
+		func(ctx context.Context, _ messaging.BankObject) (messaging.BankObject, error) {
 			log = log.WithFields(logrus.Fields{
 				"SwapID": request.SwapID,
 			})

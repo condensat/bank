@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
@@ -109,15 +108,15 @@ func CurrencySetAvailable(ctx context.Context, currencyName string, available bo
 	return result, err
 }
 
-func OnCurrencySetAvailable(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+func OnCurrencySetAvailable(ctx context.Context, subject string, message *messaging.Message) (*messaging.Message, error) {
 	log := logger.Logger(ctx).WithField("Method", "Currencying.OnCurrencySetAvailable")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})
 
 	var request common.CurrencyInfo
-	return messaging.HandleRequest(ctx, message, &request,
-		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+	return messaging.HandleRequest(ctx, appcontext.AppName(ctx), message, &request,
+		func(ctx context.Context, _ messaging.BankObject) (messaging.BankObject, error) {
 			log = log.WithFields(logrus.Fields{
 				"Name": request.Name,
 			})

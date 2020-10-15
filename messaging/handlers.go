@@ -3,9 +3,6 @@ package messaging
 import (
 	"context"
 	"errors"
-
-	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/appcontext"
 )
 
 var (
@@ -13,10 +10,10 @@ var (
 	ErrRequestFailed = errors.New("Request Failed")
 )
 
-type RequestHandler func(ctx context.Context, request bank.BankObject) (bank.BankObject, error)
+type RequestHandler func(ctx context.Context, request BankObject) (BankObject, error)
 
-func HandleRequest(ctx context.Context, message *bank.Message, request bank.BankObject, handle RequestHandler) (*bank.Message, error) {
-	err := bank.FromMessage(message, request)
+func HandleRequest(ctx context.Context, appName string, message *Message, request BankObject, handle RequestHandler) (*Message, error) {
+	err := FromMessage(message, request)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +23,7 @@ func HandleRequest(ctx context.Context, message *bank.Message, request bank.Bank
 		return nil, err
 	}
 
-	message = bank.ToMessage(appcontext.AppName(ctx), resp)
+	message = ToMessage(appName, resp)
 	if message == nil {
 		err = ErrHandleRequest
 	}
@@ -34,17 +31,17 @@ func HandleRequest(ctx context.Context, message *bank.Message, request bank.Bank
 	return message, err
 }
 
-func RequestMessage(ctx context.Context, subject string, req, resp bank.BankObject) error {
-	messaging := appcontext.Messaging(ctx)
+func RequestMessage(ctx context.Context, appName string, subject string, req, resp BankObject) error {
+	messaging := FromContext(ctx)
 
-	message := bank.ToMessage(appcontext.AppName(ctx), req)
+	message := ToMessage(appName, req)
 
 	message, err := messaging.Request(ctx, subject, message)
 	if err != nil {
 		return err
 	}
 
-	err = bank.FromMessage(message, resp)
+	err = FromMessage(message, resp)
 	if err != nil {
 		return err
 	}

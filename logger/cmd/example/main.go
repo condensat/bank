@@ -6,12 +6,17 @@ import (
 	"flag"
 	"time"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/cache"
+
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/messaging/provider"
+	mprovider "git.condensat.tech/bank/messaging/provider"
+
 	"git.condensat.tech/bank/monitor"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,7 +24,7 @@ type Args struct {
 	App appcontext.Options
 
 	Redis cache.RedisOptions
-	Nats  messaging.NatsOptions
+	Nats  mprovider.NatsOptions
 }
 
 func parseArgs() Args {
@@ -27,14 +32,14 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "LoggerExample")
 
 	cache.OptionArgs(&args.Redis)
-	messaging.OptionArgs(&args.Nats)
+	mprovider.OptionArgs(&args.Nats)
 
 	flag.Parse()
 
 	return args
 }
 
-func echoHandler(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+func echoHandler(ctx context.Context, subject string, message *messaging.Message) (*messaging.Message, error) {
 	log := logger.Logger(ctx).WithField("Method", "main.echoHandler")
 
 	log.WithFields(logrus.Fields{
@@ -48,14 +53,14 @@ func echoHandler(ctx context.Context, subject string, message *bank.Message) (*b
 func natsClient(ctx context.Context) {
 	log := logger.Logger(ctx).WithField("Method", "main.natsClient")
 
-	messaging := appcontext.Messaging(ctx)
-	messaging.SubscribeWorkers(ctx, "Example.Request", 8, echoHandler)
+	msging := messaging.FromContext(ctx)
+	msging.SubscribeWorkers(ctx, "Example.Request", 8, echoHandler)
 
-	message := bank.NewMessage()
+	message := messaging.NewMessage()
 	message.Data = []byte("Hello, World!")
 
 	for index := 0; index < 10; index++ {
-		resp, err := messaging.Request(ctx, "Example.Request", message)
+		resp, err := msging.Request(ctx, "Example.Request", message)
 		if err != nil {
 			log.
 				WithError(err).
@@ -70,9 +75,9 @@ func main() {
 
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
-	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
+	ctx = cache.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
-	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
+	ctx = messaging.WithMessaging(ctx, provider.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	natsClient(ctx)

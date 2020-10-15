@@ -9,11 +9,6 @@ import (
 	"git.condensat.tech/bank/security/secureid"
 )
 
-type BankObject interface {
-	Encode() ([]byte, error)
-	Decode(data []byte) error
-}
-
 type ServerOptions struct {
 	Protocol string
 	HostName string
@@ -24,29 +19,6 @@ type Logger interface {
 	Close()
 	CreateLogEntry(timestamp time.Time, app, level string, userID uint64, sessionID string, method, err, msg, data string) *logModel.LogEntry
 	AddLogEntries(entries []*logModel.LogEntry) error
-}
-
-// Messaging (Nats)
-type NC interface{}
-
-type MessageHandler func(ctx context.Context, subject string, message *Message) (*Message, error)
-type Messaging interface {
-	NC() NC
-
-	SubscribeWorkers(ctx context.Context, subject string, workerCount int, handle MessageHandler)
-	Subscribe(ctx context.Context, subject string, handle MessageHandler)
-
-	Publish(ctx context.Context, subject string, message *Message) error
-
-	Request(ctx context.Context, subject string, message *Message) (*Message, error)
-	RequestWithTimeout(ctx context.Context, subject string, message *Message, timeout time.Duration) (*Message, error)
-}
-
-// Cache (Redis)
-type RDB interface{}
-
-type Cache interface {
-	RDB() RDB
 }
 
 type Worker interface {

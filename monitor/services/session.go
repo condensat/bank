@@ -3,21 +3,21 @@ package services
 import (
 	"context"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/networking/sessions"
 )
 
 func verifySessionId(ctx context.Context, sessionID sessions.SessionID) (bool, error) {
 	log := logger.Logger(ctx).WithField("Method", "verifySessionId")
-	nats := appcontext.Messaging(ctx)
+	nats := messaging.FromContext(ctx)
 
-	message := bank.ToMessage(appcontext.AppName(ctx), &sessions.SessionInfo{
+	message := messaging.ToMessage(appcontext.AppName(ctx), &sessions.SessionInfo{
 		SessionID: sessionID,
 	})
 	if message == nil {
-		log.Error("bank.ToMessage failed")
+		log.Error("messaging.ToMessage failed")
 		return false, ErrServiceInternalError
 	}
 
@@ -30,7 +30,7 @@ func verifySessionId(ctx context.Context, sessionID sessions.SessionID) (bool, e
 	}
 
 	var si sessions.SessionInfo
-	err = bank.FromMessage(response, &si)
+	err = messaging.FromMessage(response, &si)
 	if err != nil {
 		log.WithError(err).
 			Error("Message data is not SessionInfo")

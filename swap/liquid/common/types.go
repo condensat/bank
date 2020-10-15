@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/utils"
 )
 
@@ -72,11 +72,11 @@ func (p *ProposalInfo) Valid() bool {
 }
 
 func (p *SwapProposal) Encode() ([]byte, error) {
-	return bank.EncodeObject(p)
+	return messaging.EncodeObject(p)
 }
 
 func (p *SwapProposal) Decode(data []byte) error {
-	return bank.DecodeObject(data, bank.BankObject(p))
+	return messaging.DecodeObject(data, messaging.BankObject(p))
 }
 
 func (payload Payload) Stdin() io.Reader {

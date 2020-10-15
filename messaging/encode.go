@@ -1,9 +1,14 @@
-package bank
+package messaging
 
 import (
 	"bytes"
 	"encoding/gob"
 )
+
+type BankObject interface {
+	Encode() ([]byte, error)
+	Decode(data []byte) error
+}
 
 // encode return bytes from BankObject. Encoded with gob
 func EncodeObject(object BankObject) ([]byte, error) {

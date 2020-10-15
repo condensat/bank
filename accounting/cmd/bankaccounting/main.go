@@ -7,11 +7,14 @@ import (
 	"git.condensat.tech/bank/accounting"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/database/query"
 	"git.condensat.tech/bank/logger"
+
 	"git.condensat.tech/bank/messaging"
+	mprovider "git.condensat.tech/bank/messaging/provider"
 )
 
 type Accounting struct {
@@ -22,7 +25,7 @@ type Args struct {
 	App appcontext.Options
 
 	Redis    cache.RedisOptions
-	Nats     messaging.NatsOptions
+	Nats     mprovider.NatsOptions
 	Database database.Options
 
 	Accounting Accounting
@@ -34,7 +37,7 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "BankAccounting")
 
 	cache.OptionArgs(&args.Redis)
-	messaging.OptionArgs(&args.Nats)
+	mprovider.OptionArgs(&args.Nats)
 	database.OptionArgs(&args.Database)
 
 	flag.StringVar(&args.Accounting.BankUser, "bankUser", "bank@condensat.tech", "Bank database email [bank@condensat.tech]")
@@ -49,9 +52,9 @@ func main() {
 
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
-	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
+	ctx = cache.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
-	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
+	ctx = messaging.WithMessaging(ctx, mprovider.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithDatabase(ctx, database.New(args.Database))
 
 	migrateDatabase(ctx)

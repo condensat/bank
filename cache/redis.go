@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"git.condensat.tech/bank"
-
 	"github.com/go-redis/redis/v8"
 )
 
@@ -21,6 +19,6 @@ func NewRedis(ctx context.Context, options RedisOptions) *Redis {
 	}
 }
 
-func (r *Redis) RDB() bank.RDB {
+func (r *Redis) RDB() RDB {
 	return r.rdb
 }

@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"time"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/monitor/database/model"
 	"git.condensat.tech/bank/utils"
 )
@@ -16,14 +16,14 @@ import (
 type ProcessusGrabber struct {
 	appName   string
 	interval  time.Duration
-	messaging bank.Messaging
+	messaging messaging.Messaging
 }
 
 func NewProcessusGrabber(ctx context.Context, interval time.Duration) *ProcessusGrabber {
 	return &ProcessusGrabber{
 		appName:   appcontext.AppName(ctx),
 		interval:  interval,
-		messaging: appcontext.Messaging(ctx),
+		messaging: messaging.FromContext(ctx),
 	}
 }
 
@@ -73,6 +73,6 @@ func processInfo(appName string, clock *Clock) model.ProcessInfo {
 }
 
 func (p *ProcessusGrabber) sendProcessInfo(ctx context.Context, processInfo *model.ProcessInfo) error {
-	request := bank.ToMessage(p.appName, processInfo)
+	request := messaging.ToMessage(p.appName, processInfo)
 	return p.messaging.Publish(ctx, InboundSubject, request)
 }

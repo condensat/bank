@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 
 	"git.condensat.tech/bank/accounting/common"
@@ -66,7 +67,7 @@ func accountTransferWithdrawRequest(ctx context.Context, withdraw common.Account
 	})
 
 	var result common.AccountTransfer
-	err := messaging.RequestMessage(ctx, common.AccountTransferWithdrawSubject, &withdraw, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountTransferWithdrawSubject, &withdraw, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

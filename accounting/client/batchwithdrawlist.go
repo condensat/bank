@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 )
@@ -26,7 +27,7 @@ func ListBatchWithdrawWithStatus(ctx context.Context, network, status string) (c
 	}
 
 	var result common.BatchWithdraws
-	err := messaging.RequestMessage(ctx, common.BatchWithdrawListSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.BatchWithdrawListSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

@@ -3,9 +3,9 @@ package liquid
 import (
 	"context"
 
-	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
 	"git.condensat.tech/bank/utils"
 
 	"git.condensat.tech/bank/swap/liquid/common"
@@ -33,7 +33,7 @@ func (p *Swap) Run(ctx context.Context, elementsConf string) {
 func (p *Swap) registerHandlers(ctx context.Context) {
 	log := logger.Logger(ctx).WithField("Method", "Liquid.RegisterHandlers")
 
-	nats := appcontext.Messaging(ctx)
+	nats := messaging.FromContext(ctx)
 
 	const concurencyLevel = 8
 

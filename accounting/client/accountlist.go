@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -18,7 +19,7 @@ func AccountList(ctx context.Context, userID uint64) (common.UserAccounts, error
 	}
 
 	var result common.UserAccounts
-	err := messaging.RequestMessage(ctx, common.AccountListSubject, &request, &result)
+	err := messaging.RequestMessage(ctx, appcontext.AppName(ctx), common.AccountListSubject, &request, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")

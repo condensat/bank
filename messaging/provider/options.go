@@ -1,21 +1,19 @@
-package messaging
+package provider
 
 import (
 	"flag"
-
-	"git.condensat.tech/bank"
 )
 
 type NatsOptions struct {
-	bank.ServerOptions
+	Protocol string
+	HostName string
+	Port     int
 }
 
 func DefaultOptions() NatsOptions {
 	return NatsOptions{
-		ServerOptions: bank.ServerOptions{
-			HostName: "nats",
-			Port:     4222,
-		},
+		HostName: "nats",
+		Port:     4222,
 	}
 }
 

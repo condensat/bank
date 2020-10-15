@@ -7,10 +7,15 @@ import (
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/cache"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/logger"
+
+	"git.condensat.tech/bank/cache"
+
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/messaging/provider"
+	mprovider "git.condensat.tech/bank/messaging/provider"
+
 	"git.condensat.tech/bank/monitor"
 )
 
@@ -19,8 +24,8 @@ type Args struct {
 	WithDatabase bool
 
 	Redis    cache.RedisOptions
+	Nats     mprovider.NatsOptions
 	Database database.Options
-	Nats     messaging.NatsOptions
 }
 
 func parseArgs() Args {
@@ -29,9 +34,9 @@ func parseArgs() Args {
 	appcontext.OptionArgs(&args.App, "LogGrabber")
 	flag.BoolVar(&args.WithDatabase, "withDatabase", false, "Store log to database (default false)")
 
+	mprovider.OptionArgs(&args.Nats)
 	cache.OptionArgs(&args.Redis)
 	database.OptionArgs(&args.Database)
-	messaging.OptionArgs(&args.Nats)
 
 	flag.Parse()
 
@@ -43,8 +48,8 @@ func main() {
 
 	ctx := context.Background()
 	ctx = appcontext.WithOptions(ctx, args.App)
-	ctx = appcontext.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
-	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
+	ctx = cache.WithCache(ctx, cache.NewRedis(ctx, args.Redis))
+	ctx = messaging.WithMessaging(ctx, provider.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithProcessusGrabber(ctx, monitor.NewProcessusGrabber(ctx, 15*time.Second))
 
 	if args.WithDatabase {

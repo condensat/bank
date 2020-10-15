@@ -1,15 +1,13 @@
 package security
 
 import (
-	"git.condensat.tech/bank"
-
 	"git.condensat.tech/bank/security/utils"
 	"golang.org/x/crypto/nacl/sign"
 )
 
 func Sign(secretKey SignatureSecretKey, data []byte) ([]byte, error) {
 	if len(data) == 0 {
-		return nil, bank.ErrNoData
+		return nil, ErrNoData
 	}
 	defer utils.Memzero(secretKey[:])
 
