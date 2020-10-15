@@ -6,7 +6,7 @@ import (
 
 	logModel "git.condensat.tech/bank/logger/model"
 
-	"code.condensat.tech/bank/secureid"
+	"git.condensat.tech/bank/security/secureid"
 )
 
 type BankObject interface {

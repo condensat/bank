@@ -9,7 +9,7 @@ import (
 	"git.condensat.tech/bank/networking"
 	"git.condensat.tech/bank/networking/sessions"
 
-	"code.condensat.tech/bank/secureid"
+	"git.condensat.tech/bank/security/secureid"
 
 	"git.condensat.tech/bank/appcontext"
 
