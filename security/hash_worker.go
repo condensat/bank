@@ -3,8 +3,6 @@ package security
 import (
 	"context"
 
-	"git.condensat.tech/bank"
-
 	"golang.org/x/crypto/argon2"
 )
 
@@ -15,7 +13,7 @@ type HasherWorker struct {
 	thread int
 }
 
-func NewHasherWorker(ctx context.Context, time, memory, thread int) bank.Worker {
+func NewHasherWorker(ctx context.Context, time, memory, thread int) *HasherWorker {
 	return &HasherWorker{
 		time:   time,
 		memory: memory,

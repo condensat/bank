@@ -1,8 +1,6 @@
 package bank
 
 import (
-	"context"
-
 	"git.condensat.tech/bank/security/secureid"
 )
 
@@ -10,10 +8,6 @@ type ServerOptions struct {
 	Protocol string
 	HostName string
 	Port     int
-}
-
-type Worker interface {
-	Run(ctx context.Context, numWorkers int)
 }
 
 type SecureID interface {
