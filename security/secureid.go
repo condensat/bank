@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"git.condensat.tech/bank"
-
 	"git.condensat.tech/bank/security/secureid"
 
 	"github.com/shengdoushi/base58"
@@ -36,7 +34,7 @@ type SecureIDKeys struct {
 	subKeys KeysMap
 }
 
-func SecureIDFromFile(filename string) bank.SecureID {
+func SecureIDFromFile(filename string) SecureID {
 	bytes, _ := ioutil.ReadFile(filename)
 	var options Options
 	err := json.Unmarshal(bytes, &options)
@@ -46,7 +44,7 @@ func SecureIDFromFile(filename string) bank.SecureID {
 	return FromOptions(options)
 }
 
-func FromOptions(options Options) bank.SecureID {
+func FromOptions(options Options) SecureID {
 	seed, err := base58.Decode(options.Seed, base58.BitcoinAlphabet)
 	if err != nil {
 		panic(err)
@@ -61,7 +59,7 @@ func FromOptions(options Options) bank.SecureID {
 	)
 }
 
-func New(info secureid.SecureInfo, keyID secureid.KeyID) bank.SecureID {
+func New(info secureid.SecureInfo, keyID secureid.KeyID) SecureID {
 	keys := secureid.DefaultKeys(info, keyID)
 	if keys == nil {
 		panic("Invalid SecureID")

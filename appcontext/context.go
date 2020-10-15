@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/database"
 
 	logger "git.condensat.tech/bank/logger/interface"
@@ -97,7 +96,7 @@ func WithProcessusGrabber(ctx context.Context, grabber Worker) context.Context {
 	return context.WithValue(ctx, ProcessusGrabberKey, grabber)
 }
 
-func WithSecureID(ctx context.Context, secureID bank.SecureID) context.Context {
+func WithSecureID(ctx context.Context, secureID security.SecureID) context.Context {
 	return context.WithValue(ctx, SecureIDKey, secureID)
 }
 
@@ -152,8 +151,8 @@ func HasherWorker(ctx context.Context) Worker {
 	return nil
 }
 
-func SecureID(ctx context.Context) bank.SecureID {
-	if ctxSecureID, ok := ctx.Value(SecureIDKey).(bank.SecureID); ok {
+func SecureID(ctx context.Context) security.SecureID {
+	if ctxSecureID, ok := ctx.Value(SecureIDKey).(security.SecureID); ok {
 		return ctxSecureID
 	}
 	return nil
