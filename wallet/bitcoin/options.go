@@ -3,11 +3,11 @@ package bitcoin
 import (
 	"flag"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/wallet/common"
 )
 
 type BitcoinOptions struct {
-	bank.ServerOptions
+	common.ServerOptions
 
 	User string
 	Pass string

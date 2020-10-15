@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"git.condensat.tech/bank"
 	"github.com/ybbus/jsonrpc"
 
+	"git.condensat.tech/bank/wallet/common"
 	ssmCommands "git.condensat.tech/bank/wallet/ssm/commands"
 
 	btcCommands "git.condensat.tech/bank/wallet/bitcoin/commands"
@@ -37,7 +37,7 @@ type GetXpubResponse struct {
 
 func bitcoinClient() jsonrpc.RPCClient {
 	return btcrpc.New(btcrpc.Options{
-		ServerOptions: bank.ServerOptions{Protocol: "http", HostName: "bitcoin-testnet", Port: 18332},
+		ServerOptions: common.ServerOptions{Protocol: "http", HostName: "bitcoin-testnet", Port: 18332},
 		User:          "condensat",
 		Password:      "condensat",
 	}).Client

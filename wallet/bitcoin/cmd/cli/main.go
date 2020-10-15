@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/rpc"
 
 	"git.condensat.tech/bank/wallet/bitcoin/commands"
@@ -96,7 +96,7 @@ func RawTransaction(ctx context.Context) {
 func bitcoinRpcClient(hostname string, port int) commands.RpcClient {
 	password := os.Getenv("BITCOIN_TESTNET_PASSWORD")
 	return rpc.New(rpc.Options{
-		ServerOptions: bank.ServerOptions{Protocol: "http", HostName: hostname, Port: port},
+		ServerOptions: common.ServerOptions{Protocol: "http", HostName: hostname, Port: port},
 		User:          "bank-wallet",
 		Password:      password,
 	}).Client

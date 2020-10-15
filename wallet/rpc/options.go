@@ -4,12 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/wallet/common"
 	"github.com/ybbus/jsonrpc"
 )
 
 type Options struct {
-	bank.ServerOptions
+	common.ServerOptions
 	User     string
 	Password string
 

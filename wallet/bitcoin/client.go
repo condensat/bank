@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/wallet/common"
 	"git.condensat.tech/bank/wallet/rpc"
@@ -38,7 +37,7 @@ type BitcoinClient struct {
 
 func New(ctx context.Context, options BitcoinOptions) *BitcoinClient {
 	client := rpc.New(rpc.Options{
-		ServerOptions: bank.ServerOptions{Protocol: "http", HostName: options.HostName, Port: options.Port},
+		ServerOptions: common.ServerOptions{Protocol: "http", HostName: options.HostName, Port: options.Port},
 		User:          options.User,
 		Password:      options.Pass,
 	})
