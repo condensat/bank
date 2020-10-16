@@ -1,3 +1,7 @@
+// Copyright 2020 Condensat Tech <contact@condensat.tech>. All rights reserved.
+// Use of this source code is governed by a MIT
+// license that can be found in the LICENSE file.
+
 // services package is au json-rpc service for session management.
 // client can perform three operations on session:
 // - Open to initiate a session with valid credentials
