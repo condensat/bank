@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -24,12 +25,25 @@ func init() {
 }
 
 func main() {
+	var destAddress string
+	var changeAddress string
+	var assetAddress string
+	var tokenAddress string
+	var reissuedAsset string
+
+	flag.StringVar(&destAddress, "dest", "", "Address to send L-BTC")
+	flag.StringVar(&changeAddress, "change", "", "Address to send change")
+	flag.StringVar(&assetAddress, "asset", "", "Address to send asset")
+	flag.StringVar(&tokenAddress, "token", "", "Address to send token")
+	flag.StringVar(&reissuedAsset, "reissue", "", "Asset to reissue")
+	flag.Parse()
+
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, KeyIssueAsset, true)
 	ctx = context.WithValue(ctx, KeyReissueAsset, true)
 	RawTransaction(ctx)
-	RawTransactionElements(ctx)
-	RawReissuanceElements(ctx)
+	RawTransactionElements(ctx, destAddress, changeAddress, assetAddress, tokenAddress)
+	RawReissuanceElements(ctx, reissuedAsset)
 }
 
 func RawTransaction(ctx context.Context) {
@@ -104,7 +118,7 @@ func RawTransaction(ctx context.Context) {
 
 }
 
-func RawTransactionElements(ctx context.Context) {
+func RawTransactionElements(ctx context.Context, destAddress, changeAddress, assetAddress, tokenAddress string) {
 	var isAssetIssuance bool
 	switch ctxValue := ctx.Value(KeyIssueAsset).(type) {
 	case bool:
@@ -115,14 +129,9 @@ func RawTransactionElements(ctx context.Context) {
 		panic("Invalid rpcClient")
 	}
 
-	// Below are some values that work with the wallet I use for testing, but obviously it would fail with any other
-	destinationAddress := "el1qqgtvpnmmxdpp9ramzde76496m4hsvu7vtxqnhps4qp37k90r7vnvcvyajp5fef556em57lku9qju832r9ddtv8s0u2q8srlu0"
-	changeAddress := "el1qq2tt6t2r5z5p99fj4z6zevs8wahdnvxgs3fn0nu2fy4ngkkdqhfpm9sgxxx76t0cphgu95s6rhjxjzvka3fxxdv4vqx9x86hz"
-	assetAddress := "el1qq2l5kfqg2l9qy0nptnpz7w6rpjx4xq2njuepejgffl4jt2vd74njl5zh3rdgs3tra2z94aj69ws77aj9ar7xkuusj4pnjru7a"
-	tokenAddress := "el1qq054gxp5n06fu992pavzalzmuy3xrev2299yvz68u3szf40whyy2sruncl23d5j6cswmeqt7xdetmryhztl05wl36h8pw5yxg"
-
+	// We create 2 LBTC outputs, which might be a bit unnecessary
 	hex, err := commands.CreateRawTransaction(ctx, rpcClient, nil, []commands.SpendInfo{
-		{Address: string(destinationAddress), Amount: 0.001},
+		{Address: string(destAddress), Amount: 0.001},
 	}, nil)
 	if err != nil {
 		panic(err)
@@ -302,7 +311,7 @@ func RawTransactionElements(ctx context.Context) {
 
 }
 
-func RawReissuanceElements(ctx context.Context) {
+func RawReissuanceElements(ctx context.Context, assetID string) {
 	var isAssetReissuance bool
 	switch ctxValue := ctx.Value(KeyReissueAsset).(type) {
 	case bool:
@@ -312,34 +321,37 @@ func RawReissuanceElements(ctx context.Context) {
 	switch {
 	case isAssetReissuance == true:
 
-		// Those values are highly dependent on the wallet, and will fail with any other wallet
-		// next step would be to get thos values from the node and not hard-coded so that it can be portable
-		entropy := "fd300cee9557a6b1fb3b20d2349f68f911e4b8941ba85a098694058b68a7e0e4"
-		tokenID := "91da6e2b69f5cb7a69a1c8599fd112b39be3775a9c7c5c15c7c455ec20b520da"
-		txID := "41b396cf4c6d19ac17e42f18fd6f09572804e230198fc70f87da3e76ea316307"
-		vout := 1
-		assetBlinding := "c85be42b4b8d6afc4ffceabf8826b9e733f843d3f761daf0f15b3c6c6aa7ac89"
-		// except those 2 which don't matter
-		tokenAmount := 0.00000001
-		assetAmount := 1000.00000002
-
 		rpcClient := elementsRpcClient("elements-testnet", 28433)
 		if rpcClient == nil {
 			panic("Invalid rpcClient")
 		}
 
-		// I should be able to get the assetblinder like this:
-		// call listunspent for the token and look at the asset_blinder field
-		/*tokenUtxo, err := commands.ListUnspentWithAsset(ctx, rpcClient, nil, tokenID)
+		issuanceInfo, err := commands.ListIssuances(ctx, rpcClient, commands.AssetID(assetID))
 		if err != nil {
 			panic(err)
 		}
-		assetBlinding := tokenUtxo[0].AssetBlinder*/
+		log.Printf("issuanceInfo is %+v", issuanceInfo)
+		i := 0
+		for i < len(issuanceInfo) && issuanceInfo[i].Isreissuance == true {
+			i++
+		}
+		entropy := issuanceInfo[i].Entropy
+		tokenID := issuanceInfo[i].Token
 
-		// Those don't matter much, better to use our address though
-		changeAddress := "el1qqfrxvlt6hmqjnewjtnjn3d6t0w3xgqd4h09g0r6ng4lskdrgafmzdfccykjuftdu5hcw8m56gv3g978nrcdek8nasqquddhuf"
-		tokenAddress := "el1qqgxj54w6f0amzuctkptu3tgt5pxacjfjvas70tyq7m58lz7sp0tccp9cr2vxrx7v83y0r63f24lh25vxupfyc4nw4df8d6g8c"
-		assetAddress := "el1qqdjjeqzweh26nx9jvztmmzzkhx3u44j4n9dfhtf89dwn79xzd2dh87m40kkr7ucfr34n544t4q39r6glh2rxzfgqnfv6jscec"
+		unspentInfo, err := commands.ListUnspentWithAssetWithMaxCount(ctx, rpcClient, nil, tokenID, 1)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("unspentinfo is %+v", unspentInfo)
+		txID := unspentInfo[0].TxID
+		vout := unspentInfo[0].Vout
+		assetBlinder := unspentInfo[0].AssetBlinder
+		tokenAmount := unspentInfo[0].Amount // there's no point not spending the whole UTXO here
+		assetAmount := 1000.00000002
+
+		changeAddress := "el1qqd98jldp2wm05ew4xte6l8kaaufjekrau5h698zc4wth5j7uft5cuntxyrx0yj5eapgq8lzjvkw6y7xezhuwy8sdltd68prcl"
+		tokenAddress := "el1qqw5paxt5wgxxj0z4x75u4hu8x905ypmq33z7gkzpu06lpa7azhpaj7y5u8fpverafnzyuye9gcjpn8skyflhc56rrz3nzj3cu"
+		assetAddress := "el1qqw5tm9jr9kl92t6ucg8cus9hr7chntenfvf634pf3jt79nftz4yteck9k7u8vf5c8jn2l5u3nac4a3vszpp47pv03huadvlp6"
 
 		hex, err := commands.CreateRawTransaction(ctx, rpcClient, []commands.UTXOInfo{
 			{TxID: txID, Vout: vout}, // this is the previous token output
@@ -373,7 +385,7 @@ func RawReissuanceElements(ctx context.Context) {
 			assetAmount,
 			assetAddress,
 			entropy,
-			assetBlinding,
+			assetBlinder,
 			0, // we put the token input at index 0 with createrawtransaction
 		)
 		if err != nil {
