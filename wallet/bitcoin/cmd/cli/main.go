@@ -30,12 +30,16 @@ func main() {
 	var assetAddress string
 	var tokenAddress string
 	var reissuedAsset string
+	var burnAsset string
+	var amountBurn float64
 
 	flag.StringVar(&destAddress, "dest", "", "Address to send L-BTC")
 	flag.StringVar(&changeAddress, "change", "", "Address to send change")
 	flag.StringVar(&assetAddress, "asset", "", "Address to send asset")
 	flag.StringVar(&tokenAddress, "token", "", "Address to send token")
 	flag.StringVar(&reissuedAsset, "reissue", "", "Asset to reissue")
+	flag.StringVar(&burnAsset, "burnAsset", "", "Asset to burn")
+	flag.Float64Var(&amountBurn, "burnAmount", 0.0, "Amount of assets to burn")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -44,6 +48,7 @@ func main() {
 	RawTransaction(ctx)
 	RawTransactionElements(ctx, destAddress, changeAddress, assetAddress, tokenAddress)
 	RawReissuanceElements(ctx, reissuedAsset)
+	BurnAsset(ctx, destAddress, changeAddress, burnAsset, amountBurn)
 }
 
 func RawTransaction(ctx context.Context) {
@@ -426,6 +431,85 @@ func RawReissuanceElements(ctx context.Context, assetID string) {
 		fmt.Println("Asset reissuance is deactivated")
 		return
 	}
+}
+
+func BurnAsset(ctx context.Context, destAddress, changeAddress, asset string, amount float64) {
+	rpcClient := elementsRpcClient("elements-testnet", 28433) // this may change
+	if rpcClient == nil {
+		panic("Invalid rpcClient")
+	}
+
+	log.Printf("Burning %f of asset %s\n", amount, asset)
+
+	unspentInfo, err := commands.ListUnspentWithAsset(ctx, rpcClient, nil, asset)
+	if err != nil {
+		panic(err)
+	}
+	i := 0
+	var sumAmt float64
+	Vin := []commands.UTXOInfo{}
+	for sumAmt = 0.0; sumAmt < amount || i >= len(unspentInfo); i++ {
+		sumAmt += unspentInfo[i].Amount
+		Vin = append(Vin, commands.UTXOInfo{
+			TxID: unspentInfo[i].TxID,
+			Vout: unspentInfo[i].Vout,
+		})
+	}
+
+	if sumAmt < amount {
+		panic("Not enough assets to burn")
+	}
+
+	hex, err := commands.CreateRawTransaction(ctx, rpcClient, Vin, []commands.SpendInfo{
+		{Address: "burn", Amount: amount},
+		{Address: destAddress, Amount: (sumAmt - amount)},
+	}, []commands.AssetInfo{
+		{Address: "burn", Asset: asset},
+		{Address: destAddress, Asset: asset},
+	})
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("CreateRawTransaction: %s\n", hex)
+
+	log.Printf("changeAddress is %s", changeAddress)
+
+	funded, err := commands.FundRawTransactionWithOptions(ctx,
+		rpcClient,
+		hex,
+		commands.FundRawTransactionOptions{
+			ChangeAddress:   changeAddress,
+			IncludeWatching: true,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("FundRawTransaction: %+v\n", funded)
+
+	toSign := funded.Hex
+	blinded, err := commands.BlindRawTransaction(ctx, rpcClient, commands.Transaction(toSign))
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("Blinded transaction: %s\n", blinded)
+
+	signed, err := commands.SignRawTransactionWithWallet(ctx, rpcClient, commands.Transaction(blinded))
+	if err != nil {
+		panic(err)
+	}
+	if !signed.Complete {
+		log.Printf("SignRawTransactionWithWallet failed\n") //this is expected if using a watch-only wallet
+		return                                              // Just continue the test for now
+	}
+	log.Printf("burn transaction signed:\n%+v", signed.Hex)
+
+	accepted, err := commands.TestMempoolAccept(ctx, rpcClient, signed.Hex)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Accepted in the mempool: %+v\n", accepted.Allowed)
 }
 
 func bitcoinRpcClient(hostname string, port int) commands.RpcClient {
