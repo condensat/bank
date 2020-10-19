@@ -5,6 +5,7 @@ type Command string
 const (
 	CmdGetBlockCount       = Command("getblockcount")
 	CmdGetNewAddress       = Command("getnewaddress")
+	CmdListIssuances       = Command("listissuances")
 	CmdListUnspent         = Command("listunspent")
 	CmdLockUnspent         = Command("lockunspent")
 	CmdListLockUnspent     = Command("listlockunspent")
