@@ -27,4 +27,5 @@ const (
 	CmdTestMempoolAccept            = Command("testmempoolaccept")
 
 	CmdRawIssueAsset = Command("rawissueasset")
+	CmdListIssuances = Command("listissuances")
 )
