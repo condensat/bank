@@ -10,5 +10,6 @@ const (
 	WalletStatusSubject = chanPrefix + "WalletStatus"
 	WalletListSubject   = chanPrefix + "WalletList"
 
-	AssetIssuanceSubject = chanPrefix + "Asset.Issuance"
+	AssetListIssuancesSubject = chanPrefix + "Asset.ListIssuances"
+	AssetIssuanceSubject      = chanPrefix + "Asset.Issuance"
 )

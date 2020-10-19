@@ -60,6 +60,22 @@ func NextDeposit(ctx context.Context, chain string) error {
 	return nil
 }
 
+func ListIssuances(ctx context.Context, chain, asset string) error {
+	log := logger.Logger(ctx).WithField("Method", "ListIssuances")
+
+	answer, err := client.ListIssuances(ctx, chain, IssuerID, asset)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"Chain":     answer.Chain,
+		"Issuer ID": answer.IssuerID,
+		"Issuances": answer.Issuances,
+	}).Info("ListIssuances")
+	return nil
+}
+
 func AssetIssuance(ctx context.Context, chain string, issuanceMode string, assetAmount, tokenAmount float64, contractHash string) error {
 	log := logger.Logger(ctx).WithField("Method", "AssetIssuance")
 
@@ -155,6 +171,8 @@ func main() {
 	switch command {
 	case "getDepositAddress":
 		NextDeposit(ctx, chain)
+	case "listIssuances":
+		err = ListIssuances(ctx, chain, assetID)
 	case "issueAsset":
 		err = AssetIssuance(ctx, chain, issuanceMode, assetAmount, tokenAmount, contractHash)
 	default:
