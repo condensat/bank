@@ -131,6 +131,7 @@ func (p *Wallet) registerHandlers(ctx context.Context) context.Context {
 
 	nats.SubscribeWorkers(ctx, common.WalletStatusSubject, concurencyLevel, handlers.OnWalletStatus)
 	nats.SubscribeWorkers(ctx, common.WalletListSubject, concurencyLevel, handlers.OnWalletList)
+	nats.SubscribeWorkers(ctx, common.AssetIssuanceSubject, concurencyLevel, handlers.OnAssetIssuance)
 
 	log.Debug("Bank Wallet registered")
 	return ctx
@@ -243,4 +244,8 @@ func (p *Wallet) GetAddressInfo(ctx context.Context, chainName, address string) 
 
 func (p *Wallet) WalletInfo(ctx context.Context, chainName string) (common.WalletInfo, error) {
 	return chain.WalletInfo(ctx, chainName)
+}
+
+func (p *Wallet) IssueNewAsset(ctx context.Context, changeAddress string, spendInfos common.SpendInfo, request common.IssuanceRequest) (common.IssuanceResponse, error) {
+	return chain.IssueNewAsset(ctx, changeAddress, spendInfos, request)
 }

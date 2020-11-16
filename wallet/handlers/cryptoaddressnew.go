@@ -263,6 +263,9 @@ func convertToSsmChain(chain model.String) model.SsmChain {
 	case "liquid-mainnet":
 		return "liquidv1"
 
+	case "liquid-regtest":
+		return "elements-regtest"
+
 	default:
 		return ""
 	}
