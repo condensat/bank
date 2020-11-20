@@ -178,11 +178,37 @@ func AssetReissuance(ctx context.Context, chain string, assetID string, assetAmo
 	return nil
 }
 
+func AssetBurn(ctx context.Context, chain string, assetID string, assetAmount float64) error {
+	log := logger.Logger(ctx).WithField("Method", "AssetBurn")
+
+	if len(assetID) != 64 {
+		return errors.New("Wrong asset ID, must be 64B hexstring")
+	}
+
+	if assetAmount <= 0.0 {
+		return errors.New("Can't burn null or negative asset amount")
+	}
+
+	answer, err := client.AssetBurn(ctx, chain, IssuerID, assetID, assetAmount)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"Chain":     answer.Chain,
+		"Issuer ID": answer.IssuerID,
+		"TxID":      answer.TxID,
+		"Vout":      answer.Vout,
+	})
+	return nil
+}
+
 func main() {
 	var command string
 	var chain string
 	var contractHash string
 	var issuanceMode string
+	var assetID string
 	var assetAmount float64
 	var tokenAmount float64
 	flag.StringVar(&command, "cmd", "", "Possible commands: [getDepositAddress, listIssuances, issueAsset, reissueAsset, burnAsset]")
@@ -191,6 +217,7 @@ func main() {
 	flag.Float64Var(&assetAmount, "assetAmount", 0.0, "amount of the new asset to issue")
 	flag.Float64Var(&tokenAmount, "tokenAmount", 0.0, "amount of the reissuance token to issue(issueAsset only)")
 	flag.StringVar(&contractHash, "contractHash", "", "hash to commit in the issuance(issueAsset only)")
+	flag.StringVar(&assetID, "assetID", "", "ID of the asset to list/reissue/burn")
 	args := parseArgs()
 
 	ctx := context.Background()
@@ -210,6 +237,8 @@ func main() {
 		err = AssetIssuance(ctx, chain, issuanceMode, assetAmount, tokenAmount, contractHash)
 	case "reissueAsset":
 		err = AssetReissuance(ctx, chain, assetID, assetAmount)
+	case "burnAsset":
+		err = AssetBurn(ctx, chain, assetID, assetAmount)
 	default:
 		log.Fatalf("Unknown command %s", command)
 	}
