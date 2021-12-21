@@ -35,6 +35,27 @@ func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey comm
 		return common.UserInfo{}, errors.New("Invalid Database")
 	}
 
+	bankMail := model.UserEmail(appcontext.BankMail(ctx))
+	if len(bankMail) == 0 {
+		return common.UserInfo{}, errors.New("Invalid bankMail")
+	}
+	bankUser, err := database.FindUserByEmail(db, bankMail)
+	if err != nil {
+		return common.UserInfo{}, errors.New("BankUser not found")
+	}
+
+	bankPgp, err := database.FindUserPgp(db, bankUser.ID)
+	if err != nil {
+		return common.UserInfo{}, errors.New("BankUser pgp not found")
+	}
+
+	bankPgp.PgpPrivateKey = model.PgpPrivateKey(security.ReadSecret(ctx, string(bankPgp.PgpPrivateKey)))
+
+	condensat := security.ReadPrivateKey(bankPgp.PgpPrivateKey)
+	if condensat == nil {
+		return common.UserInfo{}, errors.New("Invalid condensat pgp key")
+	}
+
 	if withOperatorAuth {
 		if len(authInfo.OperatorAccount) == 0 {
 			return common.UserInfo{}, errors.New("Invalid OperatorAccount")
