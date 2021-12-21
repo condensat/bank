@@ -17,6 +17,7 @@ type HasherOptions struct {
 type Options struct {
 	AppName  string
 	LogLevel string
+	BankUser string
 
 	PasswordHashSeed string
 	Hasher           HasherOptions
@@ -35,6 +36,7 @@ func OptionArgs(args *Options, defaultAppName string) {
 
 	flag.StringVar(&args.AppName, "appName", defaultAppName, "Application Name")
 	flag.StringVar(&args.LogLevel, "log", "warning", "Log level [trace, debug, info, warning, error]")
+	flag.StringVar(&args.BankUser, "bankUser", "bank@condensat.tech", "Bank database email [bank@condensat.tech]")
 
 	flag.StringVar(&args.PasswordHashSeed, "hash_seed", "", "Seed used for hash salt")
 
