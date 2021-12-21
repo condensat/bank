@@ -2,11 +2,16 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/api/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -18,7 +23,33 @@ const (
 )
 
 func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey common.PGPPublicKey) (common.UserInfo, error) {
-	return common.UserInfo{}, nil
+	db := appcontext.Database(ctx)
+	if db == nil {
+		return common.UserInfo{}, errors.New("Invalid Database")
+	}
+
+	var accountNumber string
+	var email string
+	for {
+		accountNumber = randSeq(common.AccountNumberLength)
+		email = fmt.Sprintf("%s@condensat.tech", accountNumber)
+
+		user, err := database.FindUserByEmail(db, model.UserEmail(email))
+		if err != nil {
+			return common.UserInfo{}, errors.New("Database Error")
+		}
+		// brand new user, break
+		if user.ID == 0 {
+			break
+		}
+
+		// user exists, generate new acount number
+		accountNumber = randSeq(common.AccountNumberLength)
+	}
+
+	return common.UserInfo{
+		AccountNumber: accountNumber,
+	}, nil
 }
 
 func OnUserCreate(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {

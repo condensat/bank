@@ -14,3 +14,5 @@ type UserInfo struct {
 	TOTP          TOTP
 	PayLoad       PGPString
 }
+
+const AccountNumberLength = 10
