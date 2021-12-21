@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"time"
 
 	"git.condensat.tech/bank/appcontext"
@@ -33,14 +34,14 @@ func (p *CookieCodec) NewRequest(r *http.Request) rpc.CodecRequest {
 	return &CookieCodecRequest{
 		ctx:     p.ctx,
 		request: p.codec.NewRequest(r),
-		domain:  p.domain,
+		url:     r.URL,
 	}
 }
 
 type CookieCodecRequest struct {
 	ctx     context.Context
 	request rpc.CodecRequest
-	domain  string
+	url     *url.URL
 }
 
 func (p *CookieCodecRequest) Method() (string, error) {
@@ -58,7 +59,7 @@ func (p *CookieCodecRequest) WriteResponse(w http.ResponseWriter, args interface
 
 	switch reply := args.(type) {
 	case *SessionReply:
-		setSessionCookie(p.domain, w, reply)
+		setSessionCookie(p.url.Hostname(), w, reply)
 
 	default:
 		log := logger.Logger(p.ctx).WithField("Method", "CookieCodecRequest.WriteResponse")
@@ -122,7 +123,7 @@ func CreateSessionWithCookie(ctx context.Context, r *http.Request, w http.Respon
 			Error("openUserSession failed")
 	}
 
-	setSessionCookie(appcontext.Domain(ctx), w, &reply)
+	setSessionCookie(r.URL.Hostname(), w, &reply)
 
 	return nil
 }
