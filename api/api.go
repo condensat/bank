@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"git.condensat.tech/bank/api/common"
+	"git.condensat.tech/bank/api/handlers"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/utils"
@@ -32,6 +34,8 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string, oa
 	if len(oauthOptions.Domain) > 0 {
 		ctx = appcontext.WithDomain(ctx, oauthOptions.Domain)
 	}
+
+	p.registerHandlers(ctx)
 
 	err := oauth.Init(oauthOptions)
 	if err != nil {
@@ -75,6 +79,18 @@ func (p *Api) Run(ctx context.Context, port int, corsAllowedOrigins []string, oa
 	}).Info("Api Service started")
 
 	<-ctx.Done()
+}
+
+func (p *Api) registerHandlers(ctx context.Context) {
+	log := logger.Logger(ctx).WithField("Method", "APi.RegisterHandlers")
+
+	nats := appcontext.Messaging(ctx)
+
+	const concurencyLevel = 2
+
+	nats.SubscribeWorkers(ctx, common.UserCreateSubject, concurencyLevel, handlers.OnUserCreate)
+
+	log.Debug("Bank Api registered")
 }
 
 // AddWorkerHeader - adds header of which node actually processed request
