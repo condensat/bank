@@ -33,3 +33,5 @@ require (
 )
 
 replace github.com/btcsuite/btcd => github.com/condensat/btcd v0.20.1-beta.0.20200424100000-5dc523e373e2
+
+replace golang.org/x/crypto/openpgp => github.com/keybase/go-crypto/openpgp v0.0.0-20200123153347-de78d2cb44f4
