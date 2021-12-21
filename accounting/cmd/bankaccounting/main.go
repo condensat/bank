@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"os"
 
 	"git.condensat.tech/bank/accounting"
 	"git.condensat.tech/bank/appcontext"
@@ -11,10 +13,10 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/security"
 )
 
 type Accounting struct {
-	BankUser string
 }
 
 type Args struct {
@@ -36,8 +38,6 @@ func parseArgs() Args {
 	messaging.OptionArgs(&args.Nats)
 	database.OptionArgs(&args.Database)
 
-	flag.StringVar(&args.Accounting.BankUser, "bankUser", "bank@condensat.tech", "Bank database email [bank@condensat.tech]")
-
 	flag.Parse()
 
 	return args
@@ -56,7 +56,7 @@ func main() {
 	migrateDatabase(ctx)
 	createDefaultFeeInfo(ctx)
 
-	bankUser := createBankAccounts(ctx, args.Accounting)
+	bankUser := createBankAccounts(ctx, model.UserEmail(args.App.BankUser))
 
 	var service accounting.Accounting
 	service.Run(ctx, bankUser)
@@ -116,27 +116,63 @@ func createDefaultFeeInfo(ctx context.Context) {
 	}
 }
 
-func createBankAccounts(ctx context.Context, accounting Accounting) model.User {
+func createBankAccounts(ctx context.Context, bankUserMail model.UserEmail) model.User {
 	db := appcontext.Database(ctx)
 
-	ret := model.User{
-		Name:  "Condensat Bank",
-		Email: model.UserEmail(accounting.BankUser),
-	}
-	ret, err := database.FindOrCreateUser(db, ret)
+	bankUser, err := database.FindUserByEmail(db, bankUserMail)
 	if err != nil {
 		logger.Logger(ctx).
 			WithError(err).
-			WithField("UserID", ret.ID).
-			WithField("Name", ret.Name).
-			WithField("Email", ret.Email).
-			Panic("Unable to FindOrCreateUser BankUser")
+			Panic("Failed to find BankUser")
+	}
+	if bankUser.ID == 0 {
+		bankUser = model.User{
+			Name:  "CondensatBank",
+			Email: bankUserMail,
+		}
+		bankUser, err = database.FindOrCreateUser(db, bankUser)
+		if err != nil {
+			logger.Logger(ctx).
+				WithError(err).
+				WithField("UserID", bankUser.ID).
+				WithField("Name", bankUser.Name).
+				WithField("Email", bankUser.Email).
+				Panic("Unable to FindOrCreateUser BankUser")
+		}
+
+		pubKey, privKey, err := security.CreateKeys(
+			"CondensatBank",
+			"Condensat PGP identity",
+			string(bankUserMail),
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		// encrypt keys
+		pubKey = model.PgpPublicKey(security.WriteSecret(ctx, string(pubKey)))
+		privKey = model.PgpPrivateKey(security.WriteSecret(ctx, string(privKey)))
+
+		_, err = database.AddUserPgp(db, bankUser.ID, pubKey, privKey)
+		if err != nil {
+			panic(err)
+		}
+
 	}
 
+	// get public keys from database
+	bankPgp, err := database.FindUserPgp(db, bankUser.ID)
+	if err != nil {
+		panic(err)
+	}
+
+	// decrypt public key
+	bankPgp.PublicKey = model.PgpPublicKey(security.ReadSecret(ctx, string(bankPgp.PublicKey)))
 	logger.Logger(ctx).
-		WithError(err).
-		WithField("UserID", ret.ID).
-		WithField("Email", ret.Email).
-		Info("BankUser")
-	return ret
+		Info("BankUser PGP publicKey")
+	fmt.Fprintf(os.Stderr, "%s\n", bankPgp.PublicKey)
+
+	bankPgp.PgpPrivateKey = model.PgpPrivateKey(security.ReadSecret(ctx, string(bankPgp.PgpPrivateKey)))
+
+	return bankUser
 }
