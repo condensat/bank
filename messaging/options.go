@@ -24,7 +24,15 @@ func OptionArgs(args *NatsOptions) {
 		panic("Invalid args options")
 	}
 
+	OptionCmdArgs(flag.CommandLine, args)
+}
+
+func OptionCmdArgs(cmd *flag.FlagSet, args *NatsOptions) {
+	if args == nil {
+		panic("Invalid args options")
+	}
+
 	defaults := DefaultOptions()
-	flag.StringVar(&args.HostName, "natsHost", defaults.HostName, "Nats hostName (default 'nats')")
-	flag.IntVar(&args.Port, "natsPort", defaults.Port, "Nats port (default 4222)")
+	cmd.StringVar(&args.HostName, "natsHost", defaults.HostName, "Nats hostName (default 'nats')")
+	cmd.IntVar(&args.Port, "natsPort", defaults.Port, "Nats port (default 4222)")
 }
