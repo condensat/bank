@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
+	"time"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/client"
@@ -161,8 +164,28 @@ func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey comm
 	}
 
 	log.Info("User account created with TOTP credentials")
-	return common.UserInfo{
+
+	message, err := createWelcomeMessage(accountInfo{
+		URL:           "http://condensat77h5dzs5vtnng6finwyyswqw42lmdud4pwdggjx2mlsilad.onion/login",
 		AccountNumber: accountNumber,
+		TOTP:          key.Secret(),
+	})
+
+	if err != nil {
+		return common.UserInfo{}, errors.New("Failed to Write message")
+	}
+
+	to := security.ReadPublicKey(model.PgpPublicKey(pgpPublicKey))
+	payload, err := security.PgpEncryptMessageFor(message, condensat, to)
+	if err != nil {
+		return common.UserInfo{}, errors.New("Failed to PgpEncryptMessageFor")
+	}
+
+	return common.UserInfo{
+		UserID:        uint64(credential.UserID),
+		AccountNumber: accountNumber,
+		Timestamp:     time.Now().Truncate(time.Second).UTC(),
+		PayLoad:       common.PGPString(payload),
 	}, nil
 }
 
@@ -232,4 +255,32 @@ func OnUserCreate(ctx context.Context, subject string, message *bank.Message) (*
 				},
 			}, nil
 		})
+}
+
+type accountInfo struct {
+	URL           string
+	AccountNumber string
+	TOTP          string
+}
+
+const tplWelcome = `Welcome to Condensat.
+To access to your account you need GoogleAuthenticator & TorBrowser
+
+Address: {{ .URL }}
+AccountNumber:  {{ .AccountNumber }}
+TOTP: {{ .TOTP }}
+`
+
+func createWelcomeMessage(ai accountInfo) (string, error) {
+	wt, err := template.New("welcome").Parse(tplWelcome)
+	if err != nil {
+		return "", errors.New("Failed to Write message")
+	}
+	writer := bytes.NewBuffer(nil)
+	err = wt.Execute(writer, ai)
+	if err != nil {
+		return "", errors.New("Failed to Write message")
+	}
+
+	return writer.String(), nil
 }
