@@ -18,6 +18,7 @@ func UserModel() []model.Model {
 	return []model.Model{
 		model.Model(new(model.User)),
 		model.Model(new(model.UserRole)),
+		model.Model(new(model.UserPGP)),
 	}
 }
 
