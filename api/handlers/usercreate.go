@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -14,6 +15,7 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/security/utils"
 
 	"github.com/sirupsen/logrus"
 )
@@ -26,6 +28,37 @@ func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey comm
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return common.UserInfo{}, errors.New("Invalid Database")
+	}
+
+	if withOperatorAuth {
+		if len(authInfo.OperatorAccount) == 0 {
+			return common.UserInfo{}, errors.New("Invalid OperatorAccount")
+		}
+		if len(authInfo.TOTP) == 0 {
+			return common.UserInfo{}, errors.New("Invalid TOTP")
+		}
+
+		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
+
+		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
+		if err != nil {
+			return common.UserInfo{}, errors.New("OperatorAccount not found")
+		}
+		if operator.Name != model.UserName(authInfo.OperatorAccount) {
+			return common.UserInfo{}, errors.New("Wrong OperatorAccount")
+		}
+
+		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
+		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
+		if err != nil {
+			return common.UserInfo{}, errors.New("CheckTOTP failed")
+		}
+		if !valid {
+			return common.UserInfo{}, errors.New("Invalid OTP")
+		}
+		if operatorID != operator.ID {
+			return common.UserInfo{}, errors.New("Wrong operator ID")
+		}
 	}
 
 	var accountNumber string
