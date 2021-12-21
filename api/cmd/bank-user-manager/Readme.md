@@ -1,31 +1,51 @@
 # BankUserManagement
 
-This tool imports user and credential from file into database
-Logins and passwords are hashed before storing.
+Command line tool to operate with Condensat Bank internal Api.
+Communication are made through nats messaginf system.
+Authentification methode is base on operator accountNumber and one time password (totp).
 
-New users are created.
-Credentials are override for existing user (depending on `hash_seed` flag or `$PasswordHashSeed` env)
-
-## Usage
-
-From file:
+TL;DR :
 
 ```bash
-	go run go run api/cmd/bank-user-manager/main.go --userFile=<userfile> 
+  go run go run ./api/cmd/bank-user-manager userCreate --pgpPublicKey=<UserPGPPublicFile> | tee -a userCreate.log
 ```
 
-From Stdin:
+If `operatorAccount` and `totp` are not set, unauthenticated call is made.
+
+## Environement variable
+
+Use `.env` file to store operator account and nats address (tor)
 
 ```bash
-	go run go run api/cmd/bank-user-manager/main.go < <userfile>
+  CONDENSAT_OPERATOR_ACCOUNT=123456789
+  CONDENSAT_NATS_TOR=nats-host.onion
 ```
 
-## Userfile format
+## Commond flags
 
-````
-<login>:<password>:<valid_email>:roles[](admin,user)
+```bash
+Usage of userCreate:
+
+  -natsHost string
+    	Nats hostName (default 'nats')
+  -natsPort int
+    	Nats port (default 4222)
+
+  -operatorAccount string
+    	Operator Account
+  -totp string
+    	Operator TOTP
 ```
 
-## Roles
+## Commands
 
-Roles are liste of named roles allowing access control to ressources.
+### userCreate
+
+```bash
+Usage of userCreate:
+  -pgpPublicKey string
+    	Client PGP public key filename
+```
+
+Once use created pgp encrypted message is displayed with new created accountNumber.
+User's public key is used for cyphering and store to database for further use.

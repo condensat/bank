@@ -30,6 +30,7 @@ require (
 	github.com/ybbus/jsonrpc v2.1.2+incompatible
 	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 )
 
 replace github.com/btcsuite/btcd => github.com/condensat/btcd v0.20.1-beta.0.20200424100000-5dc523e373e2

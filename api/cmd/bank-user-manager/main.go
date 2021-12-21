@@ -2,58 +2,51 @@ package main
 
 import (
 	"context"
-	"flag"
 
-	"git.condensat.tech/bank/api"
+	"git.condensat.tech/bank/api/common"
 	"git.condensat.tech/bank/appcontext"
-	"git.condensat.tech/bank/database"
-	"git.condensat.tech/bank/logger"
+	"git.condensat.tech/bank/messaging"
+
+	log "github.com/sirupsen/logrus"
+
+	dotenv "github.com/joho/godotenv"
 )
 
-type ResultCode int
-
-const (
-	ResultCodeOK ResultCode = iota
-)
-
-type Args struct {
-	App      appcontext.Options
-	Database database.Options
-
-	UserFile string
-}
-
-func parseArgs() Args {
-	var args Args
-
-	appcontext.OptionArgs(&args.App, "BankUserManager")
-	database.OptionArgs(&args.Database)
-
-	flag.StringVar(&args.UserFile, "userFile", "-", "UserFile or StdIn ('-')")
-
-	flag.Parse()
-
-	return args
+func init() {
+	_ = dotenv.Load()
 }
 
 func main() {
-	args := parseArgs()
-
 	ctx := context.Background()
-	ctx = appcontext.WithOptions(ctx, args.App)
-	ctx = appcontext.WithHasherWorker(ctx, args.App.Hasher)
-	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	args := parseArgs(ctx)
 
-	migrateDatabase(ctx)
+	if len(args.Common.AuthInfo.OperatorAccount) > 0 && len(args.Common.AuthInfo.TOTP) == 0 {
+		totp, err := readTOTP()
+		if err != nil {
+			panic(err)
+		}
+		args.Common.AuthInfo.TOTP = common.TOTP(totp)
+	}
+
+	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Common.Nats))
+
+	Run(ctx, args)
 }
 
-func migrateDatabase(ctx context.Context) {
-	db := appcontext.Database(ctx)
+func Run(ctx context.Context, args Args) {
+	var err error
+	switch args.Command {
 
-	err := db.Migrate(api.Models())
+	case UserCreate:
+		err = userCreate(ctx, args.Common.AuthInfo, args.UserCreate)
+
+	default:
+		printUsage(1)
+	}
+
 	if err != nil {
-		logger.Logger(ctx).WithError(err).
-			WithField("Method", "main.migrateDatabase").
-			Panic("Failed to migrate api models")
+		log.WithError(err).
+			WithField("Command", args.Command).
+			Error("Error while processing command.")
 	}
 }
