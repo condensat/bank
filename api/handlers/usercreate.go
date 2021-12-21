@@ -15,8 +15,11 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
+	"git.condensat.tech/bank/security"
 	"git.condensat.tech/bank/security/utils"
 
+	"github.com/pquerna/otp/totp"
+	"github.com/shengdoushi/base58"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,6 +28,8 @@ const (
 )
 
 func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey common.PGPPublicKey) (common.UserInfo, error) {
+	log := logger.Logger(ctx).WithField("Method", "api.UserCreate")
+
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return common.UserInfo{}, errors.New("Invalid Database")
@@ -80,6 +85,61 @@ func UserCreate(ctx context.Context, authInfo common.AuthInfo, pgpPublicKey comm
 		accountNumber = randSeq(common.AccountNumberLength)
 	}
 
+	// got an accountNumber, create TOTP credentials
+	log = log.WithField("AccountNumber", accountNumber)
+
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "condensat.tech",
+		AccountName: accountNumber,
+	})
+	if err != nil {
+		log.WithError(err).Errorf("Failed to create TOTP")
+		return common.UserInfo{}, errors.New("TOTP create Failed")
+	}
+
+	var credential model.Credential
+	err = db.Transaction(func(tx bank.Database) error {
+		// Store user info into database
+		user, errTx := database.FindOrCreateUser(tx, model.User{
+			Name:  model.UserName(accountNumber),
+			Email: model.UserEmail(email),
+		})
+		if errTx != nil {
+			return errTx
+		}
+
+		login := database.HashEntry(model.Base58(accountNumber))
+		loginHash := security.SaltedHash(ctx, utils.HashString(string(login)))
+		passwordHash := security.SaltedHash(ctx, []byte(randSeq(32)))
+		credential, errTx = database.CreateOrUpdatedCredential(ctx, tx,
+			model.Credential{
+				UserID:       user.ID,
+				LoginHash:    model.Base58(base58.Encode(loginHash, security.DefaultAlphabet)),
+				PasswordHash: model.Base58(passwordHash),                            // password not used for TOTP, genrate random one
+				TOTPSecret:   model.String(security.WriteSecret(ctx, key.Secret())), // secret is encrypted with current PasswordHashSeed
+			},
+		)
+		if errTx != nil {
+			return errTx
+		}
+
+		_, errTx = database.AddUserPgp(tx, user.ID, model.PgpPublicKey(security.WriteSecret(ctx, string(pgpPublicKey))), "")
+		if errTx != nil {
+			return errTx
+		}
+
+		return nil
+	})
+	if credential.UserID == 0 {
+		err = errors.New("Failed to create credential for User")
+	}
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to CreateOrUpdatedCredential")
+		return common.UserInfo{}, errors.New("Failed to CreateOrUpdatedCredential")
+	}
+
+	log.Info("User account created with TOTP credentials")
 	return common.UserInfo{
 		AccountNumber: accountNumber,
 	}, nil
