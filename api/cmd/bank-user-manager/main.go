@@ -45,48 +45,6 @@ func main() {
 	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
 
 	migrateDatabase(ctx)
-
-	resultCode := make(chan ResultCode)
-	go mainAsync(ctx, args, resultCode)
-
-	select {
-	case result := <-resultCode:
-		switch result {
-		case ResultCodeOK:
-			logger.Logger(ctx).
-				WithField("Method", "main").
-				Trace("Finished")
-		default:
-			logger.Logger(ctx).
-				WithField("Method", "main").
-				WithField("Result", result).
-				Panicf("Unknown Code")
-		}
-	case <-ctx.Done():
-		logger.Logger(ctx).
-			WithField("Method", "main").
-			Warning("Context timeout")
-
-	}
-}
-
-func mainAsync(ctx context.Context, args Args, resultCode chan<- ResultCode) {
-	defer func() { resultCode <- ResultCodeOK }()
-
-	userInfos, err := api.FromUserInfoFile(ctx, args.UserFile)
-	if err != nil {
-		logger.Logger(ctx).WithError(err).
-			WithField("Method", "mainAsync").
-			Error("FromUserInfoFile Failed")
-		return
-	}
-	err = api.ImportUsers(ctx, userInfos...)
-	if err != nil {
-		logger.Logger(ctx).WithError(err).
-			WithField("Method", "mainAsync").
-			Error("ImportUsers failed")
-		return
-	}
 }
 
 func migrateDatabase(ctx context.Context) {
