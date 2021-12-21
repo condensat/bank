@@ -21,6 +21,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/onsi/gomega v1.8.1 // indirect
+	github.com/pquerna/otp v1.3.0
 	github.com/rs/cors v1.7.0
 	github.com/shengdoushi/base58 v1.0.0
 	github.com/sirupsen/logrus v1.4.2

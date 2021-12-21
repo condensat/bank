@@ -8,6 +8,7 @@ package services
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"git.condensat.tech/bank/api/sessions"
@@ -44,7 +45,7 @@ type SessionArgs struct {
 type SessionOpenRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
-	OTP      string `json:"otp,omitempty"`
+	TOTP     string `json:"totp,omitempty"`
 }
 
 // SessionReply holds session informations for operation replies
@@ -60,6 +61,12 @@ func setSessionCookie(domain string, w http.ResponseWriter, reply *SessionReply)
 	if expires.After(time.Now()) {
 		maxAge = int(time.Until(expires).Seconds())
 	}
+
+	isTor := strings.HasSuffix(domain, ".onion")
+	sameSite := http.SameSiteStrictMode
+	if isTor {
+		sameSite = http.SameSiteLaxMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:    "sessionId",
 		Value:   reply.SessionID,
@@ -68,9 +75,9 @@ func setSessionCookie(domain string, w http.ResponseWriter, reply *SessionReply)
 		MaxAge:  maxAge,
 		Expires: expires,
 
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   !isTor,
+		HttpOnly: !isTor,
+		SameSite: sameSite,
 	})
 }
 
@@ -99,7 +106,13 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 	}
 
 	// Check credentials
-	userID, valid, err := database.CheckCredential(ctx, db, model.Base58(request.Login), model.Base58(request.Password))
+	var userID model.UserID
+	var valid bool
+	if len(request.TOTP) != 0 {
+		userID, valid, err = database.CheckTOTP(ctx, db, model.Base58(request.Login), request.TOTP)
+	} else {
+		userID, valid, err = database.CheckCredential(ctx, db, model.Base58(request.Login), model.Base58(request.Password))
+	}
 	if err != nil {
 		log.WithError(err).
 			Warning("Session open failed")

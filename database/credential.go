@@ -12,6 +12,7 @@ import (
 	"git.condensat.tech/bank/security/utils"
 
 	"github.com/jinzhu/gorm"
+	"github.com/pquerna/otp/totp"
 	"github.com/shengdoushi/base58"
 )
 
@@ -19,6 +20,7 @@ var (
 	ErrUserNotFound        = errors.New("User not found")
 	ErrInvalidPasswordHash = errors.New("Invalid PasswordHash")
 	ErrDatabaseError       = errors.New("Database Operation failed")
+	ErrInvalidTOTP         = errors.New("Invalid TOTP")
 )
 
 func HashEntry(entry model.Base58) model.Base58 {
@@ -43,7 +45,7 @@ func CreateOrUpdatedCredential(ctx context.Context, db bank.Database, credential
 		err := gdb.
 			Where(&model.Credential{UserID: credential.UserID}).
 			Assign(&model.Credential{
-				LoginHash:    model.Base58(base58.Encode(loginHash, base58.BitcoinAlphabet)),
+				LoginHash:    model.Base58(credential.LoginHash),
 				PasswordHash: model.Base58(base58.Encode(passwordHash, base58.BitcoinAlphabet)),
 				TOTPSecret:   credential.TOTPSecret,
 			}).
@@ -86,6 +88,36 @@ func CheckCredential(ctx context.Context, db bank.Database, login, password mode
 		}
 
 		return cred.UserID, security.SaltedHashVerify(ctx, []byte(password), passwordHash), nil
+
+	default:
+		return 0, false, ErrInvalidDatabase
+	}
+}
+
+func CheckTOTP(ctx context.Context, db bank.Database, login model.Base58, passcode string) (model.UserID, bool, error) {
+	switch gdb := db.DB().(type) {
+	case *gorm.DB:
+
+		loginHash := security.SaltedHash(ctx, utils.HashString(string(login)))
+
+		var cred model.Credential
+		err := gdb.
+			Where(&model.Credential{
+				LoginHash: model.Base58(base58.Encode(loginHash, base58.BitcoinAlphabet)),
+			}).
+			First(&cred).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
+			return 0, false, ErrDatabaseError
+		}
+
+		if len(cred.TOTPSecret) == 0 {
+			return 0, false, errors.New("Invalid TOTP")
+		}
+
+		secret := security.ReadSecret(ctx, string(cred.TOTPSecret))
+		valid := totp.Validate(passcode, secret)
+
+		return cred.UserID, valid, nil
 
 	default:
 		return 0, false, ErrInvalidDatabase
