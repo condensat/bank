@@ -97,7 +97,7 @@ func AccountWithdraw(ctx context.Context, accountID, referenceID uint64, amount 
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
-	// Deposit amount must be positive
+	// amount must be positive
 	if amount <= 0.0 {
 		return common.AccountEntry{}, cache.ErrInternalError
 	}

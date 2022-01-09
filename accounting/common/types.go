@@ -4,7 +4,35 @@ import (
 	"time"
 
 	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/database/model"
 )
+
+type TOTP string
+
+type AuthInfo struct {
+	OperatorAccount string
+	TOTP            TOTP
+}
+
+type FiatOperationInfo struct {
+	Label  string
+	IBAN   string
+	BIC    string
+	Type   model.OperationType
+	Status string
+}
+
+type FiatWithdraw struct {
+	AuthInfo
+	Source      AccountEntry
+	Destination FiatOperationInfo
+}
+
+type FiatDeposit struct {
+	AuthInfo
+	Source      FiatOperationInfo
+	Destination AccountEntry
+}
 
 type CurrencyType int
 
@@ -129,6 +157,22 @@ type BatchUpdate struct {
 	BatchStatus
 	TxID   string
 	Height int
+}
+
+func (p *FiatWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatDeposit) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatDeposit) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *CurrencyList) Encode() ([]byte, error) {
