@@ -30,7 +30,7 @@ type FiatWithdraw struct {
 
 type FiatDeposit struct {
 	AuthInfo
-	Source      FiatOperationInfo
+	UserName    string
 	Destination AccountEntry
 }
 

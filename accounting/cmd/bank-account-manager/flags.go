@@ -16,7 +16,7 @@ func init() {
 }
 
 func printUsage(code int) {
-	fmt.Println("Use command [userCreate]")
+	fmt.Println("Use command [fiatDeposit,fiatWithdraw]")
 	os.Exit(code)
 }
 
@@ -32,6 +32,7 @@ type Args struct {
 	Common  CommonArg
 
 	FiatWithdraw FiatWithdrawArg
+	FiatDeposit  FiatDepositArg
 }
 
 func AuthInfoCmdArgs(cmd *flag.FlagSet, args *common.AuthInfo) {
@@ -61,6 +62,9 @@ func parseArgs(ctx context.Context) Args {
 
 	case FiatWithdraw:
 		cmd = fiatWithdrawArg(&args.FiatWithdraw)
+
+	case FiatDeposit:
+		cmd = fiatDepositArg(&args.FiatDeposit)
 
 	default:
 		printUsage(2)
