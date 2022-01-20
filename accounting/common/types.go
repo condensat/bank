@@ -14,19 +14,20 @@ type AuthInfo struct {
 	TOTP            TOTP
 }
 
-// type FiatSepaInfo struct {
-// 	IBAN  string
-// 	BIC   string
-// 	Label string
-// }
-
 type FiatOperationInfo struct {
 	Type   model.OperationType
 	Status string
 	IBAN   string
 	BIC    string
 	Label  string
-	// SepaInfo FiatSepaInfo
+}
+
+type FiatFinalizeWithdraw struct {
+	AuthInfo
+	UserName string
+	IBAN     string
+	Currency string
+	Amount   float64
 }
 
 type FiatWithdraw struct {
@@ -172,6 +173,14 @@ func (p *FiatWithdraw) Encode() ([]byte, error) {
 }
 
 func (p *FiatWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatFinalizeWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatFinalizeWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

@@ -192,6 +192,15 @@ func sepaInfoColumnNames() []string {
 }
 
 // zero allocation requests string for scope
+func reqSepaInfoID() string {
+	var req [len(colID) + len(reqEQ)]byte
+	off := 0
+	off += copy(req[off:], colID)
+	copy(req[off:], reqEQ)
+
+	return string(req[:])
+}
+
 func reqSepaInfoIban() string {
 	var req [len(colSepaInfoIban) + len(reqEQ)]byte
 	off := 0

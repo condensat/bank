@@ -41,6 +41,8 @@ func Run(ctx context.Context, args Args) {
 		err = fiatWithdraw(ctx, args.Common.AuthInfo, args.FiatWithdraw)
 	case FiatDeposit:
 		err = fiatDeposit(ctx, args.Common.AuthInfo, args.FiatDeposit)
+	case FiatFinalizeWithdraw:
+		err = fiatFinalizeWithdraw(ctx, args.Common.AuthInfo, args.FiatFinalizeWithdraw)
 
 	default:
 		printUsage(1)
