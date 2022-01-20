@@ -22,46 +22,7 @@ const (
 	withOperatorAuth = true
 )
 
-func addFiatWithdrawToList(ctx context.Context, operation common.FiatOperationInfo) (model.FiatOperationInfo, error) {
-	log := logger.Logger(ctx).WithField("Method", "accounting.addFiatWithdrawToList")
-
-	db := appcontext.Database(ctx)
-	if db == nil {
-		return model.FiatOperationInfo{}, errors.New("Invalid Database")
-	}
-
-	// Update Status to "pending"
-	if operation.Status != "unvalidated" {
-		return model.FiatOperationInfo{}, errors.New("Invalid Status")
-	}
-
-	operation.Status = "pending"
-
-	// transform our struct in a model
-	toWrite := model.FiatOperationInfo{
-		Label:  operation.Label,
-		IBAN:   operation.IBAN,
-		BIC:    operation.BIC,
-		Type:   operation.Type,
-		Status: operation.Status,
-	}
-
-	// Write to db
-	result, err := database.AddFiatOperationInfo(db, toWrite)
-	if err != nil {
-		return model.FiatOperationInfo{}, errors.New("AddFiatOperationInfo failed")
-	}
-
-	log.WithFields(logrus.Fields{
-		"Label":  result.Label,
-		"Type":   result.Type,
-		"Status": result.Status,
-	}).Debug("AddFiatOperationInfo success")
-
-	return result, nil
-}
-
-func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, withdraw common.AccountEntry) (common.AccountEntry, error) {
+func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, withdraw common.AccountEntry, sepaInfo common.FiatOperationInfo) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatWithdraw")
 
 	db := appcontext.Database(ctx)
@@ -100,6 +61,82 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, withdraw common
 		}
 	}
 
+	// Look for the user and its accounts
+	email := fmt.Sprintf("%s@condensat.tech", userName)
+
+	user, err := database.FindUserByEmail(db, model.UserEmail(email))
+	if err != nil {
+		return common.AccountEntry{}, err
+	}
+
+	if user.ID == 0 {
+		return common.AccountEntry{}, errors.New("userID can't be 0")
+	}
+
+	// Get AccountID with UserID
+	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(withdraw.Currency), model.AccountName("*"))
+	if err != nil || len(account) == 0 {
+		return common.AccountEntry{}, errors.New("Account not found")
+	}
+
+	withdraw.AccountID = uint64(account[0].ID)
+
+	// Look for the sepa with userID and IBAN
+	sepaUser, err := database.GetSepaByUserAndIban(db, user.ID, model.Iban(sepaInfo.IBAN))
+	if err != nil && err != database.ErrSepaNotFound {
+		return common.AccountEntry{}, err
+	}
+
+	if sepaUser.ID == 0 {
+
+		// if sepa is not registered, add it to db
+		sepaUser, err = database.CreateSepa(db, model.FiatSepaInfo{
+			UserID: user.ID,
+			IBAN:   model.Iban(sepaInfo.IBAN),
+			BIC:    model.Bic(sepaInfo.BIC),
+			Label:  model.String(sepaInfo.Label),
+		})
+		if err != nil {
+			return common.AccountEntry{}, err
+		}
+	} else {
+
+		// Is there a fiatoperation for this sepa AND this user?
+		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, user.ID, sepaUser.ID)
+		if err != nil {
+			return common.AccountEntry{}, err
+		}
+
+		// stop if there's already 1 or more pending withdrawal
+		switch len := len(fiatOperation); len {
+		case 0:
+			break
+		case 1:
+			return common.AccountEntry{}, errors.New("Already a pending withdrawal for this user and sepa")
+		default:
+			return common.AccountEntry{}, errors.New("Multiple pending withdrawals for this user and sepa")
+		}
+	}
+
+	var withdrawAmount model.Float = model.Float(-withdraw.Amount)
+	// If there's no pending withdrawal, let's create the operation
+	_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
+		UserID:       user.ID,
+		SepaInfoID:   sepaUser.ID,
+		CurrencyName: model.CurrencyName(withdraw.Currency),
+		Amount:       &withdrawAmount,
+		Type:         "withdrawal",
+		Status:       model.FiatOperationStatusPending,
+	})
+	if err != nil {
+		return common.AccountEntry{}, err
+	}
+
+	// Set reference id as userID
+	withdraw.ReferenceID = uint64(user.ID) // or SepaID?
+	log = log.WithField("ReferenceID", withdraw.ReferenceID)
+
+	// Now do the operation
 	result, err := AccountOperation(ctx, withdraw)
 	if err != nil {
 		return common.AccountEntry{}, errors.New("AccountOperation failed")
@@ -108,7 +145,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, withdraw common
 	log.WithFields(logrus.Fields{
 		"Operation":       result.OperationID,
 		"OperationPrevID": result.OperationPrevID,
-		"Currency":        result.Currency,
+		"Currency":        withdraw.Currency,
 		"Amount":          result.Amount,
 		"Balance":         result.Balance,
 		"Label":           result.Label,
@@ -126,7 +163,7 @@ func OnFiatWithdraw(ctx context.Context, subject string, message *bank.Message) 
 	var request common.FiatWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
-			operation, err := FiatWithdraw(ctx, request.AuthInfo, request.Source)
+			operation, err := FiatWithdraw(ctx, request.AuthInfo, request.UserName, request.Source, request.Destination)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatWithdraw")

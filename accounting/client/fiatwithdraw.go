@@ -6,17 +6,16 @@ import (
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
 	"github.com/sirupsen/logrus"
 )
 
-func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, accountID, referenceID uint64, amount float64, currency string, label string, iban string, bic string) (common.AccountEntry, error) {
+func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, amount float64, currency, bankLabel, iban, bic, userLabel string) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.FiatWithdraw")
 
-	if accountID == 0 {
+	if len(userName) == 0 {
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
@@ -25,32 +24,32 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, accountID, refe
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
+	if len(iban) == 0 {
+		return common.AccountEntry{}, cache.ErrInternalError
+	}
+
 	// TODO: check that currency is fiat
 
-	log = log.WithField("AccountID", accountID)
+	log = log.WithField("userName", userName)
 
 	request := common.FiatWithdraw{
 		AuthInfo: authInfo,
+		UserName: userName,
 		Source: common.AccountEntry{
-			AccountID: accountID,
-
-			ReferenceID:      referenceID,
 			OperationType:    "withdraw",
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
 
-			Label: label,
+			Label: bankLabel,
 
 			Amount:     -amount, // withdraw remove amount from account
 			LockAmount: 0.0,     // no lock on withdraw
 			Currency:   currency,
 		},
 		Destination: common.FiatOperationInfo{
-			Label:  label,
-			IBAN:   iban,
-			BIC:    bic,
-			Type:   model.OperationTypeWithdraw,
-			Status: "unvalidated",
+			Label: userLabel,
+			IBAN:  iban,
+			BIC:   bic,
 		},
 	}
 

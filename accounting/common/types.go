@@ -14,16 +14,24 @@ type AuthInfo struct {
 	TOTP            TOTP
 }
 
+// type FiatSepaInfo struct {
+// 	IBAN  string
+// 	BIC   string
+// 	Label string
+// }
+
 type FiatOperationInfo struct {
-	Label  string
-	IBAN   string
-	BIC    string
 	Type   model.OperationType
 	Status string
+	IBAN   string
+	BIC    string
+	Label  string
+	// SepaInfo FiatSepaInfo
 }
 
 type FiatWithdraw struct {
 	AuthInfo
+	UserName    string
 	Source      AccountEntry
 	Destination FiatOperationInfo
 }
