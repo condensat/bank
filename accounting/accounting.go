@@ -50,6 +50,7 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 
 	nats.SubscribeWorkers(ctx, common.FiatWithdrawSubject, 2*concurencyLevel, handlers.OnFiatWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatFinalizeWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFinalizeWithdraw)
+	nats.SubscribeWorkers(ctx, common.FiatFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFetchPendingWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatDepositSubject, 2*concurencyLevel, handlers.OnFiatDeposit)
 
 	nats.SubscribeWorkers(ctx, common.CurrencyInfoSubject, 2*concurencyLevel, handlers.OnCurrencyInfo)

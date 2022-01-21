@@ -125,7 +125,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		SepaInfoID:   sepaUser.ID,
 		CurrencyName: model.CurrencyName(withdraw.Currency),
 		Amount:       &withdrawAmount,
-		Type:         "withdrawal",
+		Type:         model.OperationTypeWithdraw,
 		Status:       model.FiatOperationStatusPending,
 	})
 	if err != nil {

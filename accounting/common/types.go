@@ -30,6 +30,18 @@ type FiatFinalizeWithdraw struct {
 	Amount   float64
 }
 
+type FiatFetchPendingWithdraw struct {
+	UserName string
+	IBAN     string
+	BIC      string
+	Currency string
+	Amount   float64
+}
+
+type FiatFetchPendingWithdrawList struct {
+	PendingWithdraws []FiatFetchPendingWithdraw
+}
+
 type FiatWithdraw struct {
 	AuthInfo
 	UserName    string
@@ -168,6 +180,14 @@ type BatchUpdate struct {
 	Height int
 }
 
+func (p *AuthInfo) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AuthInfo) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
 func (p *FiatWithdraw) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
@@ -181,6 +201,14 @@ func (p *FiatFinalizeWithdraw) Encode() ([]byte, error) {
 }
 
 func (p *FiatFinalizeWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatFetchPendingWithdrawList) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

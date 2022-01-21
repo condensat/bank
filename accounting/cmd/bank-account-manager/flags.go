@@ -31,9 +31,10 @@ type Args struct {
 	Command Command
 	Common  CommonArg
 
-	FiatWithdraw         FiatWithdrawArg
-	FiatDeposit          FiatDepositArg
-	FiatFinalizeWithdraw FiatFinalizeWithdrawArg
+	FiatWithdraw             FiatWithdrawArg
+	FiatDeposit              FiatDepositArg
+	FiatFinalizeWithdraw     FiatFinalizeWithdrawArg
+	FiatFetchPendingWithdraw FiatFetchPendingWithdrawArg
 }
 
 func AuthInfoCmdArgs(cmd *flag.FlagSet, args *common.AuthInfo) {
@@ -69,6 +70,9 @@ func parseArgs(ctx context.Context) Args {
 
 	case FiatFinalizeWithdraw:
 		cmd = fiatFinalizeWithdrawArg(&args.FiatFinalizeWithdraw)
+
+	case FiatFetchPendingWithdraw:
+		cmd = fiatFetchPendingWithdrawArg(&args.FiatFetchPendingWithdraw)
 
 	default:
 		printUsage(2)
