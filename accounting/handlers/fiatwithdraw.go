@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"time"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
@@ -19,15 +21,20 @@ import (
 )
 
 const (
-	withOperatorAuth = true
+	withOperatorAuth      = false
+	minAmountFiatWithdraw = 20.0
 )
 
-func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, withdraw common.AccountEntry, sepaInfo common.FiatOperationInfo) (common.AccountEntry, error) {
+func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, withdraw common.AccountEntry, sepaInfo common.FiatSepaInfo) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatWithdraw")
 
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return common.AccountEntry{}, errors.New("Invalid Database")
+	}
+
+	if math.Abs(withdraw.Amount) < minAmountFiatWithdraw {
+		return common.AccountEntry{}, errors.New("Amount is below the minimum required for a fiat withdraw")
 	}
 
 	if withOperatorAuth {
@@ -73,8 +80,14 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return common.AccountEntry{}, errors.New("userID can't be 0")
 	}
 
+	// Look up the currency info
+	currency, err := database.GetCurrencyByName(db, model.CurrencyName(withdraw.Currency))
+	if err != nil {
+		return common.AccountEntry{}, err
+	}
+
 	// Get AccountID with UserID
-	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(withdraw.Currency), model.AccountName("*"))
+	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(currency.Name), model.AccountName("*"))
 	if err != nil || len(account) == 0 {
 		return common.AccountEntry{}, errors.New("Account not found")
 	}
@@ -118,28 +131,107 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		}
 	}
 
-	var withdrawAmount model.Float = model.Float(-withdraw.Amount)
-	// If there's no pending withdrawal, let's create the operation
-	_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
-		UserID:       user.ID,
-		SepaInfoID:   sepaUser.ID,
-		CurrencyName: model.CurrencyName(withdraw.Currency),
-		Amount:       &withdrawAmount,
-		Type:         model.OperationTypeWithdraw,
-		Status:       model.FiatOperationStatusPending,
-	})
-	if err != nil {
-		return common.AccountEntry{}, err
-	}
-
 	// Set reference id as userID
 	withdraw.ReferenceID = uint64(user.ID) // or SepaID?
 	log = log.WithField("ReferenceID", withdraw.ReferenceID)
 
-	// Now do the operation
-	result, err := AccountOperation(ctx, withdraw)
+	var result common.AccountEntry
+	// Database Query
+	err = db.Transaction(func(db bank.Database) error {
+		// How much to pay in fees?
+		feeInfo, err := database.GetFeeInfo(db, currency.Name)
+		if err != nil {
+			log.WithError(err).
+				Error("GetFeeInfo failed")
+			return err
+		}
+		if !feeInfo.IsValid() {
+			log.Error("Invalid FeeInfo")
+			return err
+		}
+
+		feeAmount := feeInfo.Compute(model.Float(withdraw.Amount))
+
+		if feeAmount < 0 {
+			feeAmount = -feeAmount
+		}
+
+		if feeAmount < 0.01 {
+			feeAmount = 0.01
+		}
+
+		log = log.WithField("feeAmount", feeAmount)
+
+		feeBankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Currency)
+		if err != nil {
+			return errors.New("Can't get bank account id")
+		}
+
+		timestamp := time.Now()
+		feeTransfer := common.AccountTransfer{
+			Source: common.AccountEntry{
+				AccountID: withdraw.AccountID,
+
+				OperationType:    string(model.OperationTypeTransferFee),
+				SynchroneousType: "sync",
+				ReferenceID:      withdraw.ReferenceID,
+
+				Timestamp: timestamp,
+
+				Amount: float64(-feeAmount),
+
+				Currency: withdraw.Currency,
+			},
+			Destination: common.AccountEntry{
+				AccountID: uint64(feeBankAccountID),
+
+				OperationType:    string(model.OperationTypeTransferFee),
+				SynchroneousType: "sync",
+				ReferenceID:      withdraw.ReferenceID,
+
+				Timestamp: timestamp,
+
+				Amount: float64(feeAmount),
+
+				Currency: withdraw.Currency,
+			},
+		}
+
+		_, err = AccountTransferWithDatabase(ctx, db, feeTransfer)
+		if err != nil {
+			return errors.New("AccountOperation failed")
+		}
+
+		// Since we're withdrawing, put a minus sign before amount
+		withdraw.Amount = -withdraw.Amount
+		log.Debugf("Amount sent to AccountOperation: %v\n", withdraw.Amount)
+		// Now do the operation
+		result, err = AccountOperation(ctx, withdraw)
+		if err != nil {
+			return errors.New("AccountOperation failed")
+		}
+
+		// switch amount back to positive
+		result.Amount = -result.Amount // God that's ugly
+
+		var withdrawAmount model.Float = model.Float(result.Amount)
+		_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
+			UserID:       user.ID,
+			SepaInfoID:   sepaUser.ID,
+			CurrencyName: model.CurrencyName(withdraw.Currency),
+			Amount:       &withdrawAmount,
+			Type:         model.OperationTypeWithdraw,
+			Status:       model.FiatOperationStatusPending,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return common.AccountEntry{}, errors.New("AccountOperation failed")
+		return common.AccountEntry{}, err
 	}
 
 	log.WithFields(logrus.Fields{

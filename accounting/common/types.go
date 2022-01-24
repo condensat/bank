@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/database/model"
 )
 
 type TOTP string
@@ -14,12 +13,10 @@ type AuthInfo struct {
 	TOTP            TOTP
 }
 
-type FiatOperationInfo struct {
-	Type   model.OperationType
-	Status string
-	IBAN   string
-	BIC    string
-	Label  string
+type FiatSepaInfo struct {
+	IBAN  string
+	BIC   string
+	Label string
 }
 
 type FiatFinalizeWithdraw struct {
@@ -46,7 +43,7 @@ type FiatWithdraw struct {
 	AuthInfo
 	UserName    string
 	Source      AccountEntry
-	Destination FiatOperationInfo
+	Destination FiatSepaInfo
 }
 
 type FiatDeposit struct {

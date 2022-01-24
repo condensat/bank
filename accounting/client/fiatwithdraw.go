@@ -42,11 +42,11 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 			Label: bankLabel,
 
-			Amount:     -amount, // withdraw remove amount from account
-			LockAmount: 0.0,     // no lock on withdraw
+			Amount:     amount, // withdraw remove amount from account
+			LockAmount: 0.0,    // no lock on withdraw
 			Currency:   currency,
 		},
-		Destination: common.FiatOperationInfo{
+		Destination: common.FiatSepaInfo{
 			Label: userLabel,
 			IBAN:  iban,
 			BIC:   bic,
