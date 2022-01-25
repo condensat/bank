@@ -22,12 +22,14 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userNam
 		return common.FiatFinalizeWithdraw{}, cache.ErrInternalError
 	}
 
+	dstIban := common.IBAN(iban)
+
 	log = log.WithField("userName", userName)
 
 	request := common.FiatFinalizeWithdraw{
 		AuthInfo: authInfo,
 		UserName: userName,
-		IBAN:     iban,
+		IBAN:     dstIban,
 	}
 
 	var result common.FiatFinalizeWithdraw

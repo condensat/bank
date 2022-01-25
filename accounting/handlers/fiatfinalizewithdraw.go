@@ -18,42 +18,52 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userName, iban string) (common.FiatFinalizeWithdraw, error) {
+func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, iban common.IBAN) (common.FiatFinalizeWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatFinalizeWithdraw")
 
+	var result common.FiatFinalizeWithdraw
 	db := appcontext.Database(ctx)
 	if db == nil {
-		return common.FiatFinalizeWithdraw{}, errors.New("Invalid Database")
+		return result, errors.New("Invalid Database")
+	}
+
+	// check that IBAN is in the correct format
+	validIban, err := iban.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validIban {
+		return result, errors.New("Provided iban doesn't respect format")
 	}
 
 	if withOperatorAuth {
 		if len(authInfo.OperatorAccount) == 0 {
-			return common.FiatFinalizeWithdraw{}, errors.New("Invalid OperatorAccount")
+			return result, errors.New("Invalid OperatorAccount")
 		}
 		if len(authInfo.TOTP) == 0 {
-			return common.FiatFinalizeWithdraw{}, errors.New("Invalid TOTP")
+			return result, errors.New("Invalid TOTP")
 		}
 
 		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
 
 		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
 		if err != nil {
-			return common.FiatFinalizeWithdraw{}, errors.New("OperatorAccount not found")
+			return result, errors.New("OperatorAccount not found")
 		}
 		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return common.FiatFinalizeWithdraw{}, errors.New("Wrong OperatorAccount")
+			return result, errors.New("Wrong OperatorAccount")
 		}
 
 		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
 		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
 		if err != nil {
-			return common.FiatFinalizeWithdraw{}, errors.New("CheckTOTP failed")
+			return result, errors.New("CheckTOTP failed")
 		}
 		if !valid {
-			return common.FiatFinalizeWithdraw{}, errors.New("Invalid OTP")
+			return result, errors.New("Invalid OTP")
 		}
 		if operatorID != operator.ID {
-			return common.FiatFinalizeWithdraw{}, errors.New("Wrong operator ID")
+			return result, errors.New("Wrong operator ID")
 		}
 	}
 
@@ -62,33 +72,33 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userNam
 
 	user, err := database.FindUserByEmail(db, model.UserEmail(email))
 	if err != nil {
-		return common.FiatFinalizeWithdraw{}, err
+		return result, err
 	}
 
 	if user.ID == 0 {
-		return common.FiatFinalizeWithdraw{}, errors.New("userID can't be 0")
+		return result, errors.New("userID can't be 0")
 	}
 
 	// Look for the sepa with userID and IBAN
 	sepaUser, err := database.GetSepaByUserAndIban(db, user.ID, model.Iban(iban))
 	if err != nil {
-		return common.FiatFinalizeWithdraw{}, err
+		return result, err
 	}
 
 	// Is there a fiatoperation for this sepa AND this user?
 	fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, user.ID, sepaUser.ID)
 	if err != nil {
-		return common.FiatFinalizeWithdraw{}, err
+		return result, err
 	}
 
 	// stop if there's not exactly one pending operation
 	switch len := len(fiatOperation); len {
 	case 0:
-		return common.FiatFinalizeWithdraw{}, errors.New("There's no pending withdrawal for this user and sepa")
+		return result, errors.New("There's no pending withdrawal for this user and sepa")
 	case 1:
 		break
 	default:
-		return common.FiatFinalizeWithdraw{}, errors.New("Multiple pending withdrawals for this user and sepa")
+		return result, errors.New("Multiple pending withdrawals for this user and sepa")
 	}
 
 	// Now we only need to update the status of the fiat Operation
@@ -97,15 +107,14 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userNam
 	var updated model.FiatOperationInfo
 	updated, err = database.FiatOperationFinalize(db, toUpdate)
 	if err != nil {
-		return common.FiatFinalizeWithdraw{}, err
+		return result, err
 	}
 
-	result := common.FiatFinalizeWithdraw{
-		UserName: userName,
-		IBAN:     iban,
-		Currency: string(updated.CurrencyName),
-		Amount:   float64(*(updated.Amount)),
-	}
+	result.UserName = userName
+	result.IBAN = iban
+	result.Currency = string(updated.CurrencyName)
+	result.Amount = float64(*(updated.Amount))
+
 	log.WithFields(logrus.Fields{
 		"Currency": result.Currency,
 		"Amount":   result.Amount,

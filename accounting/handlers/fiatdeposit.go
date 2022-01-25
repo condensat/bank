@@ -70,7 +70,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 
 	// Get AccountID with UserID
 	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(deposit.Currency), model.AccountName("*"))
-	if err != nil {
+	if err != nil || len(account) == 0 {
 		return common.AccountEntry{}, errors.New("Account not found")
 	}
 

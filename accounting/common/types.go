@@ -1,6 +1,7 @@
 package common
 
 import (
+	"regexp"
 	"time"
 
 	"git.condensat.tech/bank"
@@ -8,13 +9,24 @@ import (
 
 type TOTP string
 
+type IBAN string
+
+func (p *IBAN) Valid() (bool, error) {
+	valid, err := regexp.MatchString("[a-zA-Z]{2}[0-9]{2}[a-zA-Z0-9]{4}[0-9]{7}([a-zA-Z0-9]?){0,16}", string(*p))
+	if err != nil {
+		return false, err
+	}
+
+	return valid, nil
+}
+
 type AuthInfo struct {
 	OperatorAccount string
 	TOTP            TOTP
 }
 
 type FiatSepaInfo struct {
-	IBAN  string
+	IBAN
 	BIC   string
 	Label string
 }
@@ -22,14 +34,14 @@ type FiatSepaInfo struct {
 type FiatFinalizeWithdraw struct {
 	AuthInfo
 	UserName string
-	IBAN     string
+	IBAN
 	Currency string
 	Amount   float64
 }
 
 type FiatFetchPendingWithdraw struct {
 	UserName string
-	IBAN     string
+	IBAN
 	BIC      string
 	Currency string
 	Amount   float64

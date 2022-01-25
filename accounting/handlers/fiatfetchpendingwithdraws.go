@@ -98,7 +98,7 @@ func convertFiatOperation(db bank.Database, list []model.FiatOperationInfo) ([]c
 			UserName: string(user.Name),
 			Currency: string(withdraw.CurrencyName),
 			Amount:   float64(*withdraw.Amount),
-			IBAN:     string(sepaInfo.IBAN),
+			IBAN:     common.IBAN(sepaInfo.IBAN),
 			BIC:      string(sepaInfo.BIC),
 		})
 	}

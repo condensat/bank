@@ -28,7 +28,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
-	// TODO: check that currency is fiat
+	dstIban := common.IBAN(iban)
 
 	log = log.WithField("userName", userName)
 
@@ -48,7 +48,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		},
 		Destination: common.FiatSepaInfo{
 			Label: userLabel,
-			IBAN:  iban,
+			IBAN:  dstIban,
 			BIC:   bic,
 		},
 	}

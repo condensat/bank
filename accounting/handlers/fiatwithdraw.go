@@ -28,43 +28,53 @@ const (
 func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, withdraw common.AccountEntry, sepaInfo common.FiatSepaInfo) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatWithdraw")
 
+	var result common.AccountEntry
 	db := appcontext.Database(ctx)
 	if db == nil {
-		return common.AccountEntry{}, errors.New("Invalid Database")
+		return result, errors.New("Invalid Database")
 	}
 
 	if math.Abs(withdraw.Amount) < minAmountFiatWithdraw {
-		return common.AccountEntry{}, errors.New("Amount is below the minimum required for a fiat withdraw")
+		return result, errors.New("Amount is below the minimum required for a fiat withdraw")
+	}
+
+	// check that IBAN is in the correct format
+	validIban, err := sepaInfo.IBAN.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validIban {
+		return result, errors.New("Provided iban doesn't respect format")
 	}
 
 	if withOperatorAuth {
 		if len(authInfo.OperatorAccount) == 0 {
-			return common.AccountEntry{}, errors.New("Invalid OperatorAccount")
+			return result, errors.New("Invalid OperatorAccount")
 		}
 		if len(authInfo.TOTP) == 0 {
-			return common.AccountEntry{}, errors.New("Invalid TOTP")
+			return result, errors.New("Invalid TOTP")
 		}
 
 		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
 
 		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
 		if err != nil {
-			return common.AccountEntry{}, errors.New("OperatorAccount not found")
+			return result, errors.New("OperatorAccount not found")
 		}
 		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return common.AccountEntry{}, errors.New("Wrong OperatorAccount")
+			return result, errors.New("Wrong OperatorAccount")
 		}
 
 		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
 		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
 		if err != nil {
-			return common.AccountEntry{}, errors.New("CheckTOTP failed")
+			return result, errors.New("CheckTOTP failed")
 		}
 		if !valid {
-			return common.AccountEntry{}, errors.New("Invalid OTP")
+			return result, errors.New("Invalid OTP")
 		}
 		if operatorID != operator.ID {
-			return common.AccountEntry{}, errors.New("Wrong operator ID")
+			return result, errors.New("Wrong operator ID")
 		}
 	}
 
@@ -73,23 +83,23 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 	user, err := database.FindUserByEmail(db, model.UserEmail(email))
 	if err != nil {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	if user.ID == 0 {
-		return common.AccountEntry{}, errors.New("userID can't be 0")
+		return result, errors.New("userID can't be 0")
 	}
 
 	// Look up the currency info
 	currency, err := database.GetCurrencyByName(db, model.CurrencyName(withdraw.Currency))
 	if err != nil {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	// Get AccountID with UserID
 	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(currency.Name), model.AccountName("*"))
 	if err != nil || len(account) == 0 {
-		return common.AccountEntry{}, errors.New("Account not found")
+		return result, errors.New("Account not found")
 	}
 
 	withdraw.AccountID = uint64(account[0].ID)
@@ -97,7 +107,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 	// Look for the sepa with userID and IBAN
 	sepaUser, err := database.GetSepaByUserAndIban(db, user.ID, model.Iban(sepaInfo.IBAN))
 	if err != nil && err != database.ErrSepaNotFound {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	if sepaUser.ID == 0 {
@@ -110,14 +120,14 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 			Label:  model.String(sepaInfo.Label),
 		})
 		if err != nil {
-			return common.AccountEntry{}, err
+			return result, err
 		}
 	} else {
 
 		// Is there a fiatoperation for this sepa AND this user?
 		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, user.ID, sepaUser.ID)
 		if err != nil {
-			return common.AccountEntry{}, err
+			return result, err
 		}
 
 		// stop if there's already 1 or more pending withdrawal
@@ -125,9 +135,9 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		case 0:
 			break
 		case 1:
-			return common.AccountEntry{}, errors.New("Already a pending withdrawal for this user and sepa")
+			return result, errors.New("Already a pending withdrawal for this user and sepa")
 		default:
-			return common.AccountEntry{}, errors.New("Multiple pending withdrawals for this user and sepa")
+			return result, errors.New("Multiple pending withdrawals for this user and sepa")
 		}
 	}
 
@@ -135,7 +145,6 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 	withdraw.ReferenceID = uint64(user.ID) // or SepaID?
 	log = log.WithField("ReferenceID", withdraw.ReferenceID)
 
-	var result common.AccountEntry
 	// Database Query
 	err = db.Transaction(func(db bank.Database) error {
 		// How much to pay in fees?
@@ -231,7 +240,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 	})
 
 	if err != nil {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	log.WithFields(logrus.Fields{
