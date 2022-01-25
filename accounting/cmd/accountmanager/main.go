@@ -21,6 +21,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	SpecimenIban        = "CH5604835012345678009"
+	SpecimenInvalidIban = "CH56XXX"
+	SpecimenBic         = "KBAGCH22XXX"
+	SpecimenUser        = "8868029921"
+)
+
 type Args struct {
 	App appcontext.Options
 
@@ -209,6 +216,80 @@ func AccountTransferWithdraw(ctx context.Context) {
 		Info("AccountTransferWithdraw")
 }
 
+func DepositFiat(ctx context.Context) {
+
+	userName := SpecimenUser
+	amount := 50.0
+	currency := "CHF"
+	label := "label"
+
+	deposit, err := client.FiatDeposit(ctx, common.AuthInfo{}, userName, amount, currency, label)
+	if err != nil {
+		fmt.Printf("DepositFiat failed with error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Successfully deposited %v %s for user %s\n", deposit.Amount, deposit.Currency, userName)
+}
+
+func WithdrawFiat(ctx context.Context) {
+
+	userName := SpecimenUser
+	amount := 50.0
+	currency := "CHF"
+	label := "label"
+	iban := SpecimenIban
+	// iban := SpecimenInvalidIban
+	bic := SpecimenBic
+	userLabel := "label"
+
+	withdraw, err := client.FiatWithdraw(ctx, common.AuthInfo{}, userName, amount, currency, label, iban, bic, userLabel)
+	if err != nil {
+		fmt.Printf("WithdrawFiat failed with error: %v\n", err)
+		return
+	}
+	fmt.Printf("Successfully withdrawed %v %s for user %s\n", withdraw.Amount, withdraw.Currency, userName)
+}
+
+func FetchPendingWithdraw(ctx context.Context) {
+
+	withdraws, err := client.FiatFetchPendingWithdraw(ctx, common.AuthInfo{})
+	if err != nil {
+		fmt.Printf("FetchPendingWithdraw failed with error: %v\n", err)
+		return
+	}
+
+	if len(withdraws.PendingWithdraws) == 0 {
+		fmt.Printf("There's no pending withdraws for now\n")
+		return
+	}
+
+	for i, withdraw := range withdraws.PendingWithdraws {
+		fmt.Printf("\n\nWithdraw #%v: ", i)
+		fmt.Printf("\nUserName: %v", withdraw.UserName)
+		fmt.Printf("\nIBAN: %v", withdraw.IBAN)
+		fmt.Printf("\nBIC: %v", withdraw.BIC)
+		fmt.Printf("\nCurrency: %v", withdraw.Currency)
+		fmt.Printf("\nAmount: %v", withdraw.Amount)
+	}
+
+	fmt.Println()
+
+}
+
+func FinalizeWithdraw(ctx context.Context) {
+	userName := SpecimenUser
+	iban := SpecimenIban
+
+	final, err := client.FiatFinalizeWithdraw(ctx, common.AuthInfo{}, userName, iban)
+	if err != nil {
+		fmt.Printf("FinalizeWithdraw failed with error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Successfully finalized %v %s withdraw for user %s\n", final.Amount, final.Currency, userName)
+}
+
 func main() {
 	args := parseArgs()
 
@@ -220,5 +301,9 @@ func main() {
 	ctx = appcontext.WithProcessusGrabber(ctx, processus.NewGrabber(ctx, 15*time.Second))
 
 	// CreateAccounts(ctx)
-	AccountTransferWithdraw(ctx)
+	// AccountTransferWithdraw(ctx)
+	DepositFiat(ctx)
+	WithdrawFiat(ctx)
+	FetchPendingWithdraw(ctx)
+	FinalizeWithdraw(ctx)
 }
