@@ -40,6 +40,7 @@ type FiatFinalizeWithdraw struct {
 }
 
 type FiatFetchPendingWithdraw struct {
+	ID       uint64
 	UserName string
 	IBAN
 	BIC      string
