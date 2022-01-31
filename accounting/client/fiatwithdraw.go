@@ -36,7 +36,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		AuthInfo: authInfo,
 		UserName: userName,
 		Source: common.AccountEntry{
-			OperationType:    "withdraw",
+			OperationType:    "fiat_withdraw",
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
 
