@@ -33,6 +33,7 @@ type FiatSepaInfo struct {
 
 type FiatFinalizeWithdraw struct {
 	AuthInfo
+	ID       uint64
 	UserName string
 	IBAN
 	Currency string

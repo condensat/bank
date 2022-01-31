@@ -18,21 +18,19 @@ const (
 )
 
 type FiatFinalizeWithdrawArg struct {
-	userName string
-	iban     string
+	id uint64
 }
 
 func fiatFinalizeWithdrawArg(args *FiatFinalizeWithdrawArg) *flag.FlagSet {
 	cmd := flag.NewFlagSet("fiatFinalizeWithdraw", flag.ExitOnError)
 
-	cmd.StringVar(&args.userName, "userName", "", "User that ask to withdraw money")
-	cmd.StringVar(&args.iban, "iban", "", "IBAN of the recipient account")
+	cmd.Uint64Var(&args.id, "id", 0, "id of the operation we're finalizing")
 
 	return cmd
 }
 
 func fiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, args FiatFinalizeWithdrawArg) error {
-	final, err := client.FiatFinalizeWithdraw(ctx, authInfo, args.userName, args.iban)
+	final, err := client.FiatFinalizeWithdraw(ctx, authInfo, args.id)
 	if err != nil {
 		return err
 	}
