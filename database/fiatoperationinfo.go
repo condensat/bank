@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"time"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/database/model"
@@ -25,6 +26,8 @@ func AddFiatOperationInfo(db bank.Database, operation model.FiatOperationInfo) (
 	if operation.ID != 0 {
 		return model.FiatOperationInfo{}, ErrOperationInfoUpdateNotPermitted
 	}
+
+	operation.CreationTimestamp = operation.CreationTimestamp.UTC().Truncate(time.Second)
 
 	err := gdb.Create(&operation).Error
 	if err != nil {
