@@ -16,7 +16,7 @@ func init() {
 }
 
 func printUsage(code int) {
-	fmt.Println("Use command [fiatDeposit,fiatWithdraw]")
+	fmt.Println("Use command [fiatDeposit,fiatWithdraw, fiatFetchPendingWithdraw, fiatFinalizeWithdraw]")
 	os.Exit(code)
 }
 

@@ -32,7 +32,7 @@ func fiatWithdrawArg(args *FiatWithdrawArg) *flag.FlagSet {
 
 	cmd.StringVar(&args.userName, "userName", "", "User that ask to withdraw money")
 	cmd.Float64Var(&args.amount, "amount", 0.0, "Amount to withdraw from the account")
-	cmd.StringVar(&args.currency, "currency", "", "Currency that we intend to withdraw")
+	cmd.StringVar(&args.currency, "currency", "", "Currency that we intend to withdraw, in ISO4217 notation, ie. EUR")
 	cmd.StringVar(&args.withdrawLabel, "withdrawLabel", "", "Optional Label given by the bank")
 	cmd.StringVar(&args.iban, "iban", "", "IBAN of the recipient account")
 	cmd.StringVar(&args.bic, "bic", "", "BIC of the recipient account")

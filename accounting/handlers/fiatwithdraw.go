@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"git.condensat.tech/bank"
@@ -34,7 +33,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return result, errors.New("Invalid Database")
 	}
 
-	if math.Abs(withdraw.Amount) < minAmountFiatWithdraw {
+	if withdraw.Amount < minAmountFiatWithdraw {
 		return result, errors.New("Amount is below the minimum required for a fiat withdraw")
 	}
 
@@ -44,7 +43,8 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return result, err
 	}
 	if !validIban {
-		return result, errors.New("Provided iban doesn't respect format")
+		log.WithField("IBAN", sepaInfo.IBAN).Error("Provided iban doesn't respect format")
+		return result, cache.ErrInternalError
 	}
 
 	if withOperatorAuth {
@@ -213,7 +213,6 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 		// Since we're withdrawing, put a minus sign before amount
 		withdraw.Amount = -withdraw.Amount
-		log.Debugf("Amount sent to AccountOperation: %v\n", withdraw.Amount)
 		// Now do the operation
 		result, err = AccountOperation(ctx, withdraw)
 		if err != nil {
@@ -222,6 +221,9 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 		// switch amount back to positive
 		result.Amount = -result.Amount // God that's ugly
+
+		// Add the currency to the result
+		result.Currency = withdraw.Currency
 
 		var withdrawAmount model.Float = model.Float(result.Amount)
 		_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{

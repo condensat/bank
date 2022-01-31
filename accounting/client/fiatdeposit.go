@@ -24,8 +24,6 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
-	// TODO: check that currency is fiat
-
 	log = log.WithField("UserName", userName)
 
 	request := common.FiatDeposit{
