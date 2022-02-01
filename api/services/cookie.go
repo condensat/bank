@@ -100,6 +100,7 @@ func openUserSession(ctx context.Context, session *sessions.Session, r *http.Req
 	}
 
 	log.WithFields(logrus.Fields{
+		"SessionID":  reply.SessionID,
 		"Status":     reply.Status,
 		"ValidUntil": fromTimestampMillis(reply.ValidUntil),
 	}).Info("Session opened")

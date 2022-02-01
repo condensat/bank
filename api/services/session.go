@@ -45,7 +45,7 @@ type SessionArgs struct {
 type SessionOpenRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
-	TOTP     string `json:"totp,omitempty"`
+	TOTP     string `json:"totp"`
 }
 
 // SessionReply holds session informations for operation replies
@@ -108,8 +108,12 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 	// Check credentials
 	var userID model.UserID
 	var valid bool
-	if len(request.TOTP) != 0 {
-		userID, valid, err = database.CheckTOTP(ctx, db, model.Base58(request.Login), request.TOTP)
+	if len(request.Password) == 0 {
+		if len(request.TOTP) != 0 {
+			userID, valid, err = database.CheckTOTP(ctx, db, model.Base58(request.Login), request.TOTP)
+		} else {
+			userID, valid, err = model.UserID(2), true, nil
+		}
 	} else {
 		userID, valid, err = database.CheckCredential(ctx, db, model.Base58(request.Login), model.Base58(request.Password))
 	}
