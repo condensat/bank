@@ -4,12 +4,12 @@ import (
 	"git.condensat.tech/bank/utils"
 )
 
-const DefaultFeeRate = Float(0.001) // 0.1%
+const DefaultFeeRate = Float(0.002) // 0.2%
 
 type FeeInfo struct {
 	Currency CurrencyName `gorm:"primary_key"`            // [PK] Related currency
 	Minimum  Float        `gorm:"default:0.0;not null"`   // Minimum Fee
-	Rate     Float        `gorm:"default:0.001;not null"` // Percent Fee Rate (default 0.1%)
+	Rate     Float        `gorm:"default:0.002;not null"` // Percent Fee Rate (default 0.2%)
 }
 
 func (p *FeeInfo) IsValid() bool {
