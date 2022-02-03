@@ -54,8 +54,7 @@ type FiatFetchPendingWithdrawList struct {
 }
 
 type FiatWithdraw struct {
-	AuthInfo
-	UserName    string
+	UserId      uint64
 	Source      AccountEntry
 	Destination FiatSepaInfo
 }

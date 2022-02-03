@@ -8,7 +8,6 @@ TL;DR :
 
 ```bash
   go run ./accounting/cmd/bank-account-manager fiatDeposit --userName=8868029921 --amount=200 --currency=EUR
-  go run ./accounting/cmd/bank-account-manager fiatWithdraw --userName=8868029921 --amount=20 --currency=EUR --withdrawLabel=label --iban="FR76 TEST" --bic=TEST_BIC --sepaLabel=label
   go run ./accounting/cmd/bank-account-manager fiatFetchPendingWithdraw
   go run ./accounting/cmd/bank-account-manager fiatFinalizeWithdraw --userName=8868029921 --iban="FR76 TEST"
 
@@ -56,29 +55,6 @@ Usage of fiatDeposit:
 ```
 Once deposit is made the following message is displayed on screen :
 `Successfully deposited <amount> <currency> for user <userName>`
-
-### fiatWithdraw
-
-```bash
-Usage of fiatWithdraw:
-  -amount float
-        Amount to withdraw from the account
-  -bic string
-        BIC of the recipient account
-  -currency string
-        Currency that we intend to withdraw
-  -iban string
-        IBAN of the recipient account
-  -sepaLabel string
-        Optional Label given by the user
-  -userName string
-        User that ask to withdraw money
-  -withdrawLabel string
-        Optional Label given by the bank
-```
-
-`Successfully withdrew <amount> <currency> for user <userName>
-Destination is <iban>`
 
 ### fiatFetchPendingWithdraw
 

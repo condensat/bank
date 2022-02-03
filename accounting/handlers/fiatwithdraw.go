@@ -2,9 +2,8 @@ package handlers
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
-	"fmt"
+	"math"
 	"time"
 
 	"git.condensat.tech/bank"
@@ -15,25 +14,25 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/security/utils"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	withOperatorAuth      = false
 	minAmountFiatWithdraw = 20.0
 )
 
-func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, withdraw common.AccountEntry, sepaInfo common.FiatSepaInfo) (common.AccountEntry, error) {
+func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEntry, sepaInfo common.FiatSepaInfo) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatWithdraw")
-
 	var result common.AccountEntry
-	db := appcontext.Database(ctx)
-	if db == nil {
-		return result, errors.New("Invalid Database")
+
+	// Sanity checks
+	if userId == 0 {
+		return result, errors.New("userID can't be 0")
 	}
 
 	if withdraw.Amount < minAmountFiatWithdraw {
+		log.WithField("Amount", withdraw.Amount).
+			Error("Insufficient amount")
 		return result, errors.New("Amount is below the minimum required for a fiat withdraw")
 	}
 
@@ -47,47 +46,9 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return result, cache.ErrInternalError
 	}
 
-	if withOperatorAuth {
-		if len(authInfo.OperatorAccount) == 0 {
-			return result, errors.New("Invalid OperatorAccount")
-		}
-		if len(authInfo.TOTP) == 0 {
-			return result, errors.New("Invalid TOTP")
-		}
-
-		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
-
-		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
-		if err != nil {
-			return result, errors.New("OperatorAccount not found")
-		}
-		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return result, errors.New("Wrong OperatorAccount")
-		}
-
-		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
-		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
-		if err != nil {
-			return result, errors.New("CheckTOTP failed")
-		}
-		if !valid {
-			return result, errors.New("Invalid OTP")
-		}
-		if operatorID != operator.ID {
-			return result, errors.New("Wrong operator ID")
-		}
-	}
-
-	// Look for the user and its accounts
-	email := fmt.Sprintf("%s@condensat.tech", userName)
-
-	user, err := database.FindUserByEmail(db, model.UserEmail(email))
-	if err != nil {
-		return result, err
-	}
-
-	if user.ID == 0 {
-		return result, errors.New("userID can't be 0")
+	db := appcontext.Database(ctx)
+	if db == nil {
+		return result, errors.New("Invalid Database")
 	}
 
 	// Look up the currency info
@@ -96,16 +57,73 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		return result, err
 	}
 
-	// Get AccountID with UserID
-	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(currency.Name), model.AccountName("*"))
-	if err != nil || len(account) == 0 {
-		return result, errors.New("Account not found")
+	// Round up to currency.DisplayPrecision
+	rounding := math.Pow10(int(*currency.Precision))
+	withdraw.Amount = math.Floor(withdraw.Amount*rounding) / rounding
+
+	// Compute fees amount and find bank account to pay to
+	feeInfo, err := database.GetFeeInfo(db, currency.Name)
+	if err != nil {
+		log.WithError(err).
+			Error("GetFeeInfo failed")
+		return result, err
+	}
+	if !feeInfo.IsValid() {
+		log.Error("Invalid FeeInfo")
+		return result, err
 	}
 
-	withdraw.AccountID = uint64(account[0].ID)
+	feeAmount := feeInfo.Compute(model.Float(withdraw.Amount))
+
+	if feeAmount < 0 {
+		return result, errors.New("Negative fee amount are not allowed")
+	}
+
+	if feeAmount < feeInfo.Minimum {
+		feeAmount = feeInfo.Minimum
+	}
+
+	log = log.WithField("feeAmount", feeAmount)
+
+	feeBankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Currency)
+	if err != nil {
+		return result, errors.New("Can't get bank account id")
+	}
+
+	// Get AccountID with UserID only if no accountId provided
+	if withdraw.AccountID == 0 {
+		accounts, err := database.GetAccountsByUserAndCurrencyAndName(db, model.UserID(userId), model.CurrencyName(currency.Name), model.AccountName("*"))
+		if err != nil || len(accounts) == 0 {
+			return result, errors.New("Accounts not found")
+		}
+
+		for _, account := range accounts {
+			// get account info
+			accountInfo, err := AccountInfo(ctx, uint64(account.ID))
+			if err != nil {
+				return result, err
+			}
+			if accountInfo.Status != "normal" {
+				continue
+			}
+
+			// Check available balance too
+			if (withdraw.Amount + float64(feeAmount)) > accountInfo.Balance {
+				continue
+			}
+
+			// We found a suitable account
+			withdraw.AccountID = uint64(account.ID)
+			break
+		}
+	}
+
+	if withdraw.AccountID == 0 {
+		return result, errors.New("Can't find an account that allows withdraw for this user and currency")
+	}
 
 	// Look for the sepa with userID and IBAN
-	sepaUser, err := database.GetSepaByUserAndIban(db, user.ID, model.Iban(sepaInfo.IBAN))
+	sepaUser, err := database.GetSepaByUserAndIban(db, model.UserID(userId), model.Iban(sepaInfo.IBAN))
 	if err != nil && err != database.ErrSepaNotFound {
 		return result, err
 	}
@@ -114,7 +132,7 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 		// if sepa is not registered, add it to db
 		sepaUser, err = database.CreateSepa(db, model.FiatSepaInfo{
-			UserID: user.ID,
+			UserID: model.UserID(userId),
 			IBAN:   model.Iban(sepaInfo.IBAN),
 			BIC:    model.Bic(sepaInfo.BIC),
 			Label:  model.String(sepaInfo.Label),
@@ -122,10 +140,11 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		if err != nil {
 			return result, err
 		}
+
 	} else {
 
 		// Is there a fiatoperation for this sepa AND this user?
-		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, user.ID, sepaUser.ID)
+		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, model.UserID(userId), sepaUser.ID)
 		if err != nil {
 			return result, err
 		}
@@ -141,40 +160,12 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		}
 	}
 
-	// Set reference id as userID
-	withdraw.ReferenceID = uint64(user.ID) // or SepaID?
+	// Set referenceId as sepaId
+	withdraw.ReferenceID = uint64(sepaUser.ID)
 	log = log.WithField("ReferenceID", withdraw.ReferenceID)
 
 	// Database Query
 	err = db.Transaction(func(db bank.Database) error {
-		// How much to pay in fees?
-		feeInfo, err := database.GetFeeInfo(db, currency.Name)
-		if err != nil {
-			log.WithError(err).
-				Error("GetFeeInfo failed")
-			return err
-		}
-		if !feeInfo.IsValid() {
-			log.Error("Invalid FeeInfo")
-			return err
-		}
-
-		feeAmount := feeInfo.Compute(model.Float(withdraw.Amount))
-
-		if feeAmount < 0 {
-			feeAmount = -feeAmount
-		}
-
-		if feeAmount < 0.01 {
-			feeAmount = 0.01
-		}
-
-		log = log.WithField("feeAmount", feeAmount)
-
-		feeBankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Currency)
-		if err != nil {
-			return errors.New("Can't get bank account id")
-		}
 
 		timestamp := time.Now()
 		feeTransfer := common.AccountTransfer{
@@ -225,9 +216,9 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 		// Add the currency to the result
 		result.Currency = withdraw.Currency
 
-		var withdrawAmount model.Float = model.Float(result.Amount)
+		withdrawAmount := model.Float(result.Amount)
 		_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
-			UserID:       user.ID,
+			UserID:       model.UserID(userId),
 			SepaInfoID:   sepaUser.ID,
 			CurrencyName: model.CurrencyName(withdraw.Currency),
 			Amount:       &withdrawAmount,
@@ -266,7 +257,7 @@ func OnFiatWithdraw(ctx context.Context, subject string, message *bank.Message) 
 	var request common.FiatWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
-			operation, err := FiatWithdraw(ctx, request.AuthInfo, request.UserName, request.Source, request.Destination)
+			operation, err := FiatWithdraw(ctx, request.UserId, request.Source, request.Destination)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatWithdraw")

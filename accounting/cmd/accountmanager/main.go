@@ -251,43 +251,46 @@ func WithdrawFiat(ctx context.Context) {
 	fmt.Printf("Successfully withdrawed %v %s for user %s\n", withdraw.Amount, withdraw.Currency, userName)
 }
 
-func FetchPendingWithdraw(ctx context.Context) {
+func FetchPendingWithdraw(ctx context.Context) ([]uint64, error) {
+	var result []uint64
 
 	withdraws, err := client.FiatFetchPendingWithdraw(ctx, common.AuthInfo{})
 	if err != nil {
 		fmt.Printf("FetchPendingWithdraw failed with error: %v\n", err)
-		return
+		return result, err
 	}
 
 	if len(withdraws.PendingWithdraws) == 0 {
 		fmt.Printf("There's no pending withdraws for now\n")
-		return
+		return result, nil
 	}
 
-	for i, withdraw := range withdraws.PendingWithdraws {
-		fmt.Printf("\n\nWithdraw #%v: ", i)
+	for _, withdraw := range withdraws.PendingWithdraws {
+		fmt.Printf("\n\nWithdraw #%v: ", withdraw.ID)
 		fmt.Printf("\nUserName: %v", withdraw.UserName)
 		fmt.Printf("\nIBAN: %v", withdraw.IBAN)
 		fmt.Printf("\nBIC: %v", withdraw.BIC)
 		fmt.Printf("\nCurrency: %v", withdraw.Currency)
 		fmt.Printf("\nAmount: %v", withdraw.Amount)
+
+		result = append(result, withdraw.ID)
 	}
 
 	fmt.Println()
 
+	return result, nil
+
 }
 
-func FinalizeWithdraw(ctx context.Context) {
-	userName := SpecimenUser
-	iban := SpecimenIban
+func FinalizeWithdraw(ctx context.Context, id uint64) {
 
-	final, err := client.FiatFinalizeWithdraw(ctx, common.AuthInfo{}, userName, iban)
+	final, err := client.FiatFinalizeWithdraw(ctx, common.AuthInfo{}, id)
 	if err != nil {
 		fmt.Printf("FinalizeWithdraw failed with error: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Successfully finalized %v %s withdraw for user %s\n", final.Amount, final.Currency, userName)
+	fmt.Printf("Successfully finalized %v %s withdraw for user %s\n", final.Amount, final.Currency, final.UserName)
 }
 
 func main() {
@@ -304,6 +307,9 @@ func main() {
 	// AccountTransferWithdraw(ctx)
 	DepositFiat(ctx)
 	WithdrawFiat(ctx)
-	FetchPendingWithdraw(ctx)
-	FinalizeWithdraw(ctx)
+	id, err := FetchPendingWithdraw(ctx)
+	if err != nil {
+		return
+	}
+	FinalizeWithdraw(ctx, id[0])
 }

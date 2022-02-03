@@ -18,6 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const withOperatorAuth = false
+
 func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string, deposit common.AccountEntry) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatDeposit")
 

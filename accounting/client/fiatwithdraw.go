@@ -12,12 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string, amount float64, currency, bankLabel, iban, bic, userLabel string) (common.AccountEntry, error) {
+func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64, currency, iban, bic, sepaLabel string) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.FiatWithdraw")
-
-	if len(userName) == 0 {
-		return common.AccountEntry{}, cache.ErrInternalError
-	}
 
 	// amount must be positive
 	if amount <= 0.0 {
@@ -30,27 +26,26 @@ func FiatWithdraw(ctx context.Context, authInfo common.AuthInfo, userName string
 
 	dstIban := common.IBAN(iban)
 
-	log = log.WithField("userName", userName)
-
 	request := common.FiatWithdraw{
-		AuthInfo: authInfo,
-		UserName: userName,
+		UserId: userId,
 		Source: common.AccountEntry{
 			OperationType:    "fiat_withdraw",
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
-
-			Label: bankLabel,
 
 			Amount:     amount, // withdraw remove amount from account
 			LockAmount: 0.0,    // no lock on withdraw
 			Currency:   currency,
 		},
 		Destination: common.FiatSepaInfo{
-			Label: userLabel,
+			Label: sepaLabel,
 			IBAN:  dstIban,
 			BIC:   bic,
 		},
+	}
+
+	if accountId != 0 {
+		request.Source.AccountID = accountId
 	}
 
 	var result common.AccountEntry

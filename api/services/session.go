@@ -112,7 +112,7 @@ func (p *SessionService) Open(r *http.Request, request *SessionOpenRequest, repl
 		if len(request.TOTP) != 0 {
 			userID, valid, err = database.CheckTOTP(ctx, db, model.Base58(request.Login), request.TOTP)
 		} else {
-			userID, valid, err = model.UserID(2), true, nil
+			userID, valid, err = model.UserID(3), true, nil
 		}
 	} else {
 		userID, valid, err = database.CheckCredential(ctx, db, model.Base58(request.Login), model.Base58(request.Password))
