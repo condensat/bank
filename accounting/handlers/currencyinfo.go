@@ -66,7 +66,7 @@ func CurrencyInfo(ctx context.Context, currencyName string) (common.CurrencyInfo
 }
 
 func OnCurrencyInfo(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
-	log := logger.Logger(ctx).WithField("Method", "Currencying.OnCurrencyInfo")
+	log := logger.Logger(ctx).WithField("Method", "accounting.OnCurrencyInfo")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})

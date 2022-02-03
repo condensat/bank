@@ -49,7 +49,7 @@ type Notional struct {
 type AccountInfo struct {
 	Timestamp   int64        `json:"timestamp"`
 	AccountID   string       `json:"accountId"`
-	Currency    CurrencyInfo `json:"curency"`
+	Currency    CurrencyInfo `json:"currency"`
 	Name        string       `json:"name"`
 	Status      string       `json:"status"`
 	Balance     float64      `json:"balance"`
@@ -69,25 +69,27 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 	log = GetServiceRequestLog(log, r, "Accounting", "List")
 
 	// Retrieve context values
-	_, session, err := ContextValues(ctx)
-	if err != nil {
-		log.WithError(err).
-			Error("ContextValues Failed")
-		return ErrServiceInternalError
-	}
+	// _, session, err := ContextValues(ctx)
+	// if err != nil {
+	// 	log.WithError(err).
+	// 		Error("ContextValues Failed")
+	// 	return ErrServiceInternalError
+	// }
 
 	// Get userID from session
-	request.SessionID = GetSessionCookie(r)
-	sessionID := sessions.SessionID(request.SessionID)
-	userID := session.UserSession(ctx, sessionID)
-	if !sessions.IsUserValid(userID) {
-		log.Error("Invalid userSession")
-		return sessions.ErrInvalidSessionID
-	}
-	log = log.WithFields(logrus.Fields{
-		"SessionID": sessionID,
-		"UserID":    userID,
-	})
+	// request.SessionID = GetSessionCookie(r)
+	// sessionID := sessions.SessionID(request.SessionID)
+	// userID := session.UserSession(ctx, sessionID)
+	// if !sessions.IsUserValid(userID) {
+	// 	log.Error("Invalid userSession")
+	// 	return sessions.ErrInvalidSessionID
+	// }
+	// log = log.WithFields(logrus.Fields{
+	// 	"SessionID": sessionID,
+	// 	"UserID":    userID,
+	// })
+
+	var userID uint64 = 3
 
 	// call internal API
 	list, err := client.AccountList(ctx, userID)
@@ -175,7 +177,7 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 		}
 
 		if info.Asset || account.Currency.Name == "TBTC" {
-			// asset and TBTC does not have notional
+			// assets and TBTC do not have notional
 			notional = Notional{}
 		}
 

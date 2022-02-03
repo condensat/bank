@@ -48,7 +48,7 @@ func CurrencyInfo(ctx context.Context, name string) (common.CurrencyInfo, error)
 		info, err := client.CurrencyInfo(ctx, name)
 		if err != nil {
 			log.WithError(err).
-				Error("Failed to et gCurrencyInfo")
+				Error("Failed to get CurrencyInfo")
 			return common.CurrencyInfo{}, errors.New("Internal Error")
 		}
 		// get info data for result
