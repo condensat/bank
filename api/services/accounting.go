@@ -69,27 +69,25 @@ func (p *AccountingService) List(r *http.Request, request *AccountRequest, reply
 	log = GetServiceRequestLog(log, r, "Accounting", "List")
 
 	// Retrieve context values
-	// _, session, err := ContextValues(ctx)
-	// if err != nil {
-	// 	log.WithError(err).
-	// 		Error("ContextValues Failed")
-	// 	return ErrServiceInternalError
-	// }
+	_, session, err := ContextValues(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("ContextValues Failed")
+		return ErrServiceInternalError
+	}
 
 	// Get userID from session
-	// request.SessionID = GetSessionCookie(r)
-	// sessionID := sessions.SessionID(request.SessionID)
-	// userID := session.UserSession(ctx, sessionID)
-	// if !sessions.IsUserValid(userID) {
-	// 	log.Error("Invalid userSession")
-	// 	return sessions.ErrInvalidSessionID
-	// }
-	// log = log.WithFields(logrus.Fields{
-	// 	"SessionID": sessionID,
-	// 	"UserID":    userID,
-	// })
-
-	var userID uint64 = 3
+	request.SessionID = GetSessionCookie(r)
+	sessionID := sessions.SessionID(request.SessionID)
+	userID := session.UserSession(ctx, sessionID)
+	if !sessions.IsUserValid(userID) {
+		log.Error("Invalid userSession")
+		return sessions.ErrInvalidSessionID
+	}
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
 
 	// call internal API
 	list, err := client.AccountList(ctx, userID)

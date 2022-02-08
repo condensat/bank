@@ -34,8 +34,7 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	log = GetServiceRequestLog(log, r, "Fiat", "Withdraw")
 
 	// Retrieve context values
-	// _, session, err := ContextValues(ctx)
-	_, _, err := ContextValues(ctx)
+	_, session, err := ContextValues(ctx)
 	if err != nil {
 		log.WithError(err).
 			Error("ContextValues Failed")
@@ -43,19 +42,17 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	}
 
 	// Get userID from session
-	// request.SessionID = GetSessionCookie(r)
-	// sessionID := sessions.SessionID(request.SessionID)
-	// userID := session.UserSession(ctx, sessionID)
-	// if !sessions.IsUserValid(userID) {
-	// 	log.Error("Invalid userSession")
-	// 	return sessions.ErrInvalidSessionID
-	// }
-	// log = log.WithFields(logrus.Fields{
-	// 	"SessionID": sessionID,
-	// 	"UserID":    userID,
-	// })
-
-	userId := uint64(4)
+	request.SessionID = GetSessionCookie(r)
+	sessionID := sessions.SessionID(request.SessionID)
+	userID := session.UserSession(ctx, sessionID)
+	if !sessions.IsUserValid(userID) {
+		log.Error("Invalid userSession")
+		return sessions.ErrInvalidSessionID
+	}
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
 
 	sID := appcontext.SecureID(ctx)
 
@@ -101,7 +98,7 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	}
 
 	// Call internal API
-	deposit, err := client.FiatWithdraw(ctx, userId, accountId, request.Amount, request.Currency, request.Iban, request.Bic, request.SepaLabel)
+	deposit, err := client.FiatWithdraw(ctx, userID, accountId, request.Amount, request.Currency, request.Iban, request.Bic, request.SepaLabel)
 	if err != nil {
 		log.WithError(err).
 			Error("FiatWithdraw failed")

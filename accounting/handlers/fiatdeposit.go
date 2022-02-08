@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
@@ -72,11 +73,31 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 
 	// Get AccountID with UserID
 	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(deposit.Currency), model.AccountName("*"))
-	if err != nil || len(account) == 0 {
-		return common.AccountEntry{}, errors.New("Account not found")
+	if err != nil {
+		return common.AccountEntry{}, err
 	}
 
+	if len(account) == 0 {
+		// Create a new account for this user and currency
+		createdAccount, err := client.AccountCreate(ctx, uint64(user.ID), deposit.Currency)
+		if err != nil {
+			return common.AccountEntry{}, err
+		}
+
+		// Set new account to normal
+		_, err = database.AddOrUpdateAccountState(db, model.AccountState{
+			AccountID: model.AccountID(createdAccount.Info.AccountID),
+			State:     model.AccountStatusNormal,
+		})
+		if err != nil {
+			log.Errorf("in AddOrUpdateAccountState: %s\n", err)
+			return common.AccountEntry{}, errors.New("AddOrUpdateAccountState failed")
+	}
+
+		deposit.AccountID = uint64(createdAccount.Info.AccountID)
+	} else {
 	deposit.AccountID = uint64(account[0].ID)
+	}
 
 	log = log.WithField("accountID", deposit.AccountID)
 
@@ -87,6 +108,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 	// Making the operation
 	result, err := AccountOperation(ctx, deposit)
 	if err != nil {
+		log.Errorf("in AccountOperation: %s\n", err)
 		return common.AccountEntry{}, errors.New("AccountOperation failed")
 	}
 
