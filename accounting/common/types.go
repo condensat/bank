@@ -144,6 +144,14 @@ type BatchUpdate struct {
 	Height int
 }
 
+func (p *FiatDeposit) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatDeposit) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
 func (p *CurrencyList) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
