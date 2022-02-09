@@ -6,6 +6,7 @@ import (
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
 
@@ -29,7 +30,7 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 	request := common.FiatWithdraw{
 		UserId: userId,
 		Source: common.AccountEntry{
-			OperationType:    "withdraw",
+			OperationType:    string(model.OperationTypeFiatWithdraw),
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
 

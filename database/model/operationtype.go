@@ -15,7 +15,8 @@ const (
 	OperationTypeRefund      OperationType = "refund"
 	OperationTypeAdjustment  OperationType = "adjustment"
 
-	OperationTypeFiatDeposit OperationType = "fiat_deposit"
+	OperationTypeFiatDeposit  OperationType = "fiat_deposit"
+	OperationTypeFiatWithdraw OperationType = "fiat_withdraw"
 
 	OperationTypeNone  OperationType = "none"
 	OperationTypeOther OperationType = "other"
@@ -42,6 +43,8 @@ func (p OperationType) Valid() bool {
 	case OperationTypeAdjustment:
 		fallthrough
 	case OperationTypeFiatDeposit:
+		fallthrough
+	case OperationTypeFiatWithdraw:
 		fallthrough
 
 	case OperationTypeNone:
