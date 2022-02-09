@@ -49,7 +49,7 @@ type Notional struct {
 type AccountInfo struct {
 	Timestamp   int64        `json:"timestamp"`
 	AccountID   string       `json:"accountId"`
-	Currency    CurrencyInfo `json:"curency"`
+	Currency    CurrencyInfo `json:"currency"`
 	Name        string       `json:"name"`
 	Status      string       `json:"status"`
 	Balance     float64      `json:"balance"`
