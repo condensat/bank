@@ -7,7 +7,7 @@ Authentification method is based on operator accountNumber and one time password
 TL;DR :
 
 ```bash
-  go run go run ./api/cmd/bank-account-manager fiatwithdraw --pgpPublicKey=<UserPGPPublicFile> | tee -a userCreate.log
+  go run ./accounting/cmd/bank-account-manager fiatDeposit --userName=8868029921 --amount=200 --currency=EUR
 ```
 
 If `operatorAccount` and `totp` are not set, unauthenticated call is made.
@@ -39,13 +39,18 @@ Usage of userCreate:
 
 ## Commands
 
-### fiatwithdraw
+### fiatDeposit
 
 ```bash
-Usage of fiatwithdraw:
-  -pgpPublicKey string
-    	Client PGP public key filename
+Usage of fiatDeposit:
+  -amount float
+        Amount to deposit on the account
+  -currency string
+        Currency that we intend to deposit (in ISO4217 code notation, ie. EUR)
+  -label string
+        Optional label
+  -userName string
+        User that deposits money
 ```
-
-Once user created pgp encrypted message is displayed with new created accountNumber.
-User's public key is used for cyphering and store to database for further use.
+Once deposit is made the following message is displayed on screen :
+`Successfully deposited <amount> <currency> for user <userName>`
