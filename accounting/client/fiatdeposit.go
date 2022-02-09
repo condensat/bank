@@ -32,7 +32,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 		AuthInfo: authInfo,
 		UserName: userName,
 		Destination: common.AccountEntry{
-			OperationType:    "deposit", // would it be better to use the OperationType defined in model?
+			OperationType:    "fiat_deposit",
 			SynchroneousType: "sync",
 			Timestamp:        time.Now(),
 
