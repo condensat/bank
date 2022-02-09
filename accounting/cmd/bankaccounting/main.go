@@ -52,6 +52,7 @@ func main() {
 	ctx = appcontext.WithWriter(ctx, logger.NewRedisLogger(ctx))
 	ctx = appcontext.WithMessaging(ctx, messaging.NewNats(ctx, args.Nats))
 	ctx = appcontext.WithDatabase(ctx, database.NewDatabase(args.Database))
+	ctx = appcontext.WithHasherWorker(ctx, args.App.Hasher)
 
 	migrateDatabase(ctx)
 	createDefaultFeeInfo(ctx)
