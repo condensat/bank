@@ -48,6 +48,8 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 
 	const concurencyLevel = 8
 
+	nats.SubscribeWorkers(ctx, common.FiatDepositSubject, 2*concurencyLevel, handlers.OnFiatDeposit)
+
 	nats.SubscribeWorkers(ctx, common.CurrencyInfoSubject, 2*concurencyLevel, handlers.OnCurrencyInfo)
 	nats.SubscribeWorkers(ctx, common.CurrencyCreateSubject, 2*concurencyLevel, handlers.OnCurrencyCreate)
 	nats.SubscribeWorkers(ctx, common.CurrencyListSubject, 2*concurencyLevel, handlers.OnCurrencyList)
