@@ -6,6 +6,19 @@ import (
 	"git.condensat.tech/bank"
 )
 
+type TOTP string
+
+type AuthInfo struct {
+	OperatorAccount string
+	TOTP            TOTP
+}
+
+type FiatDeposit struct {
+	AuthInfo
+	UserName    string
+	Destination AccountEntry
+}
+
 type CurrencyType int
 
 type CurrencyInfo struct {
