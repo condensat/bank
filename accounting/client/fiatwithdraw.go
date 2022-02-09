@@ -25,7 +25,7 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 		return common.AccountEntry{}, cache.ErrInternalError
 	}
 
-	// TODO: check that currency is fiat
+	dstIban := common.IBAN(iban)
 
 	request := common.FiatWithdraw{
 		UserId: userId,
@@ -40,7 +40,7 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 		},
 		Destination: common.FiatSepaInfo{
 			Label: sepaLabel,
-			IBAN:  iban,
+			IBAN:  dstIban,
 			BIC:   bic,
 		},
 	}

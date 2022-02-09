@@ -35,6 +35,15 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 		return result, errors.New("Amount is below the minimum required for a fiat withdraw")
 	}
 
+	// check that IBAN is in the correct format
+	validIban, err := sepaInfo.IBAN.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validIban {
+		return result, errors.New("Provided iban doesn't respect format")
+	}
+
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return result, errors.New("Invalid Database")
@@ -114,7 +123,7 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 	// Look for the sepa with userID and IBAN
 	sepaUser, err := database.GetSepaByUserAndIban(db, model.UserID(userId), model.Iban(sepaInfo.IBAN))
 	if err != nil && err != database.ErrSepaNotFound {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	if sepaUser.ID == 0 {
@@ -127,7 +136,7 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 			Label:  model.String(sepaInfo.Label),
 		})
 		if err != nil {
-			return common.AccountEntry{}, err
+			return result, err
 		}
 
 	} else {
@@ -135,7 +144,7 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 		// Is there a fiatoperation for this sepa AND this user?
 		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, model.UserID(userId), sepaUser.ID)
 		if err != nil {
-			return common.AccountEntry{}, err
+			return result, err
 		}
 
 		// stop if there's already 1 or more pending withdrawal
@@ -143,9 +152,9 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 		case 0:
 			break
 		case 1:
-			return common.AccountEntry{}, errors.New("Already a pending withdrawal for this user and sepa")
+			return result, errors.New("Already a pending withdrawal for this user and sepa")
 		default:
-			return common.AccountEntry{}, errors.New("Multiple pending withdrawals for this user and sepa")
+			return result, errors.New("Multiple pending withdrawals for this user and sepa")
 		}
 	}
 
