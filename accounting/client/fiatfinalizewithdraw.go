@@ -11,23 +11,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userName, iban string) (common.FiatFinalizeWithdraw, error) {
+func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, id uint64) (common.FiatFinalizeWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.FiatFinalizeWithdraw")
 
-	if len(userName) == 0 {
+	if id == 0 {
 		return common.FiatFinalizeWithdraw{}, cache.ErrInternalError
 	}
 
-	if len(iban) == 0 {
-		return common.FiatFinalizeWithdraw{}, cache.ErrInternalError
-	}
-
-	log = log.WithField("userName", userName)
+	log = log.WithField("id", id)
 
 	request := common.FiatFinalizeWithdraw{
 		AuthInfo: authInfo,
-		UserName: userName,
-		IBAN:     iban,
+		ID:       id,
 	}
 
 	var result common.FiatFinalizeWithdraw
@@ -39,6 +34,7 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, userNam
 	}
 
 	log.WithFields(logrus.Fields{
+		"ID":       result.ID,
 		"UserName": result.UserName,
 		"IBAN":     result.IBAN,
 		"Currency": result.Currency,
