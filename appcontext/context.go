@@ -25,6 +25,7 @@ const (
 	CacheKey
 	MessagingKey
 	DatabaseKey
+	BankMailKey
 
 	privateKeySaltKey = security.KeyPrivateKeySalt
 	hasherWorkerKey   = security.KeyHasherWorker
@@ -60,6 +61,10 @@ func WithLogLevel(ctx context.Context, level string) context.Context {
 	return context.WithValue(ctx, LogLevelKey, level)
 }
 
+func WithBankMail(ctx context.Context, bankMail string) context.Context {
+	return context.WithValue(ctx, BankMailKey, bankMail)
+}
+
 // WithMessaging returns a context with the messaging set
 func WithCache(ctx context.Context, cache bank.Cache) context.Context {
 	return context.WithValue(ctx, CacheKey, cache)
@@ -85,6 +90,7 @@ func WithHasherWorker(ctx context.Context, options HasherOptions) context.Contex
 func WithOptions(ctx context.Context, options Options) context.Context {
 	ctx = WithAppName(ctx, options.AppName)
 	ctx = WithLogLevel(ctx, options.LogLevel)
+	ctx = WithBankMail(ctx, options.BankUser)
 
 	// generate random seed to hash private key and seed at runtime
 	ctx = context.WithValue(ctx, privateKeySaltKey, utils.GenerateRandN(32))
@@ -145,6 +151,13 @@ func Logger(ctx context.Context) bank.Logger {
 		return ctxLogger
 	}
 	return nil
+}
+
+func BankMail(ctx context.Context) string {
+	if ctxBankMail, ok := ctx.Value(BankMailKey).(string); ok {
+		return ctxBankMail
+	}
+	return ""
 }
 
 func Cache(ctx context.Context) bank.Cache {
