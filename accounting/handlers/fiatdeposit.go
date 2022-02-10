@@ -92,7 +92,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 			State:     model.AccountStatusNormal,
 		})
 		if err != nil {
-			log.Errorf("in AddOrUpdateAccountState: %s\n", err)
+			log.WithError(err).Error("Failed AddOrUpdateAccountState")
 			return common.AccountEntry{}, errors.New("AddOrUpdateAccountState failed")
 		}
 
@@ -110,7 +110,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 	// Making the operation
 	result, err := AccountOperation(ctx, deposit)
 	if err != nil {
-		log.Errorf("in AccountOperation: %s\n", err)
+		log.WithError(err).Error("AccountOperation failed")
 		return common.AccountEntry{}, errors.New("AccountOperation failed")
 	}
 
