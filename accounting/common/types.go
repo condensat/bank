@@ -6,6 +6,19 @@ import (
 	"git.condensat.tech/bank"
 )
 
+type TOTP string
+
+type AuthInfo struct {
+	OperatorAccount string
+	TOTP            TOTP
+}
+
+type FiatDeposit struct {
+	AuthInfo
+	UserName    string
+	Destination AccountEntry
+}
+
 type CurrencyType int
 
 type CurrencyInfo struct {
@@ -129,6 +142,14 @@ type BatchUpdate struct {
 	BatchStatus
 	TxID   string
 	Height int
+}
+
+func (p *FiatDeposit) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatDeposit) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *CurrencyList) Encode() ([]byte, error) {
