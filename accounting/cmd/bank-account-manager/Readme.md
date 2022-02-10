@@ -8,11 +8,13 @@ TL;DR :
 
 ```bash
   go run ./accounting/cmd/bank-account-manager fiatDeposit --userName=8868029921 --amount=200 --currency=EUR
+  go run ./accounting/cmd/bank-account-manager fiatFetchPendingWithdraw
+
 ```
 
 If `operatorAccount` and `totp` are not set, unauthenticated call is made.
 
-## Environement variable
+## Environement variables
 
 Use `.env` file to store operator account and nats address (tor)
 
@@ -21,20 +23,18 @@ Use `.env` file to store operator account and nats address (tor)
   CONDENSAT_NATS_TOR=nats-host.onion
 ```
 
-## Commond flags
+## Common flags
 
 ```bash
-Usage of userCreate:
-
+Usage of fiatDeposit:
   -natsHost string
-    	Nats hostName (default 'nats')
+        Nats hostName (default 'nats') (default "nats")
   -natsPort int
-    	Nats port (default 4222)
-
+        Nats port (default 4222) (default 4222)
   -operatorAccount string
-    	Operator Account
+        Operator Account
   -totp string
-    	Operator TOTP
+        Operator TOTP
 ```
 
 ## Commands
@@ -54,3 +54,14 @@ Usage of fiatDeposit:
 ```
 Once deposit is made the following message is displayed on screen :
 `Successfully deposited <amount> <currency> for user <userName>`
+
+### fiatFetchPendingWithdraw
+
+```
+Withdraw #0: 
+UserName: <userName>
+IBAN: <iban>
+BIC: <bic>
+Currency: <currency>
+Amount: <amount>
+```
