@@ -47,6 +47,7 @@ type FiatSepaInfo struct {
 }
 
 type FiatFetchPendingWithdraw struct {
+	ID       uint64
 	UserName string
 	IBAN     string
 	BIC      string

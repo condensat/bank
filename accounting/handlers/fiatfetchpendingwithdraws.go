@@ -95,6 +95,7 @@ func convertFiatOperation(db bank.Database, list []model.FiatOperationInfo) ([]c
 
 		// append the fetchPendingWithdraw to list
 		result = append(result, common.FiatFetchPendingWithdraw{
+			ID:       uint64(withdraw.ID),
 			UserName: string(user.Name),
 			Currency: string(withdraw.CurrencyName),
 			Amount:   float64(*withdraw.Amount),

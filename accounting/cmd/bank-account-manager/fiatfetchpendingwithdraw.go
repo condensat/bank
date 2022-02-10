@@ -31,8 +31,8 @@ func fiatPrintPendingWithdraw(withdraws []common.FiatFetchPendingWithdraw) {
 		fmt.Printf("There's no pending withdraws for now\n")
 	}
 
-	for i, withdraw := range withdraws {
-		fmt.Printf("\n\nWithdraw #%v: ", i)
+	for _, withdraw := range withdraws {
+		fmt.Printf("\n\nWithdraw #%v: ", withdraw.ID)
 		fmt.Printf("\nUserName: %v", withdraw.UserName)
 		fmt.Printf("\nIBAN: %v", withdraw.IBAN)
 		fmt.Printf("\nBIC: %v", withdraw.BIC)
