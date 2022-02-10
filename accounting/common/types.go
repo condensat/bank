@@ -59,6 +59,14 @@ type FiatFetchPendingWithdrawList struct {
 	PendingWithdraws []FiatFetchPendingWithdraw
 }
 
+type FiatFinalizeWithdraw struct {
+	AuthInfo
+	UserName string
+	IBAN     string
+	Currency string
+	Amount   float64
+}
+
 type FiatWithdraw struct {
 	UserId      uint64
 	Source      AccountEntry
@@ -217,6 +225,14 @@ func (p *FiatFetchPendingWithdrawList) Encode() ([]byte, error) {
 }
 
 func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatFinalizeWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatFinalizeWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
