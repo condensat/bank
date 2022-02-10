@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/logger"
+	"golang.org/x/net/proxy"
 
 	nats "github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
@@ -30,13 +33,77 @@ type Nats struct {
 	nc *nats.Conn
 }
 
+type customDialer struct {
+	ctx             context.Context
+	connectTimeout  time.Duration
+	connectTimeWait time.Duration
+}
+
+func (cd *customDialer) Dial(network, address string) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(cd.ctx, cd.connectTimeout)
+	defer cancel()
+
+	for {
+		logrus.Println("Attempting to connect to", address)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		select {
+		case <-cd.ctx.Done():
+			return nil, cd.ctx.Err()
+		default:
+			dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9150", nil, nil)
+			if err != nil {
+				panic(err)
+			}
+
+			if conn, err := dialer.Dial(network, address); err == nil {
+				logrus.Println("Connected to NATS successfully")
+				return conn, nil
+			} else {
+				time.Sleep(cd.connectTimeWait)
+			}
+		}
+	}
+}
+
 // NewNats returns Nats messaging.
 // panic on connection error
 func NewNats(ctx context.Context, options NatsOptions) *Nats {
 	log := logger.Logger(ctx).WithField("Method", "messaging.NewNats")
 	url := fmt.Sprintf("nats://%s:%d", options.HostName, options.Port)
 
-	nc, err := nats.Connect(url)
+	withTor := strings.HasSuffix(options.HostName, ".onion")
+
+	var err error
+	var nc *nats.Conn
+
+	var cd *customDialer
+	if withTor {
+		cd = &customDialer{
+			ctx:             ctx,
+			connectTimeout:  10 * time.Second,
+			connectTimeWait: 1 * time.Second,
+		}
+	}
+	opts := []nats.Option{
+		nats.ReconnectWait(2 * time.Second),
+		nats.ReconnectHandler(func(c *nats.Conn) {
+			log.Println("Reconnected to", c.ConnectedUrl())
+		}),
+		nats.DisconnectHandler(func(c *nats.Conn) {
+			log.Println("Disconnected from NATS")
+		}),
+		nats.ClosedHandler(func(c *nats.Conn) {
+			log.Println("NATS connection is closed.")
+		}),
+		// nats.NoReconnect(),
+	}
+	if cd != nil {
+		opts = append([]nats.Option{nats.SetCustomDialer(cd)}, opts...)
+	}
+	nc, err = nats.Connect(url, opts...)
 	if err != nil {
 		log.WithError(err).
 			WithField("URL", url).
