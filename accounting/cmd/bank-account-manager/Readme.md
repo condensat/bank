@@ -9,6 +9,7 @@ TL;DR :
 ```bash
   go run ./accounting/cmd/bank-account-manager fiatDeposit --userName=8868029921 --amount=200 --currency=EUR
   go run ./accounting/cmd/bank-account-manager fiatFetchPendingWithdraw
+  go run ./accounting/cmd/bank-account-manager fiatFinalizeWithdraw --id 1
 
 ```
 
@@ -65,3 +66,17 @@ BIC: <bic>
 Currency: <currency>
 Amount: <amount>
 ```
+
+### fiatFinalizeWithdraw
+
+```bash
+Usage of fiatFinalizeWithdraw:
+  -id uint64
+      id of the withdraw obtained with fiatFetchPendingWithdraw
+```
+
+`Successfully finalized withdrawal from user <userName> to account <iban>`
+
+### Notes
+
+* For now we don't allow to register another pending withdraw for the same user and iban if another is already pending. The existing pending withdraw must first be finalized with `fiatFinalizeWithdraw` before we can use `fiatWithdraw` again. It is possible to have many withdraws pending for the same user and different beneficiaries though.
