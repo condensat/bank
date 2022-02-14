@@ -34,6 +34,8 @@ type Args struct {
 	FiatFetchPendingWithdraw FiatFetchPendingWithdrawArg
 	FiatDeposit              FiatDepositArg
 	FiatFinalizeWithdraw     FiatFinalizeWithdrawArg
+
+	CryptoFetchPendingWithdraw CryptoFetchPendingWithdrawArg
 }
 
 func AuthInfoCmdArgs(cmd *flag.FlagSet, args *common.AuthInfo) {
@@ -69,6 +71,9 @@ func parseArgs(ctx context.Context) Args {
 
 	case FiatFinalizeWithdraw:
 		cmd = fiatFinalizeWithdrawArg(&args.FiatFinalizeWithdraw)
+
+	case CryptoFetchPendingWithdraw:
+		cmd = cryptoFetchPendingWithdrawArg(&args.CryptoFetchPendingWithdraw)
 
 	default:
 		printUsage(2)

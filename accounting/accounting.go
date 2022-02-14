@@ -50,6 +50,8 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 
 	const concurencyLevel = 8
 
+	nats.SubscribeWorkers(ctx, common.CryptoFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoFetchPendingWithdraw)
+
 	nats.SubscribeWorkers(ctx, common.FiatFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFetchPendingWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatFinalizeWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFinalizeWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatDepositSubject, 2*concurencyLevel, handlers.OnFiatDeposit)
@@ -129,10 +131,10 @@ func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.D
 
 				if autoBatch {
 					err := processPendingWithdraws(ctx)
-				if err != nil {
-					log.WithError(err).
+					if err != nil {
+						log.WithError(err).
 							Error("Failed to processPendingWithdraws")
-					// continue to next task
+						// continue to next task
 					}
 				}
 

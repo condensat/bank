@@ -44,6 +44,20 @@ type AuthInfo struct {
 	TOTP            TOTP
 }
 
+type CryptoWithdraw struct {
+	WithdrawID uint64
+	TargetID   uint64
+	UserName   string
+	Address    string
+	Amount     float64
+	Currency   string
+}
+
+type CryptoFetchPendingWithdrawList struct {
+	PendingWithdraws []CryptoWithdraw
+}
+}
+
 type FiatSepaInfo struct {
 	IBAN
 	BIC
@@ -214,6 +228,14 @@ func (p *AuthInfo) Encode() ([]byte, error) {
 }
 
 func (p *AuthInfo) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *CryptoFetchPendingWithdrawList) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *CryptoFetchPendingWithdrawList) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

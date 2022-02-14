@@ -3,6 +3,8 @@ package common
 const (
 	chanPrefix = "Condensat.Accounting."
 
+	CryptoFetchPendingWithdrawSubject = chanPrefix + "Crypto.FetchPendingWithdraw"
+
 	FiatWithdrawSubject             = chanPrefix + "Fiat.Withdraw"
 	FiatFetchPendingWithdrawSubject = chanPrefix + "Fiat.FetchPendingWithdraw"
 	FiatFinalizeWithdrawSubject     = chanPrefix + "Fiat.FinalizeWithdraw"
