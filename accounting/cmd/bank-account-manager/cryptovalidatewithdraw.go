@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 
+	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/accounting/common"
 )
 
@@ -49,12 +50,24 @@ func cryptoValidateWithdrawArg(args *CryptoValidateWithdrawArg) *flag.FlagSet {
 }
 
 func cryptoValidateWithdraw(ctx context.Context, authInfo common.AuthInfo, args CryptoValidateWithdrawArg) error {
-	// final, err := client.cryptoValidateWithdraw(ctx, authInfo, args.id)
-	// if err != nil {
-	// 	return err
-	// }
+	Validated, err := client.CryptoValidateWithdraw(ctx, authInfo, args.id)
+	if err != nil {
+		return err
+	}
 
-	// fmt.Printf("Successfully marked withdraw from user %s to account %s ready for batching\n", final.UserName, final.IBAN)
+	if len(Validated.ValidatedWithdraws) > 0 {
+		for _, withdraw := range Validated.ValidatedWithdraws {
+			fmt.Printf("Successfully validated withdraw #%v:\n", withdraw.TargetID)
+			fmt.Printf("UserName: %s\n", withdraw.UserName)
+			fmt.Printf("Address: %s\n", withdraw.Address)
+			fmt.Printf("Currency: %s\n", withdraw.Currency)
+			fmt.Printf("Amount: %v\n", withdraw.Amount)
+
+			fmt.Println()
+		}
+	} else {
+		fmt.Println("No valid withdraws in provided id")
+	}
 
 	return nil
 }

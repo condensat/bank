@@ -4,6 +4,7 @@ const (
 	chanPrefix = "Condensat.Accounting."
 
 	CryptoFetchPendingWithdrawSubject = chanPrefix + "Crypto.FetchPendingWithdraw"
+	CryptoValidateWithdrawSubject     = chanPrefix + "Crypto.ValidateWithdraw"
 
 	FiatWithdrawSubject             = chanPrefix + "Fiat.Withdraw"
 	FiatFetchPendingWithdrawSubject = chanPrefix + "Fiat.FetchPendingWithdraw"
