@@ -7,6 +7,10 @@ import (
 	"git.condensat.tech/bank"
 )
 
+const (
+	WithOperatorAuth = true
+)
+
 func Timestamp() time.Time {
 	return time.Now().UTC().Truncate(time.Second)
 }

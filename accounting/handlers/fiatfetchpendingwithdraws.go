@@ -26,7 +26,7 @@ func FiatFetchPendingWithdraw(ctx context.Context, authInfo common.AuthInfo) ([]
 		return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid Database")
 	}
 
-	if withOperatorAuth {
+	if common.WithOperatorAuth {
 		if len(authInfo.OperatorAccount) == 0 {
 			return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid OperatorAccount")
 		}
