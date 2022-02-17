@@ -26,6 +26,7 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 	}
 
 	dstIban := common.IBAN(iban)
+	dstBic := common.BIC(bic)
 
 	request := common.FiatWithdraw{
 		UserId: userId,
@@ -41,7 +42,7 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 		Destination: common.FiatSepaInfo{
 			Label: sepaLabel,
 			IBAN:  dstIban,
-			BIC:   bic,
+			BIC:   dstBic,
 		},
 	}
 

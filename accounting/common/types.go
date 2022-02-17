@@ -24,6 +24,17 @@ func (p *IBAN) Valid() (bool, error) {
 	return valid, nil
 }
 
+type BIC string
+
+func (p *BIC) Valid() (bool, error) {
+	valid, err := regexp.MatchString("([a-zA-Z]{4})([a-zA-Z]{2})(([2-9a-zA-Z]{1})([0-9a-np-zA-NP-Z]{1}))((([0-9a-wy-zA-WY-Z]{1})([0-9a-zA-Z]{2}))|([xX]{3})|)", string(*p))
+	if err != nil {
+		return false, err
+	}
+
+	return valid, nil
+}
+
 type AuthInfo struct {
 	OperatorAccount string
 	TOTP            TOTP
@@ -31,7 +42,7 @@ type AuthInfo struct {
 
 type FiatSepaInfo struct {
 	IBAN
-	BIC   string
+	BIC
 	Label string
 }
 
