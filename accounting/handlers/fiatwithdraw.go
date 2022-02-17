@@ -26,13 +26,21 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 
 	// Sanity checks
 	if userId == 0 {
-		return result, errors.New("userID can't be 0")
+		return result, errors.New("Invalid UserID")
+	}
+
+	log.WithField("userID", userId)
+
+	if withdraw.Amount <= 0.0 {
+		return result, errors.New("Amount can't be nul or negative")
 	}
 
 	if withdraw.Amount < minAmountFiatWithdraw {
-		log.WithField("Amount", withdraw.Amount).
-			Error("Insufficient amount")
-		return result, errors.New("Amount is below the minimum required for a fiat withdraw")
+		return result, errors.New("Amount is below the minimum required")
+	}
+
+	if withdraw.LockAmount != 0.0 {
+		return result, errors.New("LockAmount must be 0")
 	}
 
 	// check that IBAN is in the correct format
@@ -41,7 +49,26 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 		return result, err
 	}
 	if !validIban {
-		return result, errors.New("Provided iban doesn't respect format")
+		return result, errors.New("Provided iban invalid format")
+	}
+
+	// check that Bic is correct format
+	validBic, err := sepaInfo.BIC.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validBic {
+		return result, errors.New("Provided bic invalid format")
+	}
+
+	// check operation type is fiat_withdraw
+	if withdraw.OperationType != string(model.OperationTypeFiatWithdraw) {
+		return result, errors.New("Invalid Operation type")
+	}
+
+	// check sync is sync
+	if withdraw.SynchroneousType != string(model.SynchroneousTypeSync) {
+		return result, errors.New("Invalid Sync type")
 	}
 
 	db := appcontext.Database(ctx)
@@ -53,6 +80,10 @@ func FiatWithdraw(ctx context.Context, userId uint64, withdraw common.AccountEnt
 	currency, err := database.GetCurrencyByName(db, model.CurrencyName(withdraw.Currency))
 	if err != nil {
 		return result, err
+	}
+
+	if currency.Name == "" {
+		return result, errors.New("Currency not found")
 	}
 
 	// Round up to currency.DisplayPrecision
