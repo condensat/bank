@@ -50,6 +50,7 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 
 	const concurencyLevel = 8
 
+	nats.SubscribeWorkers(ctx, common.CryptoCancelWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoCancelWithdraw)
 	nats.SubscribeWorkers(ctx, common.CryptoValidateWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoValidateWithdraw)
 	nats.SubscribeWorkers(ctx, common.CryptoFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoFetchPendingWithdraw)
 

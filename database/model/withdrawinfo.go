@@ -23,3 +23,7 @@ type WithdrawInfo struct {
 	Status     WithdrawStatus   `gorm:"index;not null;size:16"`          // WithdrawStatus [created, processing, completed, canceled]
 	Data       WithdrawInfoData `gorm:"type:blob;not null;default:'{}'"` // WithdrawInfo data
 }
+
+type WithdrawInfoCancelComment struct {
+	Comment string
+}
