@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
@@ -23,6 +24,32 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return result, errors.New("Invalid Database")
+	}
+
+	// Test for null or negative amount
+	if deposit.Amount <= 0.0 {
+		return result, errors.New("Null or negative amount")
+	}
+
+	// We'd better set an upper limit too, for now let's say it's MaxFloat
+	if deposit.Amount >= math.MaxFloat64 {
+		return result, errors.New("Absurdly high amount")
+	}
+
+	// Is currency fiat ?
+	currencyInfo, err := database.GetCurrencyByName(db, model.CurrencyName(deposit.Currency))
+	if err != nil {
+		return result, err
+	}
+
+	var fiatType model.Int = 0
+	if *currencyInfo.Type != fiatType {
+		return result, errors.New("Currency is not fiat")
+	}
+
+	// is OperationType fiat_deposit?
+	if deposit.OperationType != model.OperationTypeFiatDeposit.String() {
+		return result, errors.New("OperationType is not fiat_deposit")
 	}
 
 	email := fmt.Sprintf("%s@condensat.tech", userName)
