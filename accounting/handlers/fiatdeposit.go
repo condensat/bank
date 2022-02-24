@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
@@ -45,14 +44,18 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 
 	if len(account) == 0 {
 		// Create a new account for this user and currency
-		createdAccount, err := client.AccountCreate(ctx, uint64(user.ID), deposit.Currency)
+		createdAccount, err := AccountCreate(ctx, uint64(user.ID), common.AccountInfo{
+			Currency: common.CurrencyInfo{
+				Name: deposit.Currency,
+			},
+		})
 		if err != nil {
 			return result, err
 		}
 
 		// Set new account to normal
 		_, err = database.AddOrUpdateAccountState(db, model.AccountState{
-			AccountID: model.AccountID(createdAccount.Info.AccountID),
+			AccountID: model.AccountID(createdAccount.AccountID),
 			State:     model.AccountStatusNormal,
 		})
 		if err != nil {
@@ -60,7 +63,7 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 			return result, errors.New("Can't update new account state")
 		}
 
-		deposit.AccountID = uint64(createdAccount.Info.AccountID)
+		deposit.AccountID = uint64(createdAccount.AccountID)
 	} else {
 		deposit.AccountID = uint64(account[0].ID)
 	}
