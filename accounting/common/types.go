@@ -6,6 +6,10 @@ import (
 	"git.condensat.tech/bank"
 )
 
+func Timestamp() time.Time {
+	return time.Now().UTC().Truncate(time.Second)
+}
+
 type TOTP string
 
 type AuthInfo struct {
