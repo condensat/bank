@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -15,75 +14,40 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/security/utils"
 	"github.com/sirupsen/logrus"
 )
 
-// const (
-// 	withOperatorAuth = true
-// )
-
-func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string, deposit common.AccountEntry) (common.AccountEntry, error) {
+func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEntry) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatDeposit")
 
+	var result common.AccountEntry
 	db := appcontext.Database(ctx)
 	if db == nil {
-		return common.AccountEntry{}, errors.New("Invalid Database")
-	}
-
-	if common.WithOperatorAuth {
-		if len(authInfo.OperatorAccount) == 0 {
-			return common.AccountEntry{}, errors.New("Invalid OperatorAccount")
-		}
-		if len(authInfo.TOTP) == 0 {
-			return common.AccountEntry{}, errors.New("Invalid TOTP")
-		}
-
-		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
-
-		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
-		if err != nil {
-			return common.AccountEntry{}, errors.New("OperatorAccount not found")
-		}
-		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return common.AccountEntry{}, errors.New("Wrong OperatorAccount")
-		}
-
-		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
-		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
-		if err != nil {
-			return common.AccountEntry{}, errors.New("CheckTOTP failed")
-		}
-		if !valid {
-			return common.AccountEntry{}, errors.New("Invalid OTP")
-		}
-		if operatorID != operator.ID {
-			return common.AccountEntry{}, errors.New("Wrong operator ID")
-		}
+		return result, errors.New("Invalid Database")
 	}
 
 	email := fmt.Sprintf("%s@condensat.tech", userName)
 
 	user, err := database.FindUserByEmail(db, model.UserEmail(email))
 	if err != nil {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	if user.ID == 0 {
-		return common.AccountEntry{}, errors.New("userID can't be 0")
+		return result, errors.New("userID can't be 0")
 	}
 
 	// Get AccountID with UserID
 	account, err := database.GetAccountsByUserAndCurrencyAndName(db, user.ID, model.CurrencyName(deposit.Currency), model.AccountName("*"))
 	if err != nil {
-		return common.AccountEntry{}, err
+		return result, err
 	}
 
 	if len(account) == 0 {
 		// Create a new account for this user and currency
 		createdAccount, err := client.AccountCreate(ctx, uint64(user.ID), deposit.Currency)
 		if err != nil {
-			return common.AccountEntry{}, err
+			return result, err
 		}
 
 		// Set new account to normal
@@ -92,8 +56,8 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 			State:     model.AccountStatusNormal,
 		})
 		if err != nil {
-			log.WithError(err).Error("Failed AddOrUpdateAccountState")
-			return common.AccountEntry{}, errors.New("AddOrUpdateAccountState failed")
+			log.WithError(err).Error("AddOrUpdateAccountState")
+			return result, errors.New("Can't update new account state")
 		}
 
 		deposit.AccountID = uint64(createdAccount.Info.AccountID)
@@ -108,10 +72,10 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 	log = log.WithField("ReferenceID", deposit.ReferenceID)
 
 	// Making the operation
-	result, err := AccountOperation(ctx, deposit)
+	result, err = AccountOperation(ctx, deposit)
 	if err != nil {
 		log.WithError(err).Error("AccountOperation failed")
-		return common.AccountEntry{}, errors.New("AccountOperation failed")
+		return result, errors.New("AccountOperation failed")
 	}
 
 	result.Currency = deposit.Currency
@@ -137,7 +101,14 @@ func OnFiatDeposit(ctx context.Context, subject string, message *bank.Message) (
 	var request common.FiatDeposit
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
-			operation, err := FiatDeposit(ctx, request.AuthInfo, request.UserName, request.Destination)
+			if common.WithOperatorAuth {
+				err := ValidateOtp(ctx, request.AuthInfo)
+				if err != nil {
+					log.WithError(err).Error("Authentication failed")
+					return nil, cache.ErrInternalError
+				}
+			}
+			operation, err := FiatDeposit(ctx, request.UserName, request.Destination)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatDeposit")
