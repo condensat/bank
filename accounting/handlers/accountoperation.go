@@ -18,7 +18,13 @@ import (
 )
 
 func AccountOperation(ctx context.Context, entry common.AccountEntry) (common.AccountEntry, error) {
-	log := logger.Logger(ctx).WithField("Method", "accounting.AccountOperation")
+	db := appcontext.Database(ctx)
+
+	return AccountOperationWithDatabase(ctx, db, entry)
+}
+
+func AccountOperationWithDatabase(ctx context.Context, db bank.Database, entry common.AccountEntry) (common.AccountEntry, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.AccountOperationWithDatabase")
 
 	log = log.WithFields(logrus.Fields{
 		"AccountID":        entry.AccountID,
@@ -38,8 +44,6 @@ func AccountOperation(ctx context.Context, entry common.AccountEntry) (common.Ac
 	defer lock.Unlock()
 
 	// Database Query
-	db := appcontext.Database(ctx)
-	accountID := model.AccountID(entry.AccountID)
 	amount := model.Float(entry.Amount)
 	lockAmount := model.Float(entry.LockAmount)
 
@@ -56,23 +60,20 @@ func AccountOperation(ctx context.Context, entry common.AccountEntry) (common.Ac
 		balance = lockAmount
 	}
 
-	op, err := database.AppendAccountOperation(db, model.AccountOperation{
-		AccountID:        accountID,
-		SynchroneousType: model.ParseSynchroneousType(entry.SynchroneousType),
-		OperationType:    model.ParseOperationType(entry.OperationType),
-		ReferenceID:      model.RefID(entry.ReferenceID),
-
-		Amount:  &amount,
-		Balance: &balance,
-
-		LockAmount:  &lockAmount,
-		TotalLocked: &totalLocked,
-
-		Timestamp: entry.Timestamp,
-	})
+	ops, err := database.TxAppendAccountOperationSlice(db,
+		common.ConvertEntryToOperation(entry),
+	)
 	if err != nil {
+		log.WithError(err).
+			Error("Failed to TxAppendAccountOperationSlice")
 		return common.AccountEntry{}, err
 	}
+
+	if len(ops) != 1 {
+		return common.AccountEntry{}, err
+	}
+
+	op := ops[0]
 
 	log.
 		WithField("OperationID", op.ID).
