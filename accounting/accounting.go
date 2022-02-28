@@ -54,6 +54,7 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 	nats.SubscribeWorkers(ctx, common.CryptoValidateWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoValidateWithdraw)
 	nats.SubscribeWorkers(ctx, common.CryptoFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoFetchPendingWithdraw)
 
+	nats.SubscribeWorkers(ctx, common.FiatCancelWithdrawSubject, 2*concurencyLevel, handlers.OnFiatCancelWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFetchPendingWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatFinalizeWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFinalizeWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatDepositSubject, 2*concurencyLevel, handlers.OnFiatDeposit)

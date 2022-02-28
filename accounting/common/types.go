@@ -106,6 +106,16 @@ type FiatWithdraw struct {
 	Destination FiatSepaInfo
 }
 
+type FiatCancelWithdraw struct {
+	AuthInfo
+	FiatOperationInfoID uint64 // model.FiatOperationInfoID
+	UserName            string
+	IBAN
+	Currency string
+	Amount   float64
+	Comment  string
+}
+
 type FiatDeposit struct {
 	AuthInfo
 	UserName    string
@@ -274,6 +284,14 @@ func (p *CryptoCancelWithdraw) Encode() ([]byte, error) {
 }
 
 func (p *CryptoCancelWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatCancelWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatCancelWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
