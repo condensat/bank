@@ -17,6 +17,18 @@ type AuthInfo struct {
 	TOTP            TOTP
 }
 
+type FiatSepaInfo struct {
+	IBAN  string
+	BIC   string
+	Label string
+}
+
+type FiatWithdraw struct {
+	UserId      uint64
+	Source      AccountEntry
+	Destination FiatSepaInfo
+}
+
 type FiatDeposit struct {
 	AuthInfo
 	UserName    string
@@ -146,6 +158,14 @@ type BatchUpdate struct {
 	BatchStatus
 	TxID   string
 	Height int
+}
+
+func (p *FiatWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *FiatDeposit) Encode() ([]byte, error) {
