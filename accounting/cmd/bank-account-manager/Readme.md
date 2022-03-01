@@ -10,7 +10,8 @@ TL;DR :
   go run ./accounting/cmd/bank-account-manager fiatDeposit --userName=8868029921 --amount=200 --currency=EUR
   go run ./accounting/cmd/bank-account-manager fiatFetchPendingWithdraw
   go run ./accounting/cmd/bank-account-manager fiatFinalizeWithdraw --id 1
-
+  go run ./accounting/cmd/bank-account-manager cryptoFetchPendingWithdraw
+  go run ./accounting/cmd/bank-account-manager cryptoValidateWithdraw 1 2 3 4
 ```
 
 If `operatorAccount` and `totp` are not set, unauthenticated call is made.
@@ -76,6 +77,35 @@ Usage of fiatFinalizeWithdraw:
 ```
 
 `Successfully finalized withdrawal from user <userName> to account <iban>`
+
+### cryptoFetchPendingWithdraw
+
+```bash
+Withdraw #0
+UserName: 12345678901
+Address: bc1000000000000000000000000
+Currency: BTC 
+Amount: 100
+```
+
+### cryptoValidateWithdraw
+
+```bash
+Usage of cryptoValidateWithdraw:
+  -id []uint64
+      ids of the withdraws obtained with cryptoValidateWithdraw
+```
+
+#### Note
+This is not a flag, just write all the space-separated ids to validate without `--id` flag.
+
+```bash
+Successfully validated withdraw #0
+UserName: 12345678901
+Address: bc10000000000000000000
+Currency: BTC
+Amount: 100
+```
 
 ### Notes
 
