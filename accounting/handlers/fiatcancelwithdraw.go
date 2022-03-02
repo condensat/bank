@@ -57,7 +57,7 @@ func fiatCancelWithdraw(ctx context.Context, db bank.Database, log *logrus.Entry
 	account := accounts[0]
 
 	// Refund the user
-	_, err = AccountOperation(ctx, common.AccountEntry{
+	refund, err := AccountOperation(ctx, common.AccountEntry{
 		AccountID: uint64(account.ID),
 		Currency:  string(account.CurrencyName),
 
@@ -96,6 +96,8 @@ func fiatCancelWithdraw(ctx context.Context, db bank.Database, log *logrus.Entry
 	result.IBAN = common.IBAN(sepa.IBAN)
 	result.Currency = string(updated.CurrencyName)
 	result.Amount = float64(*(updated.Amount))
+	result.AccountID = uint64(account.ID)
+	result.OperationID = refund.OperationID
 
 	log.WithFields(logrus.Fields{
 		"FiatOperationInfoID": result.FiatOperationInfoID,
@@ -117,8 +119,10 @@ func OnFiatCancelWithdraw(ctx context.Context, subject string, message *bank.Mes
 	var request common.FiatCancelWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			var operatorID uint64
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request.AuthInfo)
+				var err error
+				operatorID, err = ValidateOtp(ctx, request.AuthInfo, common.CommandFiatCancelWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError
@@ -129,6 +133,15 @@ func OnFiatCancelWithdraw(ctx context.Context, subject string, message *bank.Mes
 				log.WithError(err).
 					Errorf("Failed to FiatCancelWithdraw")
 				return nil, cache.ErrInternalError
+			}
+
+			if common.WithOperatorAuth {
+				// Update operator table
+				err = UpdateOperatorTable(ctx, operatorID, operation.AccountID, operation.OperationID)
+				if err != nil {
+					// not a fatal error, log an error and continue
+					log.WithError(err).Error("UpdateOperatorTable failed")
+				}
 			}
 
 			log.Info("FiatCancelWithdraw succeeded")

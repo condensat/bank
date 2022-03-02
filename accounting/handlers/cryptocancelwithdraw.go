@@ -48,8 +48,10 @@ func OnCryptoCancelWithdraw(ctx context.Context, subject string, message *bank.M
 	var request common.CryptoCancelWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			var operatorID uint64
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request.AuthInfo)
+				var err error
+				operatorID, err = ValidateOtp(ctx, request.AuthInfo, common.CommandCryptoCancelWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError
@@ -63,6 +65,15 @@ func OnCryptoCancelWithdraw(ctx context.Context, subject string, message *bank.M
 			}
 
 			log.Info("CryptoCancelWithdraw succeeded")
+
+			if common.WithOperatorAuth {
+				// Update operator table
+				err = UpdateOperatorTable(ctx, operatorID, operation.AccountID, 0)
+				if err != nil {
+					// not a fatal error, log an error and continue
+					log.WithError(err).Error("UpdateOperatorTable failed")
+				}
+			}
 
 			// create & return response
 			return &operation, nil

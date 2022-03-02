@@ -155,8 +155,10 @@ func OnFiatDeposit(ctx context.Context, subject string, message *bank.Message) (
 	var request common.FiatDeposit
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			var operatorID uint64
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request.AuthInfo)
+				var err error
+				operatorID, err = ValidateOtp(ctx, request.AuthInfo, common.CommandFiatDeposit)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError
@@ -167,6 +169,15 @@ func OnFiatDeposit(ctx context.Context, subject string, message *bank.Message) (
 				log.WithError(err).
 					Errorf("Failed to FiatDeposit")
 				return nil, cache.ErrInternalError
+			}
+
+			if common.WithOperatorAuth {
+				// Update operator table
+				err = UpdateOperatorTable(ctx, operatorID, operation.AccountID, operation.OperationID)
+				if err != nil {
+					// not a fatal error, log an error and continue
+					log.WithError(err).Error("UpdateOperatorTable failed")
+				}
 			}
 
 			log = log.WithFields(logrus.Fields{

@@ -126,8 +126,10 @@ type FiatFetchPendingWithdrawList struct {
 
 type FiatFinalizeWithdraw struct {
 	AuthInfo
-	ID       uint64
-	UserName string
+	ID          uint64
+	AccountID   uint64
+	OperationID uint64
+	UserName    string
 	IBAN
 	Currency string
 	Amount   float64
@@ -142,6 +144,8 @@ type FiatWithdraw struct {
 type FiatCancelWithdraw struct {
 	AuthInfo
 	FiatOperationInfoID uint64 // model.FiatOperationInfoID
+	AccountID           uint64
+	OperationID         uint64
 	UserName            string
 	IBAN
 	Currency string
