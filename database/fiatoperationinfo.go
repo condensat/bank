@@ -15,7 +15,13 @@ var (
 	ErrFiatOperationInfoUpdateNotPermitted = errors.New("OperationInfo Update Not Permitted")
 	ErrFiatInvalidOperationInfoID          = errors.New("Invalid OperationInfoID")
 	ErrFiatInvalidAccountID                = errors.New("Invalid AccountID")
+	ErrFiatInvalidType                     = errors.New("Not a fiat type")
+	ErrFiatNotPending                      = errors.New("Can't finalize a not pending operation")
 )
+
+func timestamp() time.Time {
+	return time.Now().UTC().Truncate(time.Second)
+}
 
 func AddFiatOperationInfo(db bank.Database, operation model.FiatOperationInfo) (model.FiatOperationInfo, error) {
 	gdb := db.DB().(*gorm.DB)
@@ -27,7 +33,7 @@ func AddFiatOperationInfo(db bank.Database, operation model.FiatOperationInfo) (
 		return model.FiatOperationInfo{}, ErrOperationInfoUpdateNotPermitted
 	}
 
-	operation.CreationTimestamp = operation.CreationTimestamp.UTC().Truncate(time.Second)
+	operation.CreationTimestamp = timestamp()
 
 	err := gdb.Create(&operation).Error
 	if err != nil {
@@ -38,6 +44,65 @@ func AddFiatOperationInfo(db bank.Database, operation model.FiatOperationInfo) (
 }
 
 func FiatOperationFinalize(db bank.Database, operationID model.FiatOperationInfoID) (model.FiatOperationInfo, error) {
+	operation, err := FindFiatOperationById(db, operationID)
+	if err != nil {
+		return model.FiatOperationInfo{}, err
+	}
+
+	if operation.Status != model.FiatOperationStatusPending {
+		return model.FiatOperationInfo{}, ErrFiatNotPending
+	}
+
+	updatedOperation, err := updateFiatOperationWithStatus(db, operation, model.FiatOperationStatusComplete)
+
+	return updatedOperation, nil
+
+}
+
+func FiatOperationCancel(db bank.Database, operationID model.FiatOperationInfoID) (model.FiatOperationInfo, error) {
+	operation, err := FindFiatOperationById(db, operationID)
+	if err != nil {
+		return model.FiatOperationInfo{}, err
+	}
+
+	if operation.Status != model.FiatOperationStatusPending {
+		return model.FiatOperationInfo{}, ErrFiatNotPending
+	}
+
+	updatedOperation, err := updateFiatOperationWithStatus(db, operation, model.FiatOperationStatusCanceled)
+
+	return updatedOperation, nil
+
+}
+
+func updateFiatOperationWithStatus(db bank.Database, operation model.FiatOperationInfo, status model.FiatOperationStatus) (model.FiatOperationInfo, error) {
+
+	err := db.Transaction(func(tx bank.Database) error {
+		txdb := tx.DB().(*gorm.DB)
+		if txdb == nil {
+			return errors.New("Invalid tx Database")
+		}
+
+		err := txdb.Model(&operation).Update("status", status).Error
+		if err != nil {
+			return err
+		}
+
+		err = txdb.Model(&operation).Update("update_timestamp", timestamp()).Error
+		if err != nil {
+			return err
+		}
+
+		return err
+	})
+	if err != nil {
+		return model.FiatOperationInfo{}, err
+	}
+
+	return operation, nil
+}
+
+func FindFiatOperationById(db bank.Database, operationID model.FiatOperationInfoID) (model.FiatOperationInfo, error) {
 	gdb := db.DB().(*gorm.DB)
 	if db == nil {
 		return model.FiatOperationInfo{}, errors.New("Invalid appcontext.Database")
@@ -51,11 +116,6 @@ func FiatOperationFinalize(db bank.Database, operationID model.FiatOperationInfo
 	err := gdb.
 		Where(&model.FiatOperationInfo{ID: operationID}).
 		First(&operation).Error
-	if err != nil {
-		return model.FiatOperationInfo{}, err
-	}
-
-	err = gdb.Model(&operation).Update("status", model.FiatOperationStatusComplete).Error
 	if err != nil {
 		return model.FiatOperationInfo{}, err
 	}

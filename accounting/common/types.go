@@ -7,6 +7,10 @@ import (
 	"git.condensat.tech/bank"
 )
 
+const (
+	WithOperatorAuth = true
+)
+
 func Timestamp() time.Time {
 	return time.Now().UTC().Truncate(time.Second)
 }
@@ -57,6 +61,15 @@ type FiatFetchPendingWithdraw struct {
 
 type FiatFetchPendingWithdrawList struct {
 	PendingWithdraws []FiatFetchPendingWithdraw
+}
+
+type FiatFinalizeWithdraw struct {
+	AuthInfo
+	ID       uint64
+	UserName string
+	IBAN
+	Currency string
+	Amount   float64
 }
 
 type FiatWithdraw struct {
@@ -217,6 +230,14 @@ func (p *FiatFetchPendingWithdrawList) Encode() ([]byte, error) {
 }
 
 func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatFinalizeWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatFinalizeWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

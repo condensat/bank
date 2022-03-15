@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"time"
 
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/cache"
@@ -33,7 +32,6 @@ func FiatWithdraw(ctx context.Context, userId, accountId uint64, amount float64,
 		Source: common.AccountEntry{
 			OperationType:    string(model.OperationTypeFiatWithdraw),
 			SynchroneousType: "sync",
-			Timestamp:        time.Now(),
 
 			Amount:     amount, // withdraw remove amount from account
 			LockAmount: 0.0,    // no lock on withdraw

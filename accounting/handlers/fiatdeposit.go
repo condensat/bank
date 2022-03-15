@@ -19,9 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	withOperatorAuth = true
-)
+// const (
+// 	withOperatorAuth = true
+// )
 
 func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string, deposit common.AccountEntry) (common.AccountEntry, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatDeposit")
@@ -31,7 +31,7 @@ func FiatDeposit(ctx context.Context, authInfo common.AuthInfo, userName string,
 		return common.AccountEntry{}, errors.New("Invalid Database")
 	}
 
-	if withOperatorAuth {
+	if common.WithOperatorAuth {
 		if len(authInfo.OperatorAccount) == 0 {
 			return common.AccountEntry{}, errors.New("Invalid OperatorAccount")
 		}
