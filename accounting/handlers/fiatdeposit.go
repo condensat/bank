@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/client"
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
@@ -24,6 +24,32 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return result, errors.New("Invalid Database")
+	}
+
+	// Test for null or negative amount
+	if deposit.Amount <= 0.0 {
+		return result, errors.New("Null or negative amount")
+	}
+
+	// We'd better set an upper limit too, for now let's say it's MaxFloat
+	if deposit.Amount >= math.MaxFloat64 {
+		return result, errors.New("Absurdly high amount")
+	}
+
+	// Is currency fiat ?
+	currencyInfo, err := database.GetCurrencyByName(db, model.CurrencyName(deposit.Currency))
+	if err != nil {
+		return result, err
+	}
+
+	var fiatType model.Int = 0
+	if *currencyInfo.Type != fiatType {
+		return result, errors.New("Currency is not fiat")
+	}
+
+	// is OperationType fiat_deposit?
+	if deposit.OperationType != model.OperationTypeFiatDeposit.String() {
+		return result, errors.New("OperationType is not fiat_deposit")
 	}
 
 	email := fmt.Sprintf("%s@condensat.tech", userName)
@@ -45,14 +71,18 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 
 	if len(account) == 0 {
 		// Create a new account for this user and currency
-		createdAccount, err := client.AccountCreate(ctx, uint64(user.ID), deposit.Currency)
+		createdAccount, err := AccountCreate(ctx, uint64(user.ID), common.AccountInfo{
+			Currency: common.CurrencyInfo{
+				Name: deposit.Currency,
+			},
+		})
 		if err != nil {
 			return result, err
 		}
 
 		// Set new account to normal
 		_, err = database.AddOrUpdateAccountState(db, model.AccountState{
-			AccountID: model.AccountID(createdAccount.Info.AccountID),
+			AccountID: model.AccountID(createdAccount.AccountID),
 			State:     model.AccountStatusNormal,
 		})
 		if err != nil {
@@ -60,7 +90,7 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 			return result, errors.New("Can't update new account state")
 		}
 
-		deposit.AccountID = uint64(createdAccount.Info.AccountID)
+		deposit.AccountID = uint64(createdAccount.AccountID)
 	} else {
 		deposit.AccountID = uint64(account[0].ID)
 	}
@@ -76,6 +106,30 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 	if err != nil {
 		log.WithError(err).Error("AccountOperation failed")
 		return result, errors.New("AccountOperation failed")
+	}
+
+	var amount = model.Float(result.Amount)
+	_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
+		UserID:       user.ID,
+		CurrencyName: model.CurrencyName(deposit.Currency),
+		Amount:       &amount,
+		Type:         model.OperationTypeDeposit,
+		Status:       model.FiatOperationStatusComplete,
+	})
+	if err != nil {
+		log.WithError(err).Error("AddFiatOperationInfo failed")
+		// Cancel the deposit
+		deposit.Amount = -deposit.Amount
+		deposit.OperationType = string(model.OperationTypeOther)
+		_, err = AccountOperation(ctx, deposit)
+		if err != nil {
+			log.WithError(err).
+				WithField("OperationID", result.OperationID).
+				Error("AccountOperation failed")
+			return result, errors.New("Failed to cancel the deposit")
+		}
+
+		return result, errors.New("Failed to fiatOperationInfo")
 	}
 
 	result.Currency = deposit.Currency
