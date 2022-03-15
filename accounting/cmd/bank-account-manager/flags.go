@@ -16,7 +16,7 @@ func init() {
 }
 
 func printUsage(code int) {
-	fmt.Println("Use command [fiatDeposit, fiatFetchPendingWithdraw, fiatFinalizeWithdraw, cryptoFetchPendingWithdraw, cryptoValidateWithdraw]")
+	fmt.Println("Use command [fiatDeposit, fiatFetchPendingWithdraw, fiatFinalizeWithdraw, cryptoFetchPendingWithdraw, cryptoValidateWithdraw, cryptoCancelWithdraw, fiatCancelWithdraw]")
 	os.Exit(code)
 }
 
@@ -37,6 +37,9 @@ type Args struct {
 
 	CryptoFetchPendingWithdraw CryptoFetchPendingWithdrawArg
 	CryptoValidateWithdraw     CryptoValidateWithdrawArg
+
+	CryptoCancelWithdraw CryptoCancelWithdrawArg
+	FiatCancelWithdraw   FiatCancelWithdrawArg
 }
 
 func AuthInfoCmdArgs(cmd *flag.FlagSet, args *common.AuthInfo) {
@@ -73,11 +76,17 @@ func parseArgs(ctx context.Context) Args {
 	case FiatFinalizeWithdraw:
 		cmd = fiatFinalizeWithdrawArg(&args.FiatFinalizeWithdraw)
 
+	case FiatCancelWithdraw:
+		cmd = fiatCancelWithdrawArg(&args.FiatCancelWithdraw)
+
 	case CryptoFetchPendingWithdraw:
 		cmd = cryptoFetchPendingWithdrawArg(&args.CryptoFetchPendingWithdraw)
 
 	case CryptoValidateWithdraw:
 		cmd = cryptoValidateWithdrawArg(&args.CryptoValidateWithdraw)
+
+	case CryptoCancelWithdraw:
+		cmd = cryptoCancelWithdrawArg(&args.CryptoCancelWithdraw)
 
 	default:
 		printUsage(2)

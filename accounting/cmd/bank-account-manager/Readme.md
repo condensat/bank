@@ -12,6 +12,8 @@ TL;DR :
   go run ./accounting/cmd/bank-account-manager fiatFinalizeWithdraw --id 1
   go run ./accounting/cmd/bank-account-manager cryptoFetchPendingWithdraw
   go run ./accounting/cmd/bank-account-manager cryptoValidateWithdraw 1 2 3 4
+  go run ./accounting/cmd/bank-account-manager cryptoCancelWithdraw --id 1
+  go run ./accounting/cmd/bank-account-manager fiatCancelWithdraw --id 1
 ```
 
 If `operatorAccount` and `totp` are not set, unauthenticated call is made.
@@ -104,6 +106,42 @@ Successfully validated withdraw #0
 UserName: 12345678901
 Address: bc10000000000000000000
 Currency: BTC
+Amount: 100
+```
+
+### cryptoCancelWithdraw
+
+```bash
+Usage of cryptoCancelWithdraw:
+  -comment string
+        comment about the cancel operation
+  -id uint
+        id of the operation we\'re canceling
+```
+
+```bash
+Successfully canceled withdraw #0
+AccountID: 1 
+Address: bc10000000000000000000
+Chain: BTC
+Amount: 100
+```
+
+### fiatCancelWithdraw
+
+```bash
+Usage of cryptoCancelWithdraw:
+  -comment string
+        comment about the cancel operation
+  -id uint
+        id of the operation we're canceling
+```
+
+```bash
+Successfully canceled withdraw #0
+UserName: 12345678901
+IBAN: FR76XXXXX
+Currency: CHF
 Amount: 100
 ```
 

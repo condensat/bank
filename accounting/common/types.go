@@ -66,6 +66,12 @@ type CryptoValidatedWithdrawList struct {
 	ValidatedWithdraws []CryptoWithdraw
 }
 
+type CryptoCancelWithdraw struct {
+	AuthInfo
+	WithdrawID uint64
+	Comment    string
+}
+
 type FiatSepaInfo struct {
 	IBAN
 	BIC
@@ -98,6 +104,16 @@ type FiatWithdraw struct {
 	UserId      uint64
 	Source      AccountEntry
 	Destination FiatSepaInfo
+}
+
+type FiatCancelWithdraw struct {
+	AuthInfo
+	FiatOperationInfoID uint64 // model.FiatOperationInfoID
+	UserName            string
+	IBAN
+	Currency string
+	Amount   float64
+	Comment  string
 }
 
 type FiatDeposit struct {
@@ -260,6 +276,22 @@ func (p *CryptoValidatedWithdrawList) Encode() ([]byte, error) {
 }
 
 func (p *CryptoValidatedWithdrawList) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *CryptoCancelWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *CryptoCancelWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *FiatCancelWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatCancelWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
