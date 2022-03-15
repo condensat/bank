@@ -44,6 +44,11 @@ func Run(ctx context.Context, args Args) {
 	case FiatFinalizeWithdraw:
 		err = fiatFinalizeWithdraw(ctx, args.Common.AuthInfo, args.FiatFinalizeWithdraw)
 
+	case CryptoFetchPendingWithdraw:
+		err = cryptoFetchPendingWithdraw(ctx, args.Common.AuthInfo, args.CryptoFetchPendingWithdraw)
+	case CryptoValidateWithdraw:
+		err = cryptoValidateWithdraw(ctx, args.Common.AuthInfo, args.CryptoValidateWithdraw)
+
 	default:
 		printUsage(1)
 	}

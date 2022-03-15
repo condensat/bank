@@ -30,13 +30,15 @@ func (p *Accounting) Run(ctx context.Context, bankUser model.User) {
 	ctx = common.BankUserContext(ctx, bankUser)
 	ctx = cache.RedisMutexContext(ctx)
 
+	autoBatch := false
+
 	p.registerHandlers(ctx)
 
 	log.WithFields(logrus.Fields{
 		"Hostname": utils.Hostname(),
 	}).Info("Accounting Service started")
 
-	go p.scheduledWithdrawBatch(ctx, DefaultInterval, DefaultDelay)
+	go p.scheduledWithdrawBatch(ctx, DefaultInterval, DefaultDelay, autoBatch)
 
 	<-ctx.Done()
 }
@@ -47,6 +49,9 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 	nats := appcontext.Messaging(ctx)
 
 	const concurencyLevel = 8
+
+	nats.SubscribeWorkers(ctx, common.CryptoValidateWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoValidateWithdraw)
+	nats.SubscribeWorkers(ctx, common.CryptoFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnCryptoFetchPendingWithdraw)
 
 	nats.SubscribeWorkers(ctx, common.FiatFetchPendingWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFetchPendingWithdraw)
 	nats.SubscribeWorkers(ctx, common.FiatFinalizeWithdrawSubject, 2*concurencyLevel, handlers.OnFiatFinalizeWithdraw)
@@ -88,7 +93,7 @@ func checkParams(interval time.Duration, delay time.Duration) (time.Duration, ti
 	return interval, delay
 }
 
-func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.Duration, delay time.Duration) {
+func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.Duration, delay time.Duration, autoBatch bool) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.scheduledWithdrawBatch")
 
 	interval, delay = checkParams(interval, delay)
@@ -118,18 +123,20 @@ func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.D
 					"Epoch": epoch.Truncate(time.Millisecond),
 				})
 
-				err := processPendingWithdraws(ctx)
-				if err != nil {
-					log.WithError(err).
-						Error("Failed to processPendingWithdraws")
-					// continue to next task
-				}
-
 				err = processCancelingWithdraws(ctx)
 				if err != nil {
 					log.WithError(err).
 						Error("Failed to processCancelingWithdraws")
 					// continue to next task
+				}
+
+				if autoBatch {
+					err := processPendingWithdraws(ctx)
+					if err != nil {
+						log.WithError(err).
+							Error("Failed to processPendingWithdraws")
+						// continue to next task
+					}
 				}
 
 				err = processPendingBatches(ctx)
