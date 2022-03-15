@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
-	"fmt"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
@@ -14,7 +12,6 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/security/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,37 +21,6 @@ func FiatFetchPendingWithdraw(ctx context.Context, authInfo common.AuthInfo) ([]
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid Database")
-	}
-
-	if common.WithOperatorAuth {
-		if len(authInfo.OperatorAccount) == 0 {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid OperatorAccount")
-		}
-		if len(authInfo.TOTP) == 0 {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid TOTP")
-		}
-
-		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
-
-		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
-		if err != nil {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("OperatorAccount not found")
-		}
-		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("Wrong OperatorAccount")
-		}
-
-		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
-		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
-		if err != nil {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("CheckTOTP failed")
-		}
-		if !valid {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid OTP")
-		}
-		if operatorID != operator.ID {
-			return []common.FiatFetchPendingWithdraw{}, errors.New("Wrong operator ID")
-		}
 	}
 
 	list, err := database.FetchFiatPendingWithdraw(db)
@@ -116,6 +82,13 @@ func OnFiatFetchPendingWithdraw(ctx context.Context, subject string, message *ba
 	var request common.AuthInfo
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			if common.WithOperatorAuth {
+				err := ValidateOtp(ctx, request)
+				if err != nil {
+					log.WithError(err).Error("Authentication failed")
+					return nil, cache.ErrInternalError
+				}
+			}
 			list, err := FiatFetchPendingWithdraw(ctx, request)
 			if err != nil {
 				log.WithError(err).

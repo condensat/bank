@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
-	"fmt"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
@@ -14,7 +12,6 @@ import (
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
 	"git.condensat.tech/bank/messaging"
-	"git.condensat.tech/bank/security/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,37 +22,6 @@ func FiatCancelWithdraw(ctx context.Context, authInfo common.AuthInfo, fiatOpera
 	db := appcontext.Database(ctx)
 	if db == nil {
 		return result, errors.New("Invalid Database")
-	}
-
-	if common.WithOperatorAuth {
-		if len(authInfo.OperatorAccount) == 0 {
-			return result, errors.New("Invalid OperatorAccount")
-		}
-		if len(authInfo.TOTP) == 0 {
-			return result, errors.New("Invalid TOTP")
-		}
-
-		email := fmt.Sprintf("%s@condensat.tech", authInfo.OperatorAccount)
-
-		operator, err := database.FindUserByEmail(db, model.UserEmail(email))
-		if err != nil {
-			return result, errors.New("OperatorAccount not found")
-		}
-		if operator.Name != model.UserName(authInfo.OperatorAccount) {
-			return result, errors.New("Wrong OperatorAccount")
-		}
-
-		login := hex.EncodeToString([]byte(utils.HashString(authInfo.OperatorAccount[:])))
-		operatorID, valid, err := database.CheckTOTP(ctx, db, model.Base58(login), string(authInfo.TOTP))
-		if err != nil {
-			return result, errors.New("CheckTOTP failed")
-		}
-		if !valid {
-			return result, errors.New("Invalid OTP")
-		}
-		if operatorID != operator.ID {
-			return result, errors.New("Wrong operator ID")
-		}
 	}
 
 	result, err := fiatCancelWithdraw(ctx, db, log, common.FiatCancelWithdraw{
@@ -151,6 +117,13 @@ func OnFiatCancelWithdraw(ctx context.Context, subject string, message *bank.Mes
 	var request common.FiatCancelWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			if common.WithOperatorAuth {
+				err := ValidateOtp(ctx, request.AuthInfo)
+				if err != nil {
+					log.WithError(err).Error("Authentication failed")
+					return nil, cache.ErrInternalError
+				}
+			}
 			operation, err := FiatCancelWithdraw(ctx, request.AuthInfo, request.FiatOperationInfoID, request.Comment)
 			if err != nil {
 				log.WithError(err).
