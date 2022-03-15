@@ -12,10 +12,5 @@ func Models() []model.Model {
 		new(model.Credential),
 		new(model.OAuth),
 		new(model.OAuthData),
-		new(model.Asset),
-		new(model.AssetInfo),
-		new(model.AssetIcon),
-		new(model.Swap),
-		new(model.SwapInfo),
 	}
 }

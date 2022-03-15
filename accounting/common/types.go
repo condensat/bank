@@ -1,16 +1,55 @@
 package common
 
 import (
+	"regexp"
 	"time"
 
 	"git.condensat.tech/bank"
 )
 
+func Timestamp() time.Time {
+	return time.Now().UTC().Truncate(time.Second)
+}
+
 type TOTP string
+
+type IBAN string
+
+func (p *IBAN) Valid() (bool, error) {
+	valid, err := regexp.MatchString("[a-zA-Z]{2}[0-9]{2}[a-zA-Z0-9]{4}[0-9]{7}([a-zA-Z0-9]?){0,16}", string(*p))
+	if err != nil {
+		return false, err
+	}
+
+	return valid, nil
+}
+
+type BIC string
+
+func (p *BIC) Valid() (bool, error) {
+	valid, err := regexp.MatchString("([a-zA-Z]{4})([a-zA-Z]{2})(([2-9a-zA-Z]{1})([0-9a-np-zA-NP-Z]{1}))((([0-9a-wy-zA-WY-Z]{1})([0-9a-zA-Z]{2}))|([xX]{3})|)", string(*p))
+	if err != nil {
+		return false, err
+	}
+
+	return valid, nil
+}
 
 type AuthInfo struct {
 	OperatorAccount string
 	TOTP            TOTP
+}
+
+type FiatSepaInfo struct {
+	IBAN
+	BIC
+	Label string
+}
+
+type FiatWithdraw struct {
+	UserId      uint64
+	Source      AccountEntry
+	Destination FiatSepaInfo
 }
 
 type FiatDeposit struct {
@@ -142,6 +181,14 @@ type BatchUpdate struct {
 	BatchStatus
 	TxID   string
 	Height int
+}
+
+func (p *FiatWithdraw) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *FiatWithdraw) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
 func (p *FiatDeposit) Encode() ([]byte, error) {
