@@ -39,6 +39,8 @@ func Run(ctx context.Context, args Args) {
 
 	case FiatDeposit:
 		err = fiatDeposit(ctx, args.Common.AuthInfo, args.FiatDeposit)
+	case FiatFetchPendingWithdraw:
+		err = fiatFetchPendingWithdraw(ctx, args.Common.AuthInfo, args.FiatFetchPendingWithdraw)
 
 	default:
 		printUsage(1)
