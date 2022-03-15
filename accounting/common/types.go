@@ -39,6 +39,39 @@ func (p *BIC) Valid() (bool, error) {
 	return valid, nil
 }
 
+type Command uint64
+
+const (
+	CommandFiatDeposit Command = iota
+	CommandFiatCancelWithdraw
+	CommandFiatFinalizeWithdraw
+	CommandFiatFetchPendingWithdraw
+	CommandCryptoValidateWithdraw
+	CommandCryptoFetchPendingWithdraw
+	CommandCryptoCancelWithdraw
+)
+
+func (c Command) String() string {
+	switch c {
+	case CommandFiatDeposit:
+		return "fiatDeposit"
+	case CommandFiatCancelWithdraw:
+		return "fiatCancelWithdraw"
+	case CommandFiatFinalizeWithdraw:
+		return "fiatFinalizeWithdraw"
+	case CommandFiatFetchPendingWithdraw:
+		return "fiatFetchPendingWithdraw"
+	case CommandCryptoValidateWithdraw:
+		return "cryptoValidateWithdraw"
+	case CommandCryptoFetchPendingWithdraw:
+		return "cryptoFetchPendingWithdraw"
+	case CommandCryptoCancelWithdraw:
+		return "cryptoCancelWithdraw"
+	}
+
+	return "Unknown command"
+}
+
 type AuthInfo struct {
 	OperatorAccount string
 	TOTP            TOTP
@@ -93,8 +126,10 @@ type FiatFetchPendingWithdrawList struct {
 
 type FiatFinalizeWithdraw struct {
 	AuthInfo
-	ID       uint64
-	UserName string
+	ID          uint64
+	AccountID   uint64
+	OperationID uint64
+	UserName    string
 	IBAN
 	Currency string
 	Amount   float64
@@ -109,6 +144,8 @@ type FiatWithdraw struct {
 type FiatCancelWithdraw struct {
 	AuthInfo
 	FiatOperationInfoID uint64 // model.FiatOperationInfoID
+	AccountID           uint64
+	OperationID         uint64
 	UserName            string
 	IBAN
 	Currency string

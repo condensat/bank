@@ -24,7 +24,6 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, id uint
 		return result, errors.New("Invalid Database")
 	}
 
-	log.Debugf("operation ID: %v", id)
 	// Now we only need to update the status of the fiat Operation
 	var updated model.FiatOperationInfo
 	updated, err := database.FiatOperationFinalize(db, model.FiatOperationInfoID(id))
@@ -42,11 +41,20 @@ func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, id uint
 		return result, err
 	}
 
+	// Get the accountID
+	accounts, err := database.GetAccountsByUserAndCurrencyAndName(db, updated.UserID, updated.CurrencyName, "*")
+	if err != nil {
+		return result, err
+	}
+
+	account := accounts[0]
+
 	result.ID = id
 	result.UserName = string(user.Name)
 	result.IBAN = common.IBAN(sepa.IBAN)
 	result.Currency = string(updated.CurrencyName)
 	result.Amount = float64(*(updated.Amount))
+	result.AccountID = uint64(account.ID)
 
 	log.WithFields(logrus.Fields{
 		"Currency": result.Currency,
@@ -66,8 +74,10 @@ func OnFiatFinalizeWithdraw(ctx context.Context, subject string, message *bank.M
 	var request common.FiatFinalizeWithdraw
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			var operatorID uint64
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request.AuthInfo)
+				var err error
+				operatorID, err = ValidateOtp(ctx, request.AuthInfo, common.CommandFiatFinalizeWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError
@@ -78,6 +88,15 @@ func OnFiatFinalizeWithdraw(ctx context.Context, subject string, message *bank.M
 				log.WithError(err).
 					Errorf("Failed to FiatFinalizeWithdraw")
 				return nil, cache.ErrInternalError
+			}
+
+			if common.WithOperatorAuth {
+				// Update operator table
+				err = UpdateOperatorTable(ctx, operatorID, operation.AccountID, operation.OperationID)
+				if err != nil {
+					// not a fatal error, log an error and continue
+					log.WithError(err).Error("UpdateOperatorTable failed")
+				}
 			}
 
 			log.Info("FiatFinalizeWithdraw succeeded")

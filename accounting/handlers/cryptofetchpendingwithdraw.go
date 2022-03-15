@@ -96,7 +96,7 @@ func OnCryptoFetchPendingWithdraw(ctx context.Context, subject string, message *
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request)
+				_, err := ValidateOtp(ctx, request, common.CommandCryptoFetchPendingWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError

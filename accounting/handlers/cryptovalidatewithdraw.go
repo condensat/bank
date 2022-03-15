@@ -468,7 +468,7 @@ func OnCryptoValidateWithdraw(ctx context.Context, subject string, message *bank
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request.AuthInfo)
+				_, err := ValidateOtp(ctx, request.AuthInfo, common.CommandCryptoValidateWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError

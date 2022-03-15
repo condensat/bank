@@ -83,7 +83,7 @@ func OnFiatFetchPendingWithdraw(ctx context.Context, subject string, message *ba
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
 			if common.WithOperatorAuth {
-				err := ValidateOtp(ctx, request)
+				_, err := ValidateOtp(ctx, request, common.CommandFiatFetchPendingWithdraw)
 				if err != nil {
 					log.WithError(err).Error("Authentication failed")
 					return nil, cache.ErrInternalError
