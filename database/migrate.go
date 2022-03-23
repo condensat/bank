@@ -37,6 +37,10 @@ func AccountOperationModel() []model.Model {
 	return append(AccountStateModel(), new(model.AccountOperation))
 }
 
+func AccountOperatorModel() []model.Model {
+	return append(AccountOperationModel(), new(model.Operator))
+}
+
 func CurrencyModel() []model.Model {
 	return []model.Model{
 		model.Model(new(model.Currency)),
@@ -81,7 +85,7 @@ func SwapModel() []model.Model {
 }
 
 func WithdrawModel() []model.Model {
-	return append(AccountOperationModel(), []model.Model{
+	return append(AccountOperatorModel(), []model.Model{
 		model.Model(new(model.Withdraw)),
 		model.Model(new(model.WithdrawInfo)),
 		model.Model(new(model.WithdrawTarget)),
