@@ -26,7 +26,8 @@ const (
 	AccountOperationSubject = chanPrefix + "Account.Operation"
 	AccountTransferSubject  = chanPrefix + "Account.Transfer"
 
-	AccountTransferWithdrawSubject = chanPrefix + "Account.TransferWithdraw"
+	AccountTransferWithdrawCryptoSubject = chanPrefix + "Account.TransferWithdrawCrypto"
+	AccountTransferWithdrawFiatSubject   = chanPrefix + "Account.TransferWithdrawFiat"
 
 	BatchWithdrawListSubject   = chanPrefix + "BatchWithdraw.List"
 	BatchWithdrawUpdateSubject = chanPrefix + "BatchWithdraw.Update"

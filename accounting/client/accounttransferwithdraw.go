@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"time"
 
 	"git.condensat.tech/bank/logger"
 
@@ -14,7 +13,86 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func AccountTransferWithdrawFiat(ctx context.Context, userID, accountID uint64, currency string, amount float64, batchMode, iban, bic, label string) (uint64, error) {
+	log := logger.Logger(ctx).WithField("Method", "Client.accountTransferWithdrawFiat")
+	log = log.WithFields(logrus.Fields{
+		"AccountID": accountID,
+		"Amount":    amount,
+		"Label":     label,
+	})
+
+	if userID == 0 {
+		return 0, cache.ErrInternalError
+	}
+
+	// Deposit amount must be positive
+	if amount <= 0.0 {
+		return 0, cache.ErrInternalError
+	}
+
+	if len(iban) == 0 {
+		return 0, cache.ErrInternalError
+	}
+	if len(bic) == 0 {
+		return 0, cache.ErrInternalError
+	}
+
+	dstIban := common.IBAN(iban)
+	dstBic := common.BIC(bic)
+
+	var result common.AccountTransfer
+
+	log.Infof("userID: %v\n", userID)
+	withdraw := common.AccountTransferWithdrawFiat{
+		BatchMode: batchMode,
+		UserID:    userID,
+		Source: common.AccountEntry{
+			AccountID: accountID,
+			Currency:  currency,
+
+			OperationType:    "transfer",
+			SynchroneousType: "sync",
+			Timestamp:        common.Timestamp(),
+
+			Label: label,
+
+			Amount: amount,
+		},
+		Sepa: common.FiatSepaInfo{
+			IBAN:  dstIban,
+			BIC:   dstBic,
+			Label: label,
+		},
+	}
+
+	err := messaging.RequestMessage(ctx, common.AccountTransferWithdrawFiatSubject, &withdraw, &result)
+	if err != nil {
+		log.WithError(err).
+			Error("RequestMessage failed")
+		return 0, messaging.ErrRequestFailed
+	}
+
+	log.WithFields(logrus.Fields{
+		"SrcID":      result.Source.OperationID,
+		"SrcPrevID":  result.Source.OperationPrevID,
+		"SrcBalance": result.Source.Balance,
+
+		"DstID":      result.Destination.OperationID,
+		"DstPrevID":  result.Destination.OperationPrevID,
+		"DstBalance": result.Destination.Balance,
+	}).Debug("Withdraw request")
+
+	return uint64(result.Source.ReferenceID), nil
+}
+
 func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, currency string, amount float64, batchMode, label string, chain, publicKey string) (uint64, error) {
+	log := logger.Logger(ctx).WithField("Method", "Client.accountTransferWithdrawCrypto")
+	log = log.WithFields(logrus.Fields{
+		"AccountID": accountID,
+		"Amount":    amount,
+		"Label":     label,
+	})
+
 	if accountID == 0 {
 		return 0, cache.ErrInternalError
 	}
@@ -31,7 +109,9 @@ func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, curren
 		return 0, cache.ErrInternalError
 	}
 
-	transfer, err := accountTransferWithdrawRequest(ctx, common.AccountTransferWithdraw{
+	var result common.AccountTransfer
+
+	withdraw := common.AccountTransferWithdrawCrypto{
 		BatchMode: batchMode,
 		Source: common.AccountEntry{
 			AccountID: accountID,
@@ -39,7 +119,7 @@ func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, curren
 
 			OperationType:    "transfer",
 			SynchroneousType: "sync",
-			Timestamp:        time.Now(),
+			Timestamp:        common.Timestamp(),
 
 			Label: label,
 
@@ -49,28 +129,13 @@ func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, curren
 			Chain:     chain,
 			PublicKey: publicKey,
 		},
-	})
-	if err != nil {
-		return 0, err
 	}
 
-	return uint64(transfer.Source.ReferenceID), nil
-}
-
-func accountTransferWithdrawRequest(ctx context.Context, withdraw common.AccountTransferWithdraw) (common.AccountTransfer, error) {
-	log := logger.Logger(ctx).WithField("Method", "Client.accountTransferWithdrawRequest")
-	log = log.WithFields(logrus.Fields{
-		"AccountID": withdraw.Source.AccountID,
-		"Amount":    withdraw.Source.Amount,
-		"Label":     withdraw.Source.Label,
-	})
-
-	var result common.AccountTransfer
-	err := messaging.RequestMessage(ctx, common.AccountTransferWithdrawSubject, &withdraw, &result)
+	err := messaging.RequestMessage(ctx, common.AccountTransferWithdrawCryptoSubject, &withdraw, &result)
 	if err != nil {
 		log.WithError(err).
 			Error("RequestMessage failed")
-		return common.AccountTransfer{}, messaging.ErrRequestFailed
+		return 0, messaging.ErrRequestFailed
 	}
 
 	log.WithFields(logrus.Fields{
@@ -83,5 +148,5 @@ func accountTransferWithdrawRequest(ctx context.Context, withdraw common.Account
 		"DstBalance": result.Destination.Balance,
 	}).Debug("Withdraw request")
 
-	return result, nil
+	return uint64(result.Source.ReferenceID), nil
 }

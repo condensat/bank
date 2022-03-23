@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
-	"time"
+	"math"
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/appcontext"
@@ -23,8 +23,8 @@ const (
 	BankWitdrawAccountName = model.AccountName("withdraw")
 )
 
-func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransferWithdraw) (common.AccountTransfer, error) {
-	log := logger.Logger(ctx).WithField("Method", "accounting.AccountTransferWithdraw")
+func AccountTransferWithdrawCrypto(ctx context.Context, withdraw common.AccountTransferWithdrawCrypto) (common.AccountTransfer, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.AccountTransferWithdrawCrypto")
 	db := appcontext.Database(ctx)
 
 	bankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Source.Currency)
@@ -60,6 +60,15 @@ func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransfe
 		if currency.Name == "LBTC" {
 			tickerPrecision = 8 // BTC precision
 		}
+	}
+
+	feeCurrencyName := getFeeCurrency(string(currency.Name), isAsset)
+
+	feeBankAccountID, err := getBankWithdrawAccount(ctx, feeCurrencyName)
+	if err != nil {
+		log.WithError(err).
+			Error("Invalid Fee BankAccount")
+		return common.AccountTransfer{}, err
 	}
 
 	// convert amount in BTC precision
@@ -121,24 +130,7 @@ func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransfe
 
 		referenceID := uint64(w.ID)
 
-		currency, err := database.GetCurrencyByName(db, model.CurrencyName(withdraw.Source.Currency))
-		if err != nil {
-			log.WithError(err).
-				Error("GetCurrencyByName failed")
-			return err
-		}
-
 		// get fee informations
-		isAsset := currency.IsCrypto() && currency.GetType() == 2
-		feeCurrencyName := getFeeCurrency(string(currency.Name), isAsset)
-
-		feeBankAccountID, err := getBankWithdrawAccount(ctx, feeCurrencyName)
-		if err != nil {
-			log.WithError(err).
-				Error("Invalid Fee BankAccount")
-			return database.ErrInvalidAccountID
-		}
-
 		feeInfo, err := database.GetFeeInfo(db, model.CurrencyName(feeCurrencyName))
 		if err != nil {
 			log.WithError(err).
@@ -178,7 +170,7 @@ func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransfe
 		}
 
 		// Transfert fees from account to bankAccount
-		timestamp := time.Now()
+		timestamp := common.Timestamp()
 		result, err = AccountTransferWithDatabase(ctx, db, common.AccountTransfer{
 			Source: common.AccountEntry{
 				AccountID: feeUserAccount,
@@ -221,7 +213,7 @@ func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransfe
 				SynchroneousType: "async-start",
 				ReferenceID:      referenceID,
 
-				Timestamp: time.Now(),
+				Timestamp: common.Timestamp(),
 				Amount:    amount,
 
 				Label: withdraw.Source.Label,
@@ -247,16 +239,280 @@ func AccountTransferWithdraw(ctx context.Context, withdraw common.AccountTransfe
 	return result, err
 }
 
-func OnAccountTransferWithdraw(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
-	log := logger.Logger(ctx).WithField("Method", "Accounting.OnAccountTransferWithdraw")
+func AccountTransferWithdrawFiat(ctx context.Context, withdraw common.AccountTransferWithdrawFiat) (common.AccountTransfer, error) {
+	log := logger.Logger(ctx).WithField("Method", "accounting.AccountTransferWithdrawFiat")
+	db := appcontext.Database(ctx)
+
+	log.Infof("userID: %v\n", withdraw.UserID)
+	var result common.AccountTransfer
+
+	bankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Source.Currency)
+	if err != nil {
+		log.WithError(err).
+			Error("Invalid BankAccount")
+		return result, database.ErrInvalidAccountID
+	}
+
+	log = log.WithFields(logrus.Fields{
+		"BankAccountId": bankAccountID,
+		"Currency":      withdraw.Source.Currency,
+		"Amount":        withdraw.Source.Amount,
+	})
+
+	currency, err := database.GetCurrencyByName(db, model.CurrencyName(withdraw.Source.Currency))
+	if err != nil {
+		return result, err
+	}
+
+	// Is the currency fiat?
+	if currency.IsCrypto() {
+		return result, errors.New("Currency is not fiat")
+	}
+
+	// Round up to currency.DisplayPrecision
+	rounding := math.Pow10(int(*currency.Precision))
+	withdraw.Source.Amount = math.Floor(withdraw.Source.Amount*rounding) / rounding
+
+	// Compute fees amount and find bank account to pay to
+	feeInfo, err := database.GetFeeInfo(db, currency.Name)
+	if err != nil {
+		log.WithError(err).
+			Error("GetFeeInfo failed")
+		return result, err
+	}
+	if !feeInfo.IsValid() {
+		log.Error("Invalid FeeInfo")
+		return result, err
+	}
+
+	feeAmount := feeInfo.Compute(model.Float(withdraw.Source.Amount))
+
+	if feeAmount < 0 {
+		return result, errors.New("Negative fee amount are not allowed")
+	}
+
+	if feeAmount < feeInfo.Minimum {
+		feeAmount = feeInfo.Minimum
+	}
+
+	log = log.WithField("feeAmount", feeAmount)
+
+	feeBankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Source.Currency)
+	if err != nil {
+		return result, errors.New("Can't get bank account id")
+	}
+
+	// Get AccountID with UserID only if no accountId provided
+	if withdraw.Source.AccountID == 0 {
+		accounts, err := database.GetAccountsByUserAndCurrencyAndName(db, model.UserID(withdraw.UserID), model.CurrencyName(currency.Name), model.AccountName("*"))
+		if err != nil || len(accounts) == 0 {
+			return result, errors.New("Accounts not found")
+		}
+
+		for _, account := range accounts {
+			// get account info
+			accountInfo, err := AccountInfo(ctx, uint64(account.ID))
+			if err != nil {
+				return result, err
+			}
+			if accountInfo.Status != "normal" {
+				continue
+			}
+
+			// Check available balance too
+			if (withdraw.Source.Amount + float64(feeAmount)) > accountInfo.Balance {
+				continue
+			}
+
+			// We found a suitable account
+			withdraw.Source.AccountID = uint64(account.ID)
+			break
+		}
+	}
+
+	if withdraw.Source.AccountID == 0 {
+		return result, errors.New("Can't find an account that allows withdraw for this user and currency")
+	}
+
+	// Look for the sepa with userID and IBAN
+	sepaUser, err := database.GetSepaByUserAndIban(db, model.UserID(withdraw.UserID), model.Iban(withdraw.Sepa.IBAN))
+	if err != nil && err != database.ErrSepaNotFound {
+		return result, err
+	}
+
+	if sepaUser.ID == 0 {
+
+		// if sepa is not registered, add it to db
+		sepaUser, err = database.CreateSepa(db, model.FiatSepaInfo{
+			UserID: model.UserID(withdraw.UserID),
+			IBAN:   model.Iban(withdraw.Sepa.IBAN),
+			BIC:    model.Bic(withdraw.Sepa.BIC),
+			Label:  model.String(withdraw.Sepa.Label),
+		})
+		if err != nil {
+			return result, err
+		}
+
+	} else {
+
+		// Is there a fiatoperation for this sepa AND this user?
+		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, model.UserID(withdraw.UserID), sepaUser.ID)
+		if err != nil {
+			return result, err
+		}
+
+		// stop if there's already 1 or more pending withdrawal
+		switch len := len(fiatOperation); len {
+		case 0:
+			break
+		case 1:
+			return result, errors.New("Already a pending withdrawal for this user and sepa")
+		default:
+			return result, errors.New("Multiple pending withdrawals for this user and sepa")
+		}
+	}
+
+	batchMode := model.BatchModeNormal
+	if len(withdraw.BatchMode) > 0 {
+		batchMode = model.BatchMode(withdraw.BatchMode)
+	}
+
+	// Database Query
+	err = db.Transaction(func(db bank.Database) error {
+
+		// Create Witdraw for batch
+		w, err := database.AddWithdraw(db,
+			model.AccountID(withdraw.Source.AccountID),
+			model.AccountID(bankAccountID),
+			model.Float(withdraw.Source.Amount), batchMode,
+			"{}",
+		)
+		if err != nil {
+			log.WithError(err).
+				Error("AddWithdraw failed")
+			return err
+		}
+		_, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCreated, "{}")
+		if err != nil {
+			log.WithError(err).
+				Error("AddWithdrawInfo failed")
+			return err
+		}
+
+		wt := model.FromSepaData(w.ID, model.WithdrawTargetSepaData{
+			BIC:  string(withdraw.Sepa.BIC),
+			IBAN: string(withdraw.Sepa.IBAN),
+		},
+		)
+
+		_, err = database.AddWithdrawTarget(db, w.ID, wt.Type, wt.Data)
+		if err != nil {
+			log.WithError(err).
+				Error("AddWithdrawTarget failed")
+			return err
+		}
+
+		referenceID := uint64(w.ID)
+
+		feeSource := common.AccountEntry{
+			AccountID: withdraw.Source.AccountID,
+
+			OperationType:    string(model.OperationTypeTransferFee),
+			SynchroneousType: "sync",
+
+			Currency: withdraw.Source.Currency,
+		}
+		feeDestination := common.AccountEntry{
+			AccountID: uint64(feeBankAccountID),
+
+			OperationType:    string(model.OperationTypeTransferFee),
+			SynchroneousType: "sync",
+			ReferenceID:      withdraw.Source.ReferenceID,
+
+			Timestamp: common.Timestamp(),
+
+			Amount: float64(feeAmount),
+
+			Currency: withdraw.Source.Currency,
+		}
+		_, err = AccountTransferWithDatabase(ctx, db, common.AccountTransfer{
+			Source:      feeSource,
+			Destination: feeDestination,
+		})
+		if err != nil {
+			log.WithError(err).Error("AccountTransferWithDatabase failed")
+			return errors.New("transfer fee operation failed")
+		}
+
+		// Transfert amount from account to bank account
+		result, err = AccountTransferWithDatabase(ctx, db, common.AccountTransfer{
+			Source: withdraw.Source,
+			Destination: common.AccountEntry{
+				AccountID: uint64(bankAccountID),
+
+				OperationType:    withdraw.Source.OperationType,
+				SynchroneousType: "async-start",
+				ReferenceID:      referenceID,
+
+				Timestamp: common.Timestamp(),
+				Amount:    withdraw.Source.Amount,
+
+				Label: withdraw.Source.Label,
+
+				LockAmount: withdraw.Source.Amount,
+				Currency:   withdraw.Source.Currency,
+			},
+		})
+		if err != nil {
+			log.WithError(err).
+				Error("AccountTransfer failed")
+			return err
+		}
+
+		log.Debug("AccountWithdraw created")
+
+		return nil
+	})
+	if err != nil {
+		return common.AccountTransfer{}, err
+	}
+
+	return result, err
+}
+
+func OnAccountTransferWithdrawCrypto(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.OnAccountTransferWithdrawCrypto")
 	log = log.WithFields(logrus.Fields{
 		"Subject": subject,
 	})
 
-	var request common.AccountTransferWithdraw
+	var request common.AccountTransferWithdrawCrypto
 	return messaging.HandleRequest(ctx, message, &request,
 		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
-			response, err := AccountTransferWithdraw(ctx, request)
+			response, err := AccountTransferWithdrawCrypto(ctx, request)
+			if err != nil {
+				log.WithError(err).
+					WithFields(logrus.Fields{
+						"AccountID": request.Source.AccountID,
+					}).Errorf("Failed to AccountTransferWithdrawCrypto")
+				return nil, cache.ErrInternalError
+			}
+
+			// return response
+			return &response, nil
+		})
+}
+
+func OnAccountTransferWithdrawFiat(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.OnAccountTransferWithdrawFiat")
+	log = log.WithFields(logrus.Fields{
+		"Subject": subject,
+	})
+
+	var request common.AccountTransferWithdrawFiat
+	return messaging.HandleRequest(ctx, message, &request,
+		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			response, err := AccountTransferWithdrawFiat(ctx, request)
 			if err != nil {
 				log.WithError(err).
 					WithFields(logrus.Fields{

@@ -238,10 +238,17 @@ type CryptoTransfert struct {
 	PublicKey string
 }
 
-type AccountTransferWithdraw struct {
+type AccountTransferWithdrawCrypto struct {
 	BatchMode string
 	Source    AccountEntry
 	Crypto    CryptoTransfert
+}
+
+type AccountTransferWithdrawFiat struct {
+	BatchMode string
+	UserID    uint64
+	Source    AccountEntry
+	Sepa      FiatSepaInfo
 }
 
 type WithdrawInfo struct {
@@ -428,11 +435,19 @@ func (p *AccountHistory) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
-func (p *AccountTransferWithdraw) Encode() ([]byte, error) {
+func (p *AccountTransferWithdrawCrypto) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
 
-func (p *AccountTransferWithdraw) Decode(data []byte) error {
+func (p *AccountTransferWithdrawCrypto) Decode(data []byte) error {
+	return bank.DecodeObject(data, bank.BankObject(p))
+}
+
+func (p *AccountTransferWithdrawFiat) Encode() ([]byte, error) {
+	return bank.EncodeObject(p)
+}
+
+func (p *AccountTransferWithdrawFiat) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

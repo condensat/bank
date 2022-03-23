@@ -98,14 +98,15 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	}
 
 	// Call internal API
-	withdraw, err := client.FiatWithdraw(ctx, userID, accountId, request.Amount, request.Currency, request.Iban, request.Bic, request.SepaLabel)
+	// withdraw, err := client.FiatWithdraw(ctx, userID, accountId, request.Amount, request.Currency, request.Iban, request.Bic, request.SepaLabel)
+	withdraw, err := client.AccountTransferWithdrawFiat(ctx, userID, accountId, request.Currency, request.Amount, "normal", request.Iban, request.Bic, request.SepaLabel)
 	if err != nil {
 		log.WithError(err).
 			Error("FiatWithdraw failed")
 		return ErrServiceInternalError
 	}
 
-	secureID, err := sID.ToSecureID("withdraw", secureid.Value(withdraw.OperationID))
+	secureID, err := sID.ToSecureID("withdraw", secureid.Value(withdraw))
 	if err != nil {
 		log.WithError(err).
 			Error("ToSecureID Failed")

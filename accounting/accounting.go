@@ -73,7 +73,8 @@ func (p *Accounting) registerHandlers(ctx context.Context) {
 	nats.SubscribeWorkers(ctx, common.AccountOperationSubject, 8*concurencyLevel, handlers.OnAccountOperation)
 	nats.SubscribeWorkers(ctx, common.AccountTransferSubject, 8*concurencyLevel, handlers.OnAccountTransfer)
 
-	nats.SubscribeWorkers(ctx, common.AccountTransferWithdrawSubject, 2*concurencyLevel, handlers.OnAccountTransferWithdraw)
+	nats.SubscribeWorkers(ctx, common.AccountTransferWithdrawCryptoSubject, 2*concurencyLevel, handlers.OnAccountTransferWithdrawCrypto)
+	nats.SubscribeWorkers(ctx, common.AccountTransferWithdrawFiatSubject, 2*concurencyLevel, handlers.OnAccountTransferWithdrawFiat)
 
 	nats.SubscribeWorkers(ctx, common.BatchWithdrawListSubject, 2*concurencyLevel, handlers.OnBatchWithdrawList)
 	nats.SubscribeWorkers(ctx, common.BatchWithdrawUpdateSubject, 2*concurencyLevel, handlers.OnBatchWithdrawUpdate)
