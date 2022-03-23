@@ -18,55 +18,75 @@ import (
 func FiatFetchPendingWithdraw(ctx context.Context) ([]common.FiatFetchPendingWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatFetchPendingWithdraw")
 
+	var result []common.FiatFetchPendingWithdraw
+
 	db := appcontext.Database(ctx)
 	if db == nil {
-		return []common.FiatFetchPendingWithdraw{}, errors.New("Invalid Database")
+		return result, errors.New("Invalid Database")
 	}
 
-	list, err := database.FetchFiatPendingWithdraw(db)
+	// Fetch the withdraws target
+	wt, err := database.GetLastWithdrawTargetByStatus(db, model.WithdrawStatusCreated)
 	if err != nil {
-		return []common.FiatFetchPendingWithdraw{}, err
+		return result, err
 	}
 
-	log.Debugf("Length of list: %v\n", len(list))
-	result, err := convertFiatOperation(db, list)
-	if err != nil {
-		return []common.FiatFetchPendingWithdraw{}, err
+	var targets []model.WithdrawTarget
+	// Keep only the `sepa` type in the list
+	for _, target := range wt {
+		if target.Type == model.WithdrawTargetSepa {
+			targets = append(targets, target)
+		}
 	}
 
-	// log.WithFields(logrus.Fields{
-	// 	"Currency": result.Currency,
-	// 	"Amount":   result.Amount,
-	// 	"UserName": result.UserName,
-	// }).Debug("FiatFetchPendingWithdraw success")
-	log.Debug("FiatFetchPendingWithdraw success")
-
-	return result, err
-}
-
-func convertFiatOperation(db bank.Database, list []model.FiatOperationInfo) ([]common.FiatFetchPendingWithdraw, error) {
-	var result []common.FiatFetchPendingWithdraw
-	for _, withdraw := range list {
-		// look up the sepa info in db
-		sepaInfo, err := database.GetSepaByID(db, withdraw.SepaInfoID)
+	// with withdraws ID, we can fetch Withdraws
+	for _, target := range targets {
+		// get withdraw
+		w, err := database.GetWithdraw(db, target.WithdrawID)
 		if err != nil {
-			return []common.FiatFetchPendingWithdraw{}, err
+			log.WithError(err).
+				Error("Failed to GetWithdraw")
+			return result, err
+		}
+		// Get withdraw info history
+		history, err := database.GetWithdrawHistory(db, target.WithdrawID)
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to GetWithdrawHistory")
+			return result, errors.New("error")
+		}
+		// skip processed withdraw
+		if len(history) != 1 || history[0].Status != model.WithdrawStatusCreated {
+			log.Warn("Withdraw status is not created")
+			continue
 		}
 
-		// get the username from userID
-		user, err := database.FindUserById(db, withdraw.UserID)
+		// get data
+		data, err := target.SepaData()
 		if err != nil {
-			return []common.FiatFetchPendingWithdraw{}, err
+			log.WithError(err).
+				Error("Failed to get SepaData")
+			return result, errors.New("error")
 		}
+
+		// Get userName
+		accountID := w.From
+
+		accountInfo, err := database.GetAccountByID(db, accountID)
+		if err != nil {
+			return result, err
+		}
+
+		userInfo, err := database.FindUserById(db, accountInfo.UserID)
 
 		// append the fetchPendingWithdraw to list
 		result = append(result, common.FiatFetchPendingWithdraw{
-			ID:       uint64(withdraw.ID),
-			UserName: string(user.Name),
-			Currency: string(withdraw.CurrencyName),
-			Amount:   float64(*withdraw.Amount),
-			IBAN:     string(sepaInfo.IBAN),
-			BIC:      string(sepaInfo.BIC),
+			ID:       uint64(w.ID),
+			UserName: string(userInfo.Name),
+			Currency: string(accountInfo.CurrencyName),
+			Amount:   float64(*w.Amount),
+			IBAN:     string(data.IBAN),
+			BIC:      string(data.BIC),
 		})
 	}
 

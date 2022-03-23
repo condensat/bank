@@ -31,17 +31,25 @@ func CryptoFetchPendingWithdraw(ctx context.Context) ([]common.CryptoWithdraw, e
 		return result, err
 	}
 
+	var targets []model.WithdrawTarget
+	// Keep only the `onchain` type in the list
+	for _, target := range wt {
+		if target.Type == model.WithdrawTargetOnChain {
+			targets = append(targets, target)
+		}
+	}
+
 	// with withdraws ID, we can fetch Withdraws
-	for _, withdraw := range wt {
+	for _, target := range targets {
 		// get withdraw
-		w, err := database.GetWithdraw(db, withdraw.WithdrawID)
+		w, err := database.GetWithdraw(db, target.WithdrawID)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to GetWithdraw")
 			return result, err
 		}
 		// Get withdraw info history
-		history, err := database.GetWithdrawHistory(db, withdraw.WithdrawID)
+		history, err := database.GetWithdrawHistory(db, target.WithdrawID)
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to GetWithdrawHistory")
@@ -54,7 +62,7 @@ func CryptoFetchPendingWithdraw(ctx context.Context) ([]common.CryptoWithdraw, e
 		}
 
 		// get data
-		data, err := withdraw.OnChainData()
+		data, err := target.OnChainData()
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to get OnChainData")
@@ -74,8 +82,8 @@ func CryptoFetchPendingWithdraw(ctx context.Context) ([]common.CryptoWithdraw, e
 		userName := userInfo.Name
 
 		result = append(result, common.CryptoWithdraw{
-			WithdrawID: uint64(withdraw.WithdrawID),
-			TargetID:   uint64(withdraw.ID),
+			WithdrawID: uint64(target.WithdrawID),
+			TargetID:   uint64(target.ID),
 			UserName:   string(userName),
 			Address:    data.PublicKey,
 			Amount:     float64(*w.Amount),
