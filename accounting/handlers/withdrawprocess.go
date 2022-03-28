@@ -37,6 +37,12 @@ type withdrawOnChainData struct {
 	Data     model.WithdrawTargetOnChainData
 }
 
+type withdrawSepaData struct {
+	Withdraw model.Withdraw
+	History  []model.WithdrawInfo
+	Data     model.WithdrawTargetSepaData
+}
+
 var (
 	ErrProcessingWithdraw     = errors.New("Error Processing Withdraw")
 	ErrProcessingWithdrawType = errors.New("Error Processing Withdraw Type")
@@ -176,11 +182,94 @@ func processWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) err
 
 		return processWithdrawOnChain(ctx, datas)
 
+	case model.WithdrawTargetSepa:
+
+		var datas []withdrawSepaData
+
+		// fetch withdraw info from database
+		for _, withdraw := range withdraws {
+			// each withdraw should have same type
+			if withdraw.Type != wType {
+				log.WithFields(logrus.Fields{
+					"RefType":      wType,
+					"WithdrawType": withdraw.Type,
+				}).Error("Wrong withdraw type")
+				return ErrProcessingWithdrawType
+			}
+
+			// get withdraw
+			w, err := database.GetWithdraw(db, withdraw.WithdrawID)
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to GetWithdraw")
+				return err
+			}
+			// Get withdraw info history
+			history, err := database.GetWithdrawHistory(db, withdraw.WithdrawID)
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to GetWithdrawHistory")
+				return ErrProcessingWithdraw
+			}
+			// skip processed withdraw
+			if len(history) != 1 || history[0].Status != model.WithdrawStatusCreated {
+				log.Warn("Withdraw status is not created")
+				continue
+			}
+
+			// get data
+			data, err := withdraw.SepaData()
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to get SepaData")
+				return ErrProcessingWithdraw
+			}
+
+			datas = append(datas, withdrawSepaData{
+				Withdraw: w,
+				History:  history,
+				Data:     data,
+			})
+		}
+
+		return processWithdrawSepa(ctx, datas)
+
 	default:
 		return ErrProcessingWithdrawType
 	}
 }
 
+func processWithdrawSepa(ctx context.Context, datas []withdrawSepaData) error {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.processWithdrawSepa")
+	db := appcontext.Database(ctx)
+
+	if len(datas) == 0 {
+		log.Debug("Emtpy Withdraw data")
+		return nil
+	}
+
+	err := db.Transaction(func(db bank.Database) error {
+
+		for _, data := range datas {
+			log.WithField("WithdrawID", data.Withdraw.ID)
+
+			// TODO	handle failed withdraws, for example cancel them without interrupting the others
+
+			// change to status settled
+			_, err := database.AddWithdrawInfo(db, data.Withdraw.ID, model.WithdrawStatusProcessing, "{}")
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to AddWithdrawInfo")
+
+				return err
+			}
+
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 func processWithdrawOnChain(ctx context.Context, datas []withdrawOnChainData) error {

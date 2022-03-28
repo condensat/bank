@@ -10,7 +10,7 @@ const (
 	FiatCancelWithdrawSubject       = chanPrefix + "Fiat.CancelWithdraw"
 	FiatWithdrawSubject             = chanPrefix + "Fiat.Withdraw"
 	FiatFetchPendingWithdrawSubject = chanPrefix + "Fiat.FetchPendingWithdraw"
-	FiatFinalizeWithdrawSubject     = chanPrefix + "Fiat.FinalizeWithdraw"
+	FiatValidateWithdrawSubject     = chanPrefix + "Fiat.ValidateWithdraw"
 	FiatDepositSubject              = chanPrefix + "Fiat.Deposit"
 
 	CurrencyInfoSubject         = chanPrefix + "Currency.Info"

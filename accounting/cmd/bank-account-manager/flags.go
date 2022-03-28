@@ -16,7 +16,7 @@ func init() {
 }
 
 func printUsage(code int) {
-	fmt.Println("Use command [fiatDeposit, fiatFetchPendingWithdraw, fiatFinalizeWithdraw, cryptoFetchPendingWithdraw, cryptoValidateWithdraw, cryptoCancelWithdraw, fiatCancelWithdraw]")
+	fmt.Println("Use command [fiatDeposit, fiatFetchPendingWithdraw, fiatValidateWithdraw, cryptoFetchPendingWithdraw, cryptoValidateWithdraw, cryptoCancelWithdraw, fiatCancelWithdraw]")
 	os.Exit(code)
 }
 
@@ -33,7 +33,7 @@ type Args struct {
 
 	FiatFetchPendingWithdraw FiatFetchPendingWithdrawArg
 	FiatDeposit              FiatDepositArg
-	FiatFinalizeWithdraw     FiatFinalizeWithdrawArg
+	FiatFinalizeWithdraw     FiatValidateWithdrawArg
 
 	CryptoFetchPendingWithdraw CryptoFetchPendingWithdrawArg
 	CryptoValidateWithdraw     CryptoValidateWithdrawArg
@@ -73,8 +73,8 @@ func parseArgs(ctx context.Context) Args {
 	case FiatFetchPendingWithdraw:
 		cmd = fiatFetchPendingWithdrawArg(&args.FiatFetchPendingWithdraw)
 
-	case FiatFinalizeWithdraw:
-		cmd = fiatFinalizeWithdrawArg(&args.FiatFinalizeWithdraw)
+	case FiatValidateWithdraw:
+		cmd = fiatValidateWithdrawArg(&args.FiatFinalizeWithdraw)
 
 	case FiatCancelWithdraw:
 		cmd = fiatCancelWithdrawArg(&args.FiatCancelWithdraw)

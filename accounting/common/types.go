@@ -44,6 +44,7 @@ type Command uint64
 const (
 	CommandFiatDeposit Command = iota
 	CommandFiatCancelWithdraw
+	CommandFiatValidateWithdraw
 	CommandFiatFinalizeWithdraw
 	CommandFiatFetchPendingWithdraw
 	CommandCryptoValidateWithdraw
@@ -57,8 +58,8 @@ func (c Command) String() string {
 		return "fiatDeposit"
 	case CommandFiatCancelWithdraw:
 		return "fiatCancelWithdraw"
-	case CommandFiatFinalizeWithdraw:
-		return "fiatFinalizeWithdraw"
+	case CommandFiatValidateWithdraw:
+		return "fiatValidateWithdraw"
 	case CommandFiatFetchPendingWithdraw:
 		return "fiatFetchPendingWithdraw"
 	case CommandCryptoValidateWithdraw:
@@ -124,15 +125,23 @@ type FiatFetchPendingWithdrawList struct {
 	PendingWithdraws []FiatFetchPendingWithdraw
 }
 
-type FiatFinalizeWithdraw struct {
+type FiatValidateWithdraw struct {
 	AuthInfo
-	ID          uint64
-	AccountID   uint64
-	OperationID uint64
-	UserName    string
+	ID []uint64
+}
+
+type FiatValidWithdraw struct {
+	WithdrawID uint64
+	TargetID   uint64
+	UserName   string
 	IBAN
-	Currency string
-	Amount   float64
+	Amount    float64
+	Currency  string
+	AccountID uint64
+}
+
+type FiatValidWithdrawList struct {
+	ValidatedWithdraws []FiatValidWithdraw
 }
 
 type FiatWithdraw struct {
@@ -355,11 +364,11 @@ func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
-func (p *FiatFinalizeWithdraw) Encode() ([]byte, error) {
+func (p *FiatValidWithdrawList) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
 
-func (p *FiatFinalizeWithdraw) Decode(data []byte) error {
+func (p *FiatValidWithdrawList) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 

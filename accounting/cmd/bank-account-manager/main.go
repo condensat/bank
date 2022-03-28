@@ -41,8 +41,8 @@ func Run(ctx context.Context, args Args) {
 		err = fiatDeposit(ctx, args.Common.AuthInfo, args.FiatDeposit)
 	case FiatFetchPendingWithdraw:
 		err = fiatFetchPendingWithdraw(ctx, args.Common.AuthInfo, args.FiatFetchPendingWithdraw)
-	case FiatFinalizeWithdraw:
-		err = fiatFinalizeWithdraw(ctx, args.Common.AuthInfo, args.FiatFinalizeWithdraw)
+	case FiatValidateWithdraw:
+		err = fiatValidateWithdraw(ctx, args.Common.AuthInfo, args.FiatFinalizeWithdraw)
 
 	case CryptoFetchPendingWithdraw:
 		err = cryptoFetchPendingWithdraw(ctx, args.Common.AuthInfo, args.CryptoFetchPendingWithdraw)
