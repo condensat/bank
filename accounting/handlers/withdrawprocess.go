@@ -1,25 +1,16 @@
-package accounting
+package handlers
 
 import (
 	"context"
 	"errors"
 
 	"git.condensat.tech/bank"
-	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
-	"git.condensat.tech/bank/logger"
-
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
-
+	"git.condensat.tech/bank/logger"
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	ErrProcessingWithdraw     = errors.New("Error Processing Withdraw")
-	ErrProcessingCanceling    = errors.New("Error Processing Canceling")
-	ErrProcessingWithdrawType = errors.New("Error Processing Withdraw Type")
 )
 
 func FetchCreatedWithdraws(ctx context.Context) ([]model.WithdrawTarget, error) {
@@ -28,10 +19,75 @@ func FetchCreatedWithdraws(ctx context.Context) ([]model.WithdrawTarget, error) 
 	return database.GetLastWithdrawTargetByStatus(db, model.WithdrawStatusCreated)
 }
 
+func FetchProcessingWithdraws(ctx context.Context) ([]model.WithdrawTarget, error) {
+	db := appcontext.Database(ctx)
+
+	return database.GetLastWithdrawTargetByStatus(db, model.WithdrawStatusProcessing)
+}
+
 func FetchCancelingOperations(ctx context.Context) ([]model.AccountOperation, error) {
 	db := appcontext.Database(ctx)
 
 	return database.ListCancelingWithdrawsAccountOperations(db)
+}
+
+type withdrawOnChainData struct {
+	Withdraw model.Withdraw
+	History  []model.WithdrawInfo
+	Data     model.WithdrawTargetOnChainData
+}
+
+var (
+	ErrProcessingWithdraw     = errors.New("Error Processing Withdraw")
+	ErrProcessingWithdrawType = errors.New("Error Processing Withdraw Type")
+)
+
+func GetTargetList(ctx context.Context, wtId []uint64, targetType model.WithdrawTargetType) ([]model.WithdrawTarget, error) {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.GetTargetList")
+
+	var toUpdate []model.WithdrawTarget
+
+	db := appcontext.Database(ctx)
+	if db == nil {
+		return toUpdate, errors.New("Invalid Database")
+	}
+
+	for _, tid := range wtId {
+		log.WithField("TargetID", tid)
+		// Look up the target
+		wt, err := database.GetWithdrawTarget(db, model.WithdrawTargetID(tid))
+		if err != nil {
+			log.WithError(err).Infoln("Can't find target in db, skipping")
+			continue
+		}
+
+		log.WithField("WithdrawID", wt.WithdrawID)
+
+		if wt.Type != targetType {
+			log.WithFields(logrus.Fields{
+				"Type":          wt.Type,
+				"Expected type": targetType,
+			}).Infoln("Target type is not expected, skipping")
+			continue
+		}
+
+		// look up info by withdraw id. Is the withdraw in "created" status?
+		winfo, err := database.GetLastWithdrawInfo(db, wt.WithdrawID)
+		if err != nil {
+			log.WithError(err).Infoln("Can't find info in db, skipping")
+			continue
+		}
+
+		if winfo.Status != model.WithdrawStatusCreated {
+			log.WithField("Status", winfo.Status).Infoln("Withdraw status is not in created status, skipping.")
+			continue
+		}
+
+		// now we can add it to our list
+		toUpdate = append(toUpdate, wt)
+	}
+
+	return toUpdate, nil
 }
 
 func ProcessWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) error {
@@ -50,6 +106,7 @@ func ProcessWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) err
 		err := processWithdraws(ctx, withdraws)
 		if err != nil {
 			log.WithError(err).Error("Fail to processWithdraws")
+			return err
 		}
 	}
 
@@ -64,11 +121,12 @@ func processWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) err
 		return nil
 	}
 
-	var datas []withdrawOnChainData
 	wType := withdraws[0].Type
 
 	switch wType {
 	case model.WithdrawTargetOnChain:
+
+		var datas []withdrawOnChainData
 
 		// fetch withdraw info from database
 		for _, withdraw := range withdraws {
@@ -123,10 +181,6 @@ func processWithdraws(ctx context.Context, withdraws []model.WithdrawTarget) err
 	}
 }
 
-type withdrawOnChainData struct {
-	Withdraw model.Withdraw
-	History  []model.WithdrawInfo
-	Data     model.WithdrawTargetOnChainData
 }
 
 func processWithdrawOnChain(ctx context.Context, datas []withdrawOnChainData) error {
@@ -364,117 +418,6 @@ func batchWithdrawCount(db bank.Database, batchID model.BatchID) (int, int, []mo
 	}
 
 	return len(withdraws), int(batch.Capacity), withdraws, nil
-}
-
-func accountRefund(ctx context.Context, db bank.Database, transfer common.AccountTransfer) (common.AccountTransfer, error) {
-	log := logger.Logger(ctx).WithField("Method", "accounting.accountRefund")
-
-	log = log.WithFields(logrus.Fields{
-		"SrcAccountID": transfer.Source.AccountID,
-		"DstAccountID": transfer.Destination.AccountID,
-		"Currency":     transfer.Source.Currency,
-		"Amount":       transfer.Source.Amount,
-	})
-
-	// check operation type
-	if model.OperationType(transfer.Destination.OperationType) != model.OperationTypeRefund {
-		log.
-			Error("OperationType is not refund")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-	}
-	// check for accounts
-	if transfer.Source.AccountID == transfer.Destination.AccountID {
-		log.
-			Error("Can not transfer within same account")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-	}
-
-	// check for currencies match
-	{
-		// fetch source account from DB
-		srcAccount, err := database.GetAccountByID(db, model.AccountID(transfer.Source.AccountID))
-		if err != nil {
-			log.WithError(err).
-				Error("Failed to get srcAccount")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-		}
-		// fetch destination account from DB
-		dstAccount, err := database.GetAccountByID(db, model.AccountID(transfer.Destination.AccountID))
-		if err != nil {
-			log.WithError(err).
-				Error("Failed to get dstAccount")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-		}
-		// currency must match
-		if srcAccount.CurrencyName != dstAccount.CurrencyName {
-			log.WithFields(logrus.Fields{
-				"SrcCurrency": srcAccount.CurrencyName,
-				"DstCurrency": dstAccount.CurrencyName,
-			}).Error("Can not transfer currencies")
-			return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-		}
-	}
-
-	// Acquire Locks for source and destination accounts
-	lockSource, err := cache.LockAccount(ctx, transfer.Source.AccountID)
-	if err != nil {
-		log.WithError(err).
-			Error("Failed to lock account")
-		return common.AccountTransfer{}, cache.ErrLockError
-	}
-	defer lockSource.Unlock()
-
-	lockDestination, err := cache.LockAccount(ctx, transfer.Destination.AccountID)
-	if err != nil {
-		log.WithError(err).
-			Error("Failed to lock account")
-		return common.AccountTransfer{}, cache.ErrLockError
-	}
-	defer lockDestination.Unlock()
-
-	// Prepare data
-	transfer.Source.OperationType = transfer.Destination.OperationType
-	transfer.Source.ReferenceID = transfer.Destination.ReferenceID
-	transfer.Source.Timestamp = transfer.Destination.Timestamp
-	transfer.Source.Label = transfer.Destination.Label
-
-	transfer.Source.SynchroneousType = transfer.Destination.SynchroneousType
-	transfer.Source.Amount = -transfer.Destination.Amount // do not create money
-	transfer.Source.LockAmount = transfer.Source.Amount   // unlock funds
-	transfer.Destination.LockAmount = 0.0
-
-	// Store operations
-	var operations []model.AccountOperation
-	opSrc, err := database.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Source))
-	if err != nil {
-		log.WithError(err).
-			Error("Failed to AppendAccountOperationSlice")
-		return common.AccountTransfer{}, err
-	}
-	operations = append(operations, opSrc)
-	opDst, err := database.TxAppendAccountOperation(db, common.ConvertEntryToOperation(transfer.Destination))
-	if err != nil {
-		log.WithError(err).
-			Error("Failed to AppendAccountOperationSlice")
-		return common.AccountTransfer{}, err
-	}
-	operations = append(operations, opDst)
-
-	// response should contains 2 operations
-	if len(operations) != 2 {
-		log.
-			Error("Invalid operations count")
-		return common.AccountTransfer{}, database.ErrInvalidAccountOperation
-	}
-
-	source := operations[0]
-	destination := operations[1]
-	log.Trace("Account transfer")
-
-	return common.AccountTransfer{
-		Source:      common.ConvertOperationToEntry(source, "N/A"),
-		Destination: common.ConvertOperationToEntry(destination, "N/A"),
-	}, nil
 }
 
 func removeWithdraw(s []model.WithdrawID, i int) []model.WithdrawID {

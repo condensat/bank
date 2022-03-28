@@ -164,7 +164,7 @@ func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.D
 func processPendingWithdraws(ctx context.Context) error {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.processPendingWithdraws")
 
-	withdraws, err := FetchCreatedWithdraws(ctx)
+	withdraws, err := handlers.FetchCreatedWithdraws(ctx)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to FetchCreatedWithdraws")
@@ -177,7 +177,7 @@ func processPendingWithdraws(ctx context.Context) error {
 		return err
 	}
 
-	err = ProcessWithdraws(ctx, withdraws)
+	err = handlers.ProcessWithdraws(ctx, withdraws)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to ProcessWithdraws")
@@ -191,7 +191,7 @@ func processCancelingWithdraws(ctx context.Context) error {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.processCancelingWithdraws")
 	db := appcontext.Database(ctx)
 
-	accountOperations, err := FetchCancelingOperations(ctx)
+	accountOperations, err := handlers.FetchCancelingOperations(ctx)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to FetchCancelingOperations")
@@ -248,7 +248,7 @@ func processCancelingWithdraws(ctx context.Context) error {
 				return err
 			}
 
-			_, err := accountRefund(ctx, db, common.AccountTransfer{
+			_, err := handlers.AccountRefund(ctx, db, common.AccountTransfer{
 				Source: common.AccountEntry{
 					AccountID:   uint64(to.AccountID),
 					ReferenceID: uint64(to.ReferenceID),
