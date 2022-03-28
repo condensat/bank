@@ -156,6 +156,13 @@ func (p *Accounting) scheduledWithdrawBatch(ctx context.Context, interval time.D
 					// continue to next task
 				}
 
+				err = processValidatedFiatWithdraw(ctx)
+				if err != nil {
+					log.WithError(err).
+						Error("Failed to processValidatedFiatWithdraw")
+					// continue to next task
+				}
+
 				return nil
 			})
 	}
@@ -405,7 +412,7 @@ func processConfirmedBatches(ctx context.Context) error {
 				}
 
 				// withdrawID is use as reference in transfert account operation
-				err = settleAccountOperation(ctx, db, model.RefID(wID))
+				_, err = settleAccountOperation(ctx, db, model.RefID(wID))
 				if err != nil {
 					log.WithError(err).
 						Error("Failed to settleAccountOperation")
@@ -426,22 +433,103 @@ func processConfirmedBatches(ctx context.Context) error {
 	return nil
 }
 
-func settleAccountOperation(ctx context.Context, db bank.Database, refID model.RefID) error {
+func processValidatedFiatWithdraw(ctx context.Context) error {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.processValidatedFiatWithdraw")
+	db := appcontext.Database(ctx)
+
+	// First get all the processing fiat withdraws
+	processingTargets, err := handlers.FetchProcessingWithdraws(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to FetchProcessingWithdraws")
+		return err
+	}
+
+	var wt []model.WithdrawTarget
+	for _, target := range processingTargets {
+		if target.Type == model.WithdrawTargetSepa {
+			wt = append(wt, target)
+		}
+	}
+
+	if len(wt) == 0 {
+		log.
+			Debug("FetchProcessingWithdraws returns empty list")
+		return err
+	}
+
+	// Now we just change status to settled and finalize account_operation
+	for _, target := range wt {
+		log = log.WithFields(logrus.Fields{
+			"TargetID":   target.ID,
+			"WithdrawID": target.WithdrawID,
+		})
+		// within a db transaction
+		err = db.Transaction(func(db bank.Database) error {
+			// Mark WithdrawInfo as settled
+			// get last withdraw stats
+			wi, err := database.GetLastWithdrawInfo(db, target.WithdrawID)
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to GetLastWithdrawInfo")
+				return err
+			}
+			// skip if last status is not processing
+			if wi.Status != model.WithdrawStatusProcessing {
+				log.WithField("Status", wi.Status).
+					Warning("Withdraw Status is not Processing")
+				return err
+			}
+
+			// mark withdraw as Settled
+			wi, err = database.AddWithdrawInfo(db, wi.WithdrawID, model.WithdrawStatusSettled, "{}")
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to AddWithdrawInfo")
+				return err
+			}
+
+			// Settle account operation
+			// withdrawID is use as reference in transfert account operation
+			op, err := settleAccountOperation(ctx, db, model.RefID(wi.WithdrawID))
+			if err != nil {
+				log.WithError(err).
+					Error("Failed to settleAccountOperation")
+				return err
+			}
+
+			log.WithField("accountOperationID", op.ID).Info("Successfully settled withdraw")
+
+			return nil
+		})
+
+		if err != nil {
+			log.WithError(err).
+				Error("Failed to settle validated fiat withdraws")
+			return err
+		}
+	}
+
+	return nil
+}
+
+func settleAccountOperation(ctx context.Context, db bank.Database, refID model.RefID) (model.AccountOperation, error) {
+	var result model.AccountOperation
 	// Find transfer account operation
 	op, err := database.FindAccountOperationByReference(db, model.SynchroneousTypeAsyncStart, model.OperationTypeTransfer, refID)
 	if err != nil {
-		return err
+		return result, err
 	}
 
 	// Acquire Lock
 	lock, err := cache.LockAccount(ctx, uint64(op.AccountID))
 	if err != nil {
-		return nil
+		return result, nil
 	}
 	defer lock.Unlock()
 
 	// create new AccountOperation, removing and unlock amount
-	_, err = database.TxAppendAccountOperation(db, model.NewAccountOperation(0,
+	op, err = database.TxAppendAccountOperation(db, model.NewAccountOperation(0,
 		op.AccountID,
 		model.SynchroneousTypeAsyncEnd,
 		model.OperationTypeWithdraw,
@@ -450,5 +538,5 @@ func settleAccountOperation(ctx context.Context, db bank.Database, refID model.R
 		-(*op.Amount), 0.0,
 		-(*op.LockAmount), 0.0,
 	))
-	return err
+	return op, err
 }
