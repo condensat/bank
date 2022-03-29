@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CryptoCancelWithdraw(ctx context.Context, authInfo common.AuthInfo, id uint64, comment string) (common.WithdrawInfo, error) {
+func CryptoCancelWithdraw(ctx context.Context, id uint64, comment string) (common.WithdrawInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.CryptoCancelWithdraw")
 	var result common.WithdrawInfo
 
@@ -57,7 +57,7 @@ func OnCryptoCancelWithdraw(ctx context.Context, subject string, message *bank.M
 					return nil, cache.ErrInternalError
 				}
 			}
-			operation, err := CryptoCancelWithdraw(ctx, request.AuthInfo, request.WithdrawID, request.Comment)
+			operation, err := CryptoCancelWithdraw(ctx, request.WithdrawID, request.Comment)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CryptoCancelWithdraw")

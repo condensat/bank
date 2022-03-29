@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CryptoFetchPendingWithdraw(ctx context.Context, authInfo common.AuthInfo) ([]common.CryptoWithdraw, error) {
+func CryptoFetchPendingWithdraw(ctx context.Context) ([]common.CryptoWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "Accounting.FetchPendingWithdraws")
 
 	var result []common.CryptoWithdraw
@@ -102,7 +102,7 @@ func OnCryptoFetchPendingWithdraw(ctx context.Context, subject string, message *
 					return nil, cache.ErrInternalError
 				}
 			}
-			list, err := CryptoFetchPendingWithdraw(ctx, request)
+			list, err := CryptoFetchPendingWithdraw(ctx)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CryptoFetchPendingWithdraw")

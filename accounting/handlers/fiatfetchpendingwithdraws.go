@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatFetchPendingWithdraw(ctx context.Context, authInfo common.AuthInfo) ([]common.FiatFetchPendingWithdraw, error) {
+func FiatFetchPendingWithdraw(ctx context.Context) ([]common.FiatFetchPendingWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatFetchPendingWithdraw")
 
 	db := appcontext.Database(ctx)
@@ -89,7 +89,7 @@ func OnFiatFetchPendingWithdraw(ctx context.Context, subject string, message *ba
 					return nil, cache.ErrInternalError
 				}
 			}
-			list, err := FiatFetchPendingWithdraw(ctx, request)
+			list, err := FiatFetchPendingWithdraw(ctx)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatFetchPendingWithdraw")

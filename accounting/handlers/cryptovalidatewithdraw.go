@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CryptoValidateWithdraw(ctx context.Context, authInfo common.AuthInfo, id []uint64) (common.CryptoValidatedWithdrawList, error) {
+func CryptoValidateWithdraw(ctx context.Context, id []uint64) (common.CryptoValidatedWithdrawList, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.CryptoValidateWithdraw")
 	var result common.CryptoValidatedWithdrawList
 
@@ -474,7 +474,7 @@ func OnCryptoValidateWithdraw(ctx context.Context, subject string, message *bank
 					return nil, cache.ErrInternalError
 				}
 			}
-			operation, err := CryptoValidateWithdraw(ctx, request.AuthInfo, request.ID)
+			operation, err := CryptoValidateWithdraw(ctx, request.ID)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to CryptoWithdraw")

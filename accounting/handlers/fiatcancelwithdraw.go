@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatCancelWithdraw(ctx context.Context, authInfo common.AuthInfo, fiatOperationInfoId uint64, comment string) (common.FiatCancelWithdraw, error) {
+func FiatCancelWithdraw(ctx context.Context, fiatOperationInfoId uint64, comment string) (common.FiatCancelWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatCancelWithdraw")
 	var result common.FiatCancelWithdraw
 
@@ -128,7 +128,7 @@ func OnFiatCancelWithdraw(ctx context.Context, subject string, message *bank.Mes
 					return nil, cache.ErrInternalError
 				}
 			}
-			operation, err := FiatCancelWithdraw(ctx, request.AuthInfo, request.FiatOperationInfoID, request.Comment)
+			operation, err := FiatCancelWithdraw(ctx, request.FiatOperationInfoID, request.Comment)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatCancelWithdraw")

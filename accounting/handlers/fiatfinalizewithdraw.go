@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FiatFinalizeWithdraw(ctx context.Context, authInfo common.AuthInfo, id uint64) (common.FiatFinalizeWithdraw, error) {
+func FiatFinalizeWithdraw(ctx context.Context, id uint64) (common.FiatFinalizeWithdraw, error) {
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatFinalizeWithdraw")
 	var result common.FiatFinalizeWithdraw
 
@@ -83,7 +83,7 @@ func OnFiatFinalizeWithdraw(ctx context.Context, subject string, message *bank.M
 					return nil, cache.ErrInternalError
 				}
 			}
-			operation, err := FiatFinalizeWithdraw(ctx, request.AuthInfo, request.ID)
+			operation, err := FiatFinalizeWithdraw(ctx, request.ID)
 			if err != nil {
 				log.WithError(err).
 					Errorf("Failed to FiatFinalizeWithdraw")
