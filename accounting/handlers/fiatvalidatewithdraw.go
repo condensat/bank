@@ -19,6 +19,10 @@ func FiatValidateWithdraw(ctx context.Context, id []uint64) (common.FiatValidWit
 	log := logger.Logger(ctx).WithField("Method", "accounting.FiatValidWithdraw")
 	var result common.FiatValidWithdrawList
 
+	if len(id) == 0 {
+		return result, errors.New("Empty list of withdraws")
+	}
+
 	// Get all the targets
 	wt, err := GetTargetList(ctx, id, model.WithdrawTargetSepa)
 	if err != nil {
@@ -33,6 +37,7 @@ func FiatValidateWithdraw(ctx context.Context, id []uint64) (common.FiatValidWit
 		}
 	} else {
 		log.Info("No valid withdraw to process")
+		return result, errors.New("No valid withdrawIDs provided")
 	}
 
 	db := appcontext.Database(ctx)
