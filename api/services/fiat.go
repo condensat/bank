@@ -98,7 +98,6 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	}
 
 	// Call internal API
-	// withdraw, err := client.FiatWithdraw(ctx, userID, accountId, request.Amount, request.Currency, request.Iban, request.Bic, request.SepaLabel)
 	withdraw, err := client.AccountTransferWithdrawFiat(ctx, userID, accountId, request.Currency, request.Amount, "normal", request.Iban, request.Bic, request.SepaLabel)
 	if err != nil {
 		log.WithError(err).
@@ -115,6 +114,69 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 
 	*reply = FiatWithdrawResponse{
 		FiatWithdrawID: sID.ToString(secureID),
+	}
+
+	return nil
+}
+
+// WalletCancelWithdrawRequest holds args for wallet requests
+type FiatCancelWithdrawRequest struct {
+	SessionArgs
+	WithdrawID string `json:"withdrawId"`
+}
+
+// WalletCancelWithdrawResponse holds args for wallet requests
+type FiatCancelWithdrawResponse struct {
+	WithdrawID string `json:"withdrawId"`
+	Status     string `json:"status"`
+}
+
+func (p *WalletService) CancelFiatWithdraw(r *http.Request, request *WalletCancelWithdrawRequest, reply *WalletCancelWithdrawResponse) error {
+	ctx := r.Context()
+	log := logger.Logger(ctx).WithField("Method", "WalletService.CancelFiatWithdraw")
+	log = GetServiceRequestLog(log, r, "Wallet", "CancelFiatWithdraw")
+
+	// Retrieve context values
+	_, session, err := ContextValues(ctx)
+	if err != nil {
+		log.WithError(err).
+			Error("ContextValues Failed")
+		return ErrServiceInternalError
+	}
+
+	// Get userID from session
+	request.SessionID = GetSessionCookie(r)
+	sessionID := sessions.SessionID(request.SessionID)
+	userID := session.UserSession(ctx, sessionID)
+	if !sessions.IsUserValid(userID) {
+		log.Error("Invalid userSession")
+		return sessions.ErrInvalidSessionID
+	}
+	log = log.WithFields(logrus.Fields{
+		"SessionID": sessionID,
+		"UserID":    userID,
+	})
+
+	sID := appcontext.SecureID(ctx)
+	withdrawID, err := sID.FromSecureID("withdraw", sID.Parse(request.WithdrawID))
+	if err != nil {
+		log.WithError(err).
+			WithField("WithdrawID", request.WithdrawID).
+			Error("Wrong WithdrawID")
+		return sessions.ErrInternalError
+	}
+
+	log = log.WithField("WithdrawID", withdrawID)
+
+	wi, err := accounting.UserCancelWithdraw(ctx, uint64(withdrawID))
+	if err != nil {
+		log.WithError(err).Error("UserCancelWithdraw failed")
+		return err
+	}
+
+	*reply = WalletCancelWithdrawResponse{
+		WithdrawID: request.WithdrawID,
+		Status:     wi.Status,
 	}
 
 	return nil
