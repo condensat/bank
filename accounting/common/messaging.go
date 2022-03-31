@@ -6,7 +6,6 @@ const (
 	CryptoFetchPendingWithdrawSubject = chanPrefix + "Crypto.FetchPendingWithdraw"
 	CryptoValidateWithdrawSubject     = chanPrefix + "Crypto.ValidateWithdraw"
 
-	FiatWithdrawSubject             = chanPrefix + "Fiat.Withdraw"
 	FiatFetchPendingWithdrawSubject = chanPrefix + "Fiat.FetchPendingWithdraw"
 	FiatValidateWithdrawSubject     = chanPrefix + "Fiat.ValidateWithdraw"
 	FiatDepositSubject              = chanPrefix + "Fiat.Deposit"

@@ -344,11 +344,11 @@ func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
-func (p *FiatFetchPendingWithdrawList) Encode() ([]byte, error) {
+func (p *FiatValidateWithdraw) Encode() ([]byte, error) {
 	return bank.EncodeObject(p)
 }
 
-func (p *FiatFetchPendingWithdrawList) Decode(data []byte) error {
+func (p *FiatValidateWithdraw) Decode(data []byte) error {
 	return bank.DecodeObject(data, bank.BankObject(p))
 }
 
