@@ -243,8 +243,54 @@ func AccountTransferWithdrawFiat(ctx context.Context, withdraw common.AccountTra
 	log := logger.Logger(ctx).WithField("Method", "accounting.AccountTransferWithdrawFiat")
 	db := appcontext.Database(ctx)
 
-	log.Infof("userID: %v\n", withdraw.UserID)
 	var result common.AccountTransfer
+
+	// Sanity checks
+	if withdraw.UserID == 0 {
+		return result, errors.New("Invalid UserID")
+	}
+
+	log.WithField("userID", withdraw.UserID)
+
+	if withdraw.Source.Amount <= 0.0 {
+		return result, errors.New("Amount can't be nul or negative")
+	}
+
+	if withdraw.Source.Amount < minAmountFiatWithdraw {
+		return result, errors.New("Amount is below the minimum required")
+	}
+
+	if withdraw.Source.LockAmount != 0.0 {
+		return result, errors.New("LockAmount must be 0")
+	}
+
+	// check that IBAN is in the correct format
+	validIban, err := withdraw.Sepa.IBAN.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validIban {
+		return result, errors.New("Provided iban invalid format")
+	}
+
+	// check that Bic is correct format
+	validBic, err := withdraw.Sepa.BIC.Valid()
+	if err != nil {
+		return result, err
+	}
+	if !validBic {
+		return result, errors.New("Provided bic invalid format")
+	}
+
+	// check operation type is fiat_withdraw
+	if withdraw.Source.OperationType != string(model.OperationTypeTransfer) {
+		return result, errors.New("Invalid Operation type")
+	}
+
+	// check sync is sync
+	if withdraw.Source.SynchroneousType != string(model.SynchroneousTypeSync) {
+		return result, errors.New("Invalid Sync type")
+	}
 
 	bankAccountID, err := getBankWithdrawAccount(ctx, withdraw.Source.Currency)
 	if err != nil {
