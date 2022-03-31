@@ -312,9 +312,9 @@ func (p *WalletService) CancelWithdraw(r *http.Request, request *WalletCancelWit
 
 	log = log.WithField("WithdrawID", withdrawID)
 
-	wi, err := accounting.CancelWithdraw(ctx, uint64(withdrawID))
+	wi, err := accounting.UserCancelWithdraw(ctx, uint64(withdrawID))
 	if err != nil {
-		log.WithError(err).Error("CancelWithdraw failed")
+		log.WithError(err).Error("UserCancelWithdraw failed")
 		return err
 	}
 

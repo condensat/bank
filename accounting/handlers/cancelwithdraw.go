@@ -74,13 +74,13 @@ func CancelWithdraw(ctx context.Context, targetID uint64, comment string) (commo
 		switch wt.Type {
 		case model.WithdrawTargetOnChain:
 			data, err := wt.OnChainData()
-		if err != nil {
+			if err != nil {
 				log.WithError(err).Error("OnChainData failed")
-			return err
-		}
+				return err
+			}
 
-		chain := data.Chain
-		publicKey := data.PublicKey
+			chain := data.Chain
+			publicKey := data.PublicKey
 
 			// Add a new WithdrawInfo entry for Withdraw
 			wi, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCanceling, model.WithdrawInfoData(withdrawData))
@@ -88,7 +88,7 @@ func CancelWithdraw(ctx context.Context, targetID uint64, comment string) (commo
 				log.WithError(err).
 					Error("AddWithdrawInfo failed")
 				return err
-		}
+			}
 
 			result.WithdrawID = uint64(wi.WithdrawID)
 			result.Status = string(wi.Status)
@@ -108,22 +108,22 @@ func CancelWithdraw(ctx context.Context, targetID uint64, comment string) (commo
 
 			iban := data.IBAN
 
-		// Add a new WithdrawInfo entry for Withdraw
+			// Add a new WithdrawInfo entry for Withdraw
 			wi, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCanceling, model.WithdrawInfoData(withdrawData))
-		if err != nil {
-			log.WithError(err).
-				Error("AddWithdrawInfo failed")
-			return err
-		}
+			if err != nil {
+				log.WithError(err).
+					Error("AddWithdrawInfo failed")
+				return err
+			}
 
-		result.WithdrawID = uint64(wi.WithdrawID)
-		result.Status = string(wi.Status)
-		result.Amount = float64(*w.Amount)
-		result.AccountID = uint64(w.From)
+			result.WithdrawID = uint64(wi.WithdrawID)
+			result.Status = string(wi.Status)
+			result.Amount = float64(*w.Amount)
+			result.AccountID = uint64(w.From)
 			result.IBAN = common.IBAN(iban)
 			result.Type = string(wt.Type)
 
-		return nil
+			return nil
 
 		default:
 			return errors.New("Not implemented")
@@ -171,6 +171,29 @@ func OnCancelWithdraw(ctx context.Context, subject string, message *bank.Message
 					// not a fatal error, log an error and continue
 					log.WithError(err).Error("UpdateOperatorTable failed")
 				}
+			}
+
+			// return response
+			return &response, nil
+		})
+}
+
+func OnUserCancelWithdraw(ctx context.Context, subject string, message *bank.Message) (*bank.Message, error) {
+	log := logger.Logger(ctx).WithField("Method", "Accounting.OnCancelWithdraw")
+	log = log.WithFields(logrus.Fields{
+		"Subject": subject,
+	})
+
+	var request common.CancelWithdraw
+	return messaging.HandleRequest(ctx, message, &request,
+		func(ctx context.Context, _ bank.BankObject) (bank.BankObject, error) {
+			response, err := CancelWithdraw(ctx, request.TargetID, request.Comment)
+			if err != nil {
+				log.WithError(err).
+					WithFields(logrus.Fields{
+						"WithdrawID": request.TargetID,
+					}).Errorf("Failed to CancelWithdraw")
+				return nil, cache.ErrInternalError
 			}
 
 			// return response

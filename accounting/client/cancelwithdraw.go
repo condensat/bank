@@ -33,3 +33,27 @@ func CancelWithdraw(ctx context.Context, authInfo common.AuthInfo, targetID uint
 
 	return result, nil
 }
+
+func UserCancelWithdraw(ctx context.Context, targetID uint64) (common.WithdrawInfo, error) {
+	log := logger.Logger(ctx).WithField("Method", "Client.UserCancelWithdraw")
+	log = log.WithField("TargetID", targetID)
+
+	if targetID == 0 {
+		return common.WithdrawInfo{}, cache.ErrInternalError
+	}
+
+	request := common.CancelWithdraw{
+		TargetID: targetID,
+		Comment:  "Canceled by user",
+	}
+
+	var result common.WithdrawInfo
+	err := messaging.RequestMessage(ctx, common.UserCancelWithdrawSubject, &request, &result)
+	if err != nil {
+		log.WithError(err).
+			Error("RequestMessage failed")
+		return common.WithdrawInfo{}, messaging.ErrRequestFailed
+	}
+
+	return result, nil
+}
