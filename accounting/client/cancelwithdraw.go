@@ -9,17 +9,18 @@ import (
 	"git.condensat.tech/bank/messaging"
 )
 
-func CancelWithdraw(ctx context.Context, withdrawID uint64) (common.WithdrawInfo, error) {
+func CancelWithdraw(ctx context.Context, authInfo common.AuthInfo, targetID uint64, comment string) (common.WithdrawInfo, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.CancelWithdraw")
-	log = log.WithField("WithdrawID", withdrawID)
+	log = log.WithField("TargetID", targetID)
 
-	if withdrawID == 0 {
+	if targetID == 0 {
 		return common.WithdrawInfo{}, cache.ErrInternalError
 	}
 
-	request := common.CryptoCancelWithdraw{
-		WithdrawID: withdrawID,
-		Comment:    "Canceled by user",
+	request := common.CancelWithdraw{
+		AuthInfo: authInfo,
+		TargetID: targetID,
+		Comment:  comment,
 	}
 
 	var result common.WithdrawInfo

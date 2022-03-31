@@ -109,10 +109,10 @@ Currency: BTC
 Amount: 100
 ```
 
-### cryptoCancelWithdraw
+### cancelWithdraw
 
 ```bash
-Usage of cryptoCancelWithdraw:
+Usage of cancelWithdraw:
   -comment string
         comment about the cancel operation
   -id uint
@@ -120,29 +120,20 @@ Usage of cryptoCancelWithdraw:
 ```
 
 ```bash
-Successfully canceled withdraw #0
-AccountID: 1 
-Address: bc10000000000000000000
-Chain: BTC
-Amount: 100
-```
-
-### fiatCancelWithdraw
-
-```bash
-Usage of cryptoCancelWithdraw:
-  -comment string
-        comment about the cancel operation
-  -id uint
-        id of the operation we're canceling
+Successfully canceled withdraw #47:
+AccountID: 26
+Amount: 0.0143
+Type: onchain
+Address: lq1qqvagrzd353dm3sccclswlg58853ndeqsx76eed9mdu4rgszryzpgjyuzf7vwgvpa4fsp6p93wxedd6kvtatj755d2qejqqr9m
+Chain: liquid-mainnet
 ```
 
 ```bash
-Successfully canceled withdraw #0
-UserName: 12345678901
-IBAN: FR76XXXXX
-Currency: CHF
-Amount: 100
+Successfully canceled withdraw #46:
+AccountID: 21
+Amount: 26
+Type: sepa
+IBAN: KM4600005000010010904400137
 ```
 
 ### Notes
