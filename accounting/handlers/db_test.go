@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"git.condensat.tech/bank"
+	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 
@@ -118,4 +119,77 @@ func randSeq(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func initTestData(db bank.Database) error {
+	for _, currency := range currencies {
+		_, err := database.AddOrUpdateCurrency(db, currency)
+		if err != nil {
+			fmt.Println("Can't create currency in db")
+			return err
+		}
+		_, err = database.AddOrUpdateFeeInfo(db, model.FeeInfo{
+			Currency: currency.Name,
+			Minimum:  fiatMinFee,
+			Rate:     feeRate,
+		})
+		if err != nil {
+			fmt.Println("Can't create feeInfo in db")
+			return err
+		}
+	}
+
+	users := []model.User{
+		bankUser,
+		customerUser,
+	}
+
+	var accounts []model.Account
+	for _, user := range users {
+		newUser, err := database.FindOrCreateUser(db, user)
+		if err != nil {
+			fmt.Println("Can't create user in db")
+			return err
+		}
+		for _, currency := range currencies {
+			accounts = append(accounts, model.Account{
+				UserID:       newUser.ID,
+				CurrencyName: currency.Name,
+				Name:         "default",
+			})
+		}
+	}
+
+	for _, account := range accounts {
+		newAccount, err := database.CreateAccount(db, account)
+		if err != nil {
+			fmt.Println("Can't create account in db")
+			return err
+		}
+
+		_, err = database.AddOrUpdateAccountState(db, model.AccountState{
+			AccountID: newAccount.ID,
+			State:     model.AccountStatusNormal,
+		})
+		if err != nil {
+			fmt.Println("Can't set account state")
+			return err
+		}
+
+		// Fund the new account
+		_, err = AccountOperation(testCtx, common.AccountEntry{
+			OperationType:    string(model.OperationTypeFiatDeposit),
+			SynchroneousType: string(model.SynchroneousTypeSync),
+
+			Label: "init_deposit",
+
+			Amount:     initAmount,
+			LockAmount: 0.0,
+			Currency:   string(account.CurrencyName),
+			AccountID:  uint64(newAccount.ID),
+		})
+
+	}
+
+	return nil
 }

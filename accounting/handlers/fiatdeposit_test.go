@@ -1,13 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
-	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
@@ -32,9 +29,10 @@ func TestFiatDeposit(t *testing.T) {
 	testCtx = appcontext.WithCache(testCtx, cache.NewRedis(testCtx, redisOptions))
 	testCtx = cache.RedisMutexContext(testCtx)
 
-	err := createFiatDepositTestData(db)
+	// Now we already make a deposit here, because it's more convenient for other tests, maybe that makes this test kind of pointless maybe?
+	err := initTestData(db)
 	if err != nil {
-		log.WithError(err).Error("createFiatDepositTestData failed")
+		log.WithError(err).Error("initTestData failed")
 		return
 	}
 
@@ -58,75 +56,28 @@ func TestFiatDeposit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := FiatDeposit(testCtx, tt.args.deposit.UserName, tt.args.deposit.Destination)
-			fmt.Printf("err: %s\n", err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FiatDeposit() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !func(got, want common.AccountEntry) bool {
+				if got.Amount != want.Amount ||
+					got.Balance != want.Balance ||
+					got.LockAmount != want.LockAmount ||
+					got.TotalLocked != want.TotalLocked ||
+					got.AccountID != want.AccountID ||
+					got.Currency != want.Currency ||
+					got.SynchroneousType != want.SynchroneousType ||
+					got.OperationType != want.OperationType ||
+					got.Label != want.Label {
+					return false
+				}
+				return true
+			}(got, tt.want) {
 				t.Errorf("FiatDeposit() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-}
-
-func createFiatDepositTestData(db bank.Database) error {
-	for _, currency := range currencies {
-		_, err := database.AddOrUpdateCurrency(db, currency)
-		if err != nil {
-			fmt.Println("Can't create currency in db")
-			return err
-		}
-		_, err = database.AddOrUpdateFeeInfo(db, model.FeeInfo{
-			Currency: currency.Name,
-			Minimum:  fiatMinFee,
-			Rate:     feeRate,
-		})
-		if err != nil {
-			fmt.Println("Can't create feeInfo in db")
-			return err
-		}
-	}
-
-	users := []model.User{
-		bankUser,
-		customerUser,
-	}
-
-	var accounts []model.Account
-	for _, user := range users {
-		newUser, err := database.FindOrCreateUser(db, user)
-		if err != nil {
-			fmt.Println("Can't create user in db")
-			return err
-		}
-		for _, currency := range currencies {
-			accounts = append(accounts, model.Account{
-				UserID:       newUser.ID,
-				CurrencyName: currency.Name,
-				Name:         "default",
-			})
-		}
-	}
-
-	for _, account := range accounts {
-		newAccount, err := database.CreateAccount(db, account)
-		if err != nil {
-			fmt.Println("Can't create account in db")
-			return err
-		}
-
-		_, err = database.AddOrUpdateAccountState(db, model.AccountState{
-			AccountID: newAccount.ID,
-			State:     model.AccountStatusNormal,
-		})
-		if err != nil {
-			fmt.Println("Can't set account state")
-			return err
-		}
-	}
-
-	return nil
 }
 
 var depositCases = map[string]common.FiatDeposit{
@@ -188,7 +139,7 @@ var depositCases = map[string]common.FiatDeposit{
 }
 
 var validReturn common.AccountEntry = common.AccountEntry{
-	OperationID:      uint64(len(testUsers)*len(currencies) + 1),
+	OperationID:      uint64((len(testUsers)*len(currencies))*2 + 1),
 	AccountID:        uint64(len(currencies) + 1),
 	Currency:         string(currencies[0].Name),
 	ReferenceID:      2,
@@ -197,5 +148,5 @@ var validReturn common.AccountEntry = common.AccountEntry{
 	Timestamp:        common.Timestamp(),
 	Label:            "N/A",
 	Amount:           initAmount,
-	Balance:          initAmount,
+	Balance:          initAmount * 2,
 }
