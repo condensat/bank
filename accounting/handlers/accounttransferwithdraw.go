@@ -398,24 +398,6 @@ func AccountTransferWithdrawFiat(ctx context.Context, withdraw common.AccountTra
 		if err != nil {
 			return result, err
 		}
-
-	} else {
-
-		// Is there a fiatoperation for this sepa AND this user?
-		fiatOperation, err := database.FindFiatWithdrawalPendingForUserAndSepa(db, model.UserID(withdraw.UserID), sepaUser.ID)
-		if err != nil {
-			return result, err
-		}
-
-		// stop if there's already 1 or more pending withdrawal
-		switch len := len(fiatOperation); len {
-		case 0:
-			break
-		case 1:
-			return result, errors.New("Already a pending withdrawal for this user and sepa")
-		default:
-			return result, errors.New("Multiple pending withdrawals for this user and sepa")
-		}
 	}
 
 	batchMode := model.BatchModeNormal

@@ -94,7 +94,6 @@ func WithdrawModel() []model.Model {
 		model.Model(new(model.Batch)),
 		model.Model(new(model.BatchInfo)),
 		model.Model(new(model.BatchWithdraw)),
-		model.Model(new(model.FiatOperationInfo)),
 		model.Model(new(model.FiatSepaInfo)),
 	}...)
 }

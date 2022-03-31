@@ -108,30 +108,6 @@ func FiatDeposit(ctx context.Context, userName string, deposit common.AccountEnt
 		return result, errors.New("AccountOperation failed")
 	}
 
-	var amount = model.Float(result.Amount)
-	_, err = database.AddFiatOperationInfo(db, model.FiatOperationInfo{
-		UserID:       user.ID,
-		CurrencyName: model.CurrencyName(deposit.Currency),
-		Amount:       &amount,
-		Type:         model.OperationTypeDeposit,
-		Status:       model.FiatOperationStatusComplete,
-	})
-	if err != nil {
-		log.WithError(err).Error("AddFiatOperationInfo failed")
-		// Cancel the deposit
-		deposit.Amount = -deposit.Amount
-		deposit.OperationType = string(model.OperationTypeOther)
-		_, err = AccountOperation(ctx, deposit)
-		if err != nil {
-			log.WithError(err).
-				WithField("OperationID", result.OperationID).
-				Error("AccountOperation failed")
-			return result, errors.New("Failed to cancel the deposit")
-		}
-
-		return result, errors.New("Failed to fiatOperationInfo")
-	}
-
 	result.Currency = deposit.Currency
 
 	log.WithFields(logrus.Fields{
