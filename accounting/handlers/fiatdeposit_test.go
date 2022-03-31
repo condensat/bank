@@ -38,11 +38,6 @@ func TestFiatDeposit(t *testing.T) {
 		return
 	}
 
-	feeAmount := wAmt * feeRate
-	if feeAmount < minAmountFiatWithdraw {
-		feeAmount = fiatMinFee
-	}
-
 	type args struct {
 		deposit common.FiatDeposit
 	}

@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	WithOperatorAuth = true
+	WithOperatorAuth      = true
+	MinAmountFiatWithdraw = 20.0
 )
 
 func Timestamp() time.Time {

@@ -256,7 +256,7 @@ func AccountTransferWithdrawFiat(ctx context.Context, withdraw common.AccountTra
 		return result, errors.New("Amount can't be nul or negative")
 	}
 
-	if withdraw.Source.Amount < minAmountFiatWithdraw {
+	if withdraw.Source.Amount < common.MinAmountFiatWithdraw {
 		return result, errors.New("Amount is below the minimum required")
 	}
 

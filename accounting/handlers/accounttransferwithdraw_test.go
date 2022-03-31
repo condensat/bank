@@ -30,7 +30,7 @@ func TestAccountTransferWithdrawFiat(t *testing.T) {
 	}
 
 	feeAmount := wAmt * feeRate
-	if feeAmount < minAmountFiatWithdraw {
+	if feeAmount < common.MinAmountFiatWithdraw {
 		feeAmount = fiatMinFee
 	}
 
@@ -94,7 +94,7 @@ var withdrawCases = map[string]common.AccountEntry{
 	"Empty":                    {},
 	"Invalid Amount":           {Amount: -wAmt, Currency: "CHF", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 0.0},
 	"Invalid Currency":         {Amount: wAmt, Currency: "FAKE", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 0.0},
-	"Invalid Amount below min": {Amount: minAmountFiatWithdraw / 2, Currency: "CHF", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 0.0},
+	"Invalid Amount below min": {Amount: common.MinAmountFiatWithdraw / 2, Currency: "CHF", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 0.0},
 	"Invalid OperationType":    {Amount: wAmt, Currency: "CHF", OperationType: string(model.OperationTypeInvalid), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 0.0},
 	"Invalid Sync":             {Amount: wAmt, Currency: "CHF", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeInvalid), LockAmount: 0.0},
 	"Invalid LockAmount":       {Amount: wAmt, Currency: "CHF", OperationType: string(model.OperationTypeTransfer), SynchroneousType: string(model.SynchroneousTypeSync), LockAmount: 10.0},
