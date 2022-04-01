@@ -42,7 +42,6 @@ func AccountTransferWithdrawFiat(ctx context.Context, userID, accountID uint64, 
 
 	var result common.AccountTransfer
 
-	log.Infof("userID: %v\n", userID)
 	withdraw := common.AccountTransferWithdrawFiat{
 		BatchMode: batchMode,
 		UserID:    userID,
@@ -61,7 +60,7 @@ func AccountTransferWithdrawFiat(ctx context.Context, userID, accountID uint64, 
 		Sepa: common.FiatSepaInfo{
 			IBAN:  dstIban,
 			BIC:   dstBic,
-			Label: label,
+			Label: "", // We'll see how to add labels specific to the sepa beneficiary later
 		},
 	}
 
@@ -85,7 +84,7 @@ func AccountTransferWithdrawFiat(ctx context.Context, userID, accountID uint64, 
 	return uint64(result.Source.ReferenceID), nil
 }
 
-func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, currency string, amount float64, batchMode, label string, chain, publicKey string) (uint64, error) {
+func AccountTransferWithdrawCrypto(ctx context.Context, accountID uint64, currency string, amount float64, batchMode, label, chain, publicKey string) (uint64, error) {
 	log := logger.Logger(ctx).WithField("Method", "Client.accountTransferWithdrawCrypto")
 	log = log.WithFields(logrus.Fields{
 		"AccountID": accountID,

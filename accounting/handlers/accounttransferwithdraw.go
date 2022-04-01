@@ -108,7 +108,18 @@ func AccountTransferWithdrawCrypto(ctx context.Context, withdraw common.AccountT
 				Error("AddWithdraw failed")
 			return err
 		}
-		_, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCreated, "{}")
+
+		userLabel := model.WithdrawInfoUserLabel{
+			Label: withdraw.Source.Label,
+		}
+		withdrawInfoData, err := model.EncodeData(&userLabel)
+		if err != nil {
+			log.WithError(err).
+				Error("EncodeData failed")
+			return err
+		}
+
+		_, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCreated, model.WithdrawInfoData(withdrawInfoData))
 		if err != nil {
 			log.WithError(err).
 				Error("AddWithdrawInfo failed")
@@ -420,7 +431,18 @@ func AccountTransferWithdrawFiat(ctx context.Context, withdraw common.AccountTra
 				Error("AddWithdraw failed")
 			return err
 		}
-		_, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCreated, "{}")
+
+		userLabel := model.WithdrawInfoUserLabel{
+			Label: withdraw.Source.Label,
+		}
+		withdrawInfoData, err := model.EncodeData(&userLabel)
+		if err != nil {
+			log.WithError(err).
+				Error("EncodeData failed")
+			return err
+		}
+
+		_, err = database.AddWithdrawInfo(db, w.ID, model.WithdrawStatusCreated, model.WithdrawInfoData(withdrawInfoData))
 		if err != nil {
 			log.WithError(err).
 				Error("AddWithdrawInfo failed")

@@ -152,6 +152,7 @@ type WalletSendFundsRequest struct {
 	AccountID     string  `json:"accountId"`
 	PublicAddress string  `json:"publicAddress"`
 	Amount        float64 `json:"amount"`
+	Label         string  `json:"label"`
 }
 
 // WalletSendFundsResponse holds args for wallet requests
@@ -242,7 +243,7 @@ func (p *WalletService) SendFunds(r *http.Request, request *WalletSendFundsReque
 		"Address": addr,
 	}).Debug("Account and address infos")
 
-	withdrawID, err := accounting.AccountTransferWithdrawCrypto(ctx, account.AccountID, account.Currency.DatabaseName, request.Amount, "normal", "Api SendFunds", chain, request.PublicAddress)
+	withdrawID, err := accounting.AccountTransferWithdrawCrypto(ctx, account.AccountID, account.Currency.DatabaseName, request.Amount, "normal", request.Label, chain, request.PublicAddress)
 	if err != nil {
 		log.WithError(err).
 			Error("AccountTransferWithdrawCrypto Failed")

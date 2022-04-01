@@ -20,7 +20,7 @@ type FiatWithdrawRequest struct {
 	Currency  string  `json:"currency"`
 	Iban      string  `json:"iban"`
 	Bic       string  `json:"bic"`
-	SepaLabel string  `json:"sepaLabel,omitempty"`
+	Label     string  `json:"label,omitempty"`
 	AccountID string  `json:"accountId,omitempty"`
 }
 
@@ -98,7 +98,7 @@ func (p *FiatService) Withdraw(r *http.Request, request *FiatWithdrawRequest, re
 	}
 
 	// Call internal API
-	withdraw, err := client.AccountTransferWithdrawFiat(ctx, userID, accountId, request.Currency, request.Amount, "normal", request.Iban, request.Bic, request.SepaLabel)
+	withdraw, err := client.AccountTransferWithdrawFiat(ctx, userID, accountId, request.Currency, request.Amount, "normal", request.Iban, request.Bic, request.Label)
 	if err != nil {
 		log.WithError(err).
 			Error("FiatWithdraw failed")

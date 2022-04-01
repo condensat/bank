@@ -27,3 +27,7 @@ type WithdrawInfo struct {
 type WithdrawInfoCancelComment struct {
 	Comment string
 }
+
+type WithdrawInfoUserLabel struct {
+	Label string
+}
