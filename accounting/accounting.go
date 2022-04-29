@@ -560,7 +560,7 @@ func processValidatedFiatWithdraw(ctx context.Context) error {
 		if err != nil {
 			log.WithError(err).
 				Error("Failed to settle validated fiat withdraws")
-			return err
+			continue
 		}
 	}
 
