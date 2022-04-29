@@ -82,6 +82,20 @@ func ListAvailableCurrency(db bank.Database) ([]model.Currency, error) {
 	return QueryCurrencyList(db, "", FlagCurencyAvailable)
 }
 
+// Returns only the precision of the currency
+func GetCurrencyPrecision(db bank.Database, name model.CurrencyName) (uint, error) {
+	currency, err := GetCurrencyByName(db, name)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(currency.Name) == 0 {
+		return 0, errors.New("Currency doesn't seem to exist")
+	}
+
+	return uint(*currency.Precision), nil
+}
+
 // QueryCurrencyList
 func QueryCurrencyList(db bank.Database, name model.CurrencyName, available int) ([]model.Currency, error) {
 	gdb := db.DB().(*gorm.DB)
