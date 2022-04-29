@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"git.condensat.tech/bank"
@@ -200,6 +201,20 @@ func GetLatestRateForBase(ctx context.Context, currency string, rateBase string)
 	}
 
 	return finaleRate, err
+}
+
+func ConvertWithRate(n float64, rate float64, precision uint) float64 {
+	result := n / rate
+
+	if precision > 0 {
+		// Round to the closest with `precision` number
+		factor := 10 * float64(precision)
+		result = math.Floor(result*factor) / factor
+	} else {
+		// We don't want to divide by 0
+		result = math.Round(result)
+	}
+	return result
 }
 
 func formatCurrencyKey(name string) string {
