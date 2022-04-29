@@ -10,6 +10,7 @@ import (
 	"git.condensat.tech/bank/accounting/handlers"
 	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/cache"
+	"git.condensat.tech/bank/currency/rate"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 	"git.condensat.tech/bank/logger"
@@ -23,6 +24,7 @@ type Accounting int
 const (
 	DefaultInterval time.Duration = 30 * time.Second
 	DefaultDelay    time.Duration = 0 * time.Second
+	BaseCurrency                  = "CHF"
 )
 
 func (p *Accounting) Run(ctx context.Context, bankUser model.User) {
@@ -182,7 +184,18 @@ func processPendingWithdraws(ctx context.Context) error {
 		return err
 	}
 
-	err = handlers.ProcessWithdraws(ctx, withdraws)
+	// Check which withdraws are inside automatic validations limit
+	toValidate, err := autoValidatePendingWithdraws(ctx, withdraws)
+	if err != nil {
+		log.WithError(err).
+			Error("Failed to autoValidatePendingWithdraws")
+		return err
+	}
+
+	log.WithField("Withdraws to validate", len(toValidate)).Info()
+
+	// Proceed to process withdraws that don't necessitate manual validations
+	err = handlers.ProcessWithdraws(ctx, toValidate)
 	if err != nil {
 		log.WithError(err).
 			Error("Failed to ProcessWithdraws")
@@ -498,6 +511,49 @@ func processValidatedFiatWithdraw(ctx context.Context) error {
 
 			log.WithField("accountOperationID", op.ID).Info("Successfully settled withdraw")
 
+			// Now we add a validation entry to keep track of the amount
+
+			// First we look up the withdraw, we have the index in op.ReferenceID
+			withdraw, err := database.GetWithdraw(db, model.WithdrawID(op.ReferenceID))
+			if err != nil {
+				log.WithError(err).Error("Failed to GetWithdraw")
+				return err
+			}
+
+			// Now get the account from where the withdraw originated from
+			account, err := database.GetAccountByID(db, withdraw.From)
+			if err != nil {
+				log.WithError(err).Error("Failed to GetAccountByID")
+				return err
+			}
+
+			// Now we can look up the user
+			user, err := database.FindUserById(db, account.UserID)
+			if err != nil {
+				log.WithError(err).Error("Failed to FindUserByID")
+				return err
+			}
+
+			// We need to convert the amount into the base currency used for validation
+			changeRate, err := rate.GetLatestRateForBase(ctx, string(account.CurrencyName), BaseCurrency)
+			if err != nil {
+				log.WithError(err).Error("Failed to GetLatestRateForBase")
+				return err
+			}
+
+			precision, err := database.GetCurrencyPrecision(db, account.CurrencyName)
+			if err != nil {
+				log.WithError(err).Error("Failed to GetCurrencyPrecision")
+				return err
+			}
+
+			validationAmount := rate.ConvertWithRate(float64(-*op.Amount), changeRate, precision)
+			_, err = database.AddWithdrawValidation(db, user.ID, withdraw.ID, BaseCurrency, model.Float(validationAmount))
+			if err != nil {
+				log.WithError(err).Error("Failed to AddWithdrawValidation")
+				return err
+			}
+
 			return nil
 		})
 
@@ -537,4 +593,24 @@ func settleAccountOperation(ctx context.Context, db bank.Database, refID model.R
 		-(*op.LockAmount), 0.0,
 	))
 	return op, err
+}
+
+func autoValidatePendingWithdraws(ctx context.Context, targets []model.WithdrawTarget) ([]model.WithdrawTarget, error) {
+	var result []model.WithdrawTarget
+
+	for _, target := range targets {
+		rule, err := handlers.ValidateWithdrawTarget(ctx, target)
+		if err != nil {
+			return result, err
+		}
+
+		// if we have an empty rule, target didn't break any, add it to result
+		if rule.Amount == 0 {
+			result = append(result, target)
+		}
+
+		// just continue for now, the withdraw will be dealt with by an operator
+	}
+
+	return result, nil
 }
