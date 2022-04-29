@@ -162,6 +162,46 @@ func FetchRedisRate(ctx context.Context, name, base string) (Rate, error) {
 	return result, nil
 }
 
+func GetLatestRateForBase(ctx context.Context, currency string, rateBase string) (float64, error) {
+	log := logger.Logger(ctx).WithField("Method", "rate.GetLatestRateForBase")
+
+	dstrate := 1.0
+	var err error
+	// default rateBase to CHF
+	if len(rateBase) == 0 {
+		rateBase = "CHF"
+	}
+	if rateBase != "USD" {
+		dst, err := FetchRedisRate(ctx, rateBase, "USD")
+		if err != nil {
+			log.WithError(err).
+				WithField("CurrencyName", rateBase).
+				Error("FetchRedisrate failed")
+			// non fatal, continue
+			rateBase = ""
+		}
+
+		if dst.Rate > 0.0 {
+			dstrate = 1.0 / dst.Rate
+		}
+	}
+
+	finaleRate := 1.0
+	if currency != "USD" {
+		currencyRate, err := FetchRedisRate(ctx, currency, "USD")
+		if err != nil {
+			log.WithError(err).
+				WithField("CurrencyName", currency).
+				Error("FetchRedisrate failed")
+			// non fatal, continue
+			currencyRate.Rate = 1.0
+		}
+		finaleRate = currencyRate.Rate * dstrate
+	}
+
+	return finaleRate, err
+}
+
 func formatCurrencyKey(name string) string {
 	return fmt.Sprintf("currency:%s", name)
 }
