@@ -2,6 +2,7 @@ package rate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 
 	"git.condensat.tech/bank/database/model"
+	"git.condensat.tech/bank/logger"
 )
 
 const (
@@ -21,6 +23,8 @@ const (
 )
 
 func FetchLatestRates(ctx context.Context, appID string) ([]model.CurrencyRate, error) {
+	log := logger.Logger(ctx).WithField("Method", "openexchangerates.FetchLatestRates")
+
 	entryPoint := fmt.Sprintf("%s/api/%s", OpenExchangeRatesURL, LatestPath)
 	u, err := url.Parse(entryPoint)
 	if err != nil {
@@ -52,23 +56,41 @@ func FetchLatestRates(ctx context.Context, appID string) ([]model.CurrencyRate, 
 		return nil, err
 	}
 
-	return parseRate(string(body))
+	result, err := parseRate(string(body))
+	if err != nil {
+		log.WithError(err).Debug("parseRate failed")
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func parseRate(jsonBody string) ([]model.CurrencyRate, error) {
 	var result []model.CurrencyRate
 
 	var info struct {
-		Disclaimer string                             `json:"disclaimer"`
-		Licence    string                             `json:"licence"`
-		Timestamp  int64                              `json:"timestamp"`
-		Base       model.CurrencyName                 `json:"base"`
-		Rates      map[model.CurrencyName]interface{} `json:"rates"`
+		Error       bool                               `json:"error"`
+		Status      int64                              `json:"status"`
+		Message     string                             `json:"message"`
+		Description string                             `json:"description"`
+		Disclaimer  string                             `json:"disclaimer"`
+		Licence     string                             `json:"licence"`
+		Timestamp   int64                              `json:"timestamp"`
+		Base        model.CurrencyName                 `json:"base"`
+		Rates       map[model.CurrencyName]interface{} `json:"rates"`
 	}
 
 	err := json.Unmarshal([]byte(jsonBody), &info)
 	if err != nil {
 		return nil, err
+	}
+	if info.Error == true {
+		message := fmt.Sprintf("http request failed: \n"+
+			"Status: %d\n"+
+			"Message: %s\n"+
+			"Description: %s",
+			info.Status, info.Message, info.Description)
+		return nil, errors.New(message)
 	}
 
 	for name, value := range info.Rates {
