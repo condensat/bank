@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 
 	"git.condensat.tech/bank"
 	"git.condensat.tech/bank/accounting/common"
+	"git.condensat.tech/bank/appcontext"
 	"git.condensat.tech/bank/database"
 	"git.condensat.tech/bank/database/model"
 
@@ -37,11 +39,12 @@ var validBic = "BCNNCH22"
 var currencies = []model.Currency{
 	model.NewCurrency("CHF", "swiss franc", 0, 1, 0, 2),
 	model.NewCurrency("BTC", "bitcoin", 1, 1, 1, 8),
+	model.NewCurrency("EUR", "euro", 0, 1, 0, 2),
 }
 
 const (
-	initAmount = 100.0
-	wAmt       = 25.0
+	initAmount = 100_500.0
+	wAmt       = 100_001.0
 	feeRate    = 0.002
 	fiatMinFee = 0.5
 )
@@ -189,6 +192,64 @@ func initTestData(db bank.Database) error {
 			AccountID:  uint64(newAccount.ID),
 		})
 
+	}
+
+	return nil
+}
+
+func initWithdraw(ctx context.Context, accountID uint64, currency string) error {
+	db := appcontext.Database(ctx)
+
+	var curr model.Currency
+	var err error
+	// get currency from db
+	if database.CurrencyExists(db, model.CurrencyName(currency)) {
+		curr, err = database.GetCurrencyByName(db, model.CurrencyName(currency))
+		if err != nil {
+			return err
+		}
+	} else {
+		return errors.New("Currency doesn't exist")
+	}
+
+	if *curr.Crypto == 1 {
+		_, err := AccountTransferWithdrawCrypto(ctx, common.AccountTransferWithdrawCrypto{
+			BatchMode: "normal",
+			Source: common.AccountEntry{
+				AccountID:        accountID,
+				Currency:         currency,
+				Amount:           wAmt,
+				OperationType:    string(model.OperationTypeTransfer),
+				SynchroneousType: string(model.SynchroneousTypeSync),
+			},
+			Crypto: common.CryptoTransfert{
+				Chain:     "bitcoin",
+				PublicKey: "bc1qxatfze4d2ahf692xhspa42gaaachyq3sf9gaku",
+			},
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := AccountTransferWithdrawFiat(ctx, common.AccountTransferWithdrawFiat{
+			BatchMode: "normal",
+			UserID:    uint64(2),
+			Source: common.AccountEntry{
+				AccountID:        accountID,
+				Currency:         currency,
+				Amount:           wAmt,
+				OperationType:    string(model.OperationTypeTransfer),
+				SynchroneousType: string(model.SynchroneousTypeSync),
+			},
+			Sepa: common.FiatSepaInfo{
+				IBAN:  common.IBAN(validIban),
+				BIC:   common.BIC(validBic),
+				Label: "test label",
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
