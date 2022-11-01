@@ -109,9 +109,6 @@ func parseArgs(ctx context.Context) Args {
 }
 
 func fromStringEnv(key string, value string) string {
-	if len(value) != 0 {
-		return value
-	}
 	e := os.Getenv(key)
 	if len(e) == 0 {
 		e = value
